@@ -1,4 +1,5 @@
-import { accountExists, delay, startVerification } from "@/features/auth/demoAuth";
+import { registerRequest, savePending, toUser } from "@/features/auth/api";
+import { getErrorMessage, getErrorStatus } from "@/shared/api/client";
 import { useAuth } from "@/app/AuthContext";
 import { useLocale } from "@/i18n/LocaleContext";
 import { AuthLayout } from "@/shared/layout/AuthLayout";
@@ -42,9 +43,6 @@ export function SignUpPage() {
     if (!isUniversityEmail(email)) {
       setEmailError(t("corporateEmail"));
       invalid = true;
-    } else if (accountExists(email)) {
-      setEmailError(t("emailAlreadyUsed"));
-      invalid = true;
     }
     if (!isStrongPassword(password)) {
       setPasswordError(t("passwordRequirements"));
@@ -54,16 +52,25 @@ export function SignUpPage() {
 
     setLoading(true);
     try {
-      await delay();
-      startVerification({
-        email,
+      const res = await registerRequest({ email, password, displayName: username.trim() });
+      savePending({
         purpose: "signup",
-        username: username.trim(),
-        password,
+        token: res.token,
+        user: toUser(res.user),
+        devCode: res.dev_verification_code,
       });
-      navigate("/verify", { state: { email: email.trim().toLowerCase(), purpose: "signup" } });
-    } catch {
-      setFormError(t("signUpFailed"));
+      navigate("/verify");
+    } catch (err) {
+      const status = getErrorStatus(err);
+      if (status === 429) {
+        setFormError(t("tooManyRequests"));
+      } else if (status === 409) {
+        // The backend reports which field collided in its error message.
+        if (getErrorMessage(err)?.includes("display name")) setUsernameError(t("usernameTaken"));
+        else setEmailError(t("emailAlreadyUsed"));
+      } else {
+        setFormError(t("signUpFailed"));
+      }
     } finally {
       setLoading(false);
     }

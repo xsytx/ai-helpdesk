@@ -1,41 +1,46 @@
-import { clearPending, delay, updatePassword } from "@/features/auth/demoAuth";
+import { resetPasswordRequest } from "@/features/auth/api";
 import { useAuth } from "@/app/AuthContext";
 import { useLocale } from "@/i18n/LocaleContext";
+import { getErrorStatus } from "@/shared/api/client";
 import { AuthLayout } from "@/shared/layout/AuthLayout";
+import { isStrongPassword } from "@/shared/lib/format";
 import { Button } from "@/shared/ui/Button";
 import { PasswordField } from "@/shared/ui/PasswordField";
 import { FormEvent, useState } from "react";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 
+/** Last step of "Forgot password?" — reached from the code screen with { email, code }. */
 export function ResetPasswordPage() {
   const { isAuthenticated } = useAuth();
   const { t } = useLocale();
   const navigate = useNavigate();
-  const location = useLocation();
-  const state = location.state as { email?: string; verified?: boolean } | null;
+  const state = useLocation().state as { email?: string; code?: string } | null;
+  const email = state?.email;
+  const code = state?.code;
 
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [passwordError, setPasswordError] = useState<string>();
   const [confirmError, setConfirmError] = useState<string>();
+  const [formError, setFormError] = useState<string>();
   const [loading, setLoading] = useState(false);
 
   if (isAuthenticated) {
     return <Navigate to="/" replace />;
   }
 
-  if (!state?.email || !state.verified) {
+  if (!email || !code) {
     return <Navigate to="/forgot-password" replace />;
   }
 
-  const email = state.email;
-
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
+    if (!email || !code) return;
     setPasswordError(undefined);
     setConfirmError(undefined);
-    if (password.length < 6) {
-      setPasswordError(t("passwordTooShort"));
+    setFormError(undefined);
+    if (!isStrongPassword(password)) {
+      setPasswordError(t("passwordRequirements"));
       return;
     }
     if (password !== confirm) {
@@ -44,10 +49,10 @@ export function ResetPasswordPage() {
     }
     setLoading(true);
     try {
-      await delay();
-      updatePassword(email, password);
-      clearPending();
+      await resetPasswordRequest(email, code, password);
       navigate("/login", { state: { notice: t("passwordUpdated") } });
+    } catch (err) {
+      setFormError(getErrorStatus(err) === 400 ? t("resetCodeInvalid") : t("serverUnavailable"));
     } finally {
       setLoading(false);
     }
@@ -78,6 +83,11 @@ export function ResetPasswordPage() {
           onChange={(e) => setConfirm(e.target.value)}
           error={confirmError}
         />
+        {formError ? (
+          <p className="text-sm text-error" role="alert">
+            {formError}
+          </p>
+        ) : null}
         <Button type="submit" size="lg" disabled={loading}>
           {loading ? t("loading") : t("savePassword")}
         </Button>

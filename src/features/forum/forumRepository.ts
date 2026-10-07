@@ -32,7 +32,7 @@ function seedData(): ForumData {
       body: "How do I register for fall courses if I missed the deadline?",
       createdAt: new Date(now - 2 * 60_000).toISOString(),
       answerCount: 2,
-      topAnswerLikes: 12,
+      score: 12,
     },
     {
       id: "t2",
@@ -42,7 +42,7 @@ function seedData(): ForumData {
       body: "Does anyone know where the CS department office moved this semester?",
       createdAt: new Date(now - 15 * 60_000).toISOString(),
       answerCount: 1,
-      topAnswerLikes: 8,
+      score: 8,
     },
     {
       id: "t3",
@@ -52,7 +52,7 @@ function seedData(): ForumData {
       body: "Tips for the ECTS credit transfer process?",
       createdAt: new Date(now - 60 * 60_000).toISOString(),
       answerCount: 2,
-      topAnswerLikes: 21,
+      score: 21,
     },
   ];
   const answers: Answer[] = [
@@ -117,7 +117,7 @@ function syncThreadStats(data: ForumData, threadId: string) {
   const thread = data.threads.find((t) => t.id === threadId);
   if (!thread) return;
   thread.answerCount = threadAnswers.length;
-  thread.topAnswerLikes = threadAnswers.reduce((max, a) => Math.max(max, a.likes), 0);
+  thread.score = threadAnswers.reduce((max, a) => Math.max(max, a.likes), 0);
 }
 
 export function listThreads(sort: ThreadSort): Thread[] {
@@ -126,7 +126,7 @@ export function listThreads(sort: ThreadSort): Thread[] {
   if (sort === "newest") {
     threads.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   } else {
-    threads.sort((a, b) => b.topAnswerLikes - a.topAnswerLikes || b.createdAt.localeCompare(a.createdAt));
+    threads.sort((a, b) => b.score - a.score || b.createdAt.localeCompare(a.createdAt));
   }
   return threads;
 }
@@ -155,7 +155,7 @@ export function createThread(input: {
     body: input.body.trim(),
     createdAt: new Date().toISOString(),
     answerCount: 0,
-    topAnswerLikes: 0,
+    score: 0,
   };
   data.threads.unshift(thread);
   writeData(data);

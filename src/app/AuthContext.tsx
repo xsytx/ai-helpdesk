@@ -1,9 +1,11 @@
 import type { User } from "@/entities/user";
-import { getAuthToken, setAuthToken } from "@/shared/api/client";
+import { fetchMe, toUser } from "@/features/auth/api";
+import { getAuthToken, getErrorStatus, setAuthToken } from "@/shared/api/client";
 import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -46,6 +48,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem(USER_KEY);
     setUser(null);
   }, []);
+
+  // Refresh the cached user from the backend; drop the session if the token
+  // is no longer valid (expired, or left over from the old demo login).
+  useEffect(() => {
+    if (!getAuthToken()) return;
+    fetchMe()
+      .then((me) => {
+        const next = toUser(me);
+        localStorage.setItem(USER_KEY, JSON.stringify(next));
+        setUser(next);
+      })
+      .catch((err) => {
+        if (getErrorStatus(err) === 401) logout();
+      });
+  }, [logout]);
 
   const value = useMemo(
     () => ({

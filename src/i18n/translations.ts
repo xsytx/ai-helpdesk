@@ -119,6 +119,12 @@ export const translations = {
     confirmNewPassword: "Confirm new password",
     passwordChangeFailed: "Could not change the password. Try again.",
     passwordChanged: "Password changed successfully.",
+    accountSuspended: "Your account has been suspended.",
+    serverUnavailable: "Could not reach the server. Try again.",
+    usernameTaken: "That username is already taken.",
+    resetCodeInvalid: "This code is invalid or has expired. Request a new one.",
+    faqLoadFailed: "Could not load the FAQ.",
+    tooManyRequests: "Too many attempts. Wait a moment and try again.",
   },
   kz: {
     brand: "SDU Helpdesk",
@@ -238,6 +244,12 @@ export const translations = {
     confirmNewPassword: "Жаңа құпиясөзді растаңыз",
     passwordChangeFailed: "Құпиясөзді өзгерту мүмкін болмады. Қайта көріңіз.",
     passwordChanged: "Құпиясөз сәтті өзгертілді.",
+    accountSuspended: "Аккаунтыңыз бұғатталған.",
+    serverUnavailable: "Серверге қосылу мүмкін болмады. Қайта көріңіз.",
+    usernameTaken: "Бұл пайдаланушы аты бос емес.",
+    resetCodeInvalid: "Код жарамсыз немесе мерзімі өткен. Жаңасын сұраңыз.",
+    faqLoadFailed: "FAQ жүктелмеді.",
+    tooManyRequests: "Тым көп әрекет. Біраз күтіп, қайта көріңіз.",
   },
   ru: {
     brand: "SDU Helpdesk",
@@ -357,6 +369,12 @@ export const translations = {
     confirmNewPassword: "Подтвердите новый пароль",
     passwordChangeFailed: "Не удалось сменить пароль. Попробуйте снова.",
     passwordChanged: "Пароль успешно изменён.",
+    accountSuspended: "Ваш аккаунт заблокирован.",
+    serverUnavailable: "Не удалось связаться с сервером. Попробуйте снова.",
+    usernameTaken: "Это имя пользователя уже занято.",
+    resetCodeInvalid: "Код недействителен или устарел. Запросите новый.",
+    faqLoadFailed: "Не удалось загрузить FAQ.",
+    tooManyRequests: "Слишком много попыток. Подождите немного и попробуйте снова.",
   },
 } as const;
 

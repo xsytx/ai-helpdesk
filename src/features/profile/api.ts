@@ -1,12 +1,10 @@
 import { useAuth } from "@/app/AuthContext";
-import { authenticate, delay, updatePassword } from "@/features/auth/demoAuth";
-import { apiClient } from "@/shared/api/client";
+import { apiClient, getErrorStatus } from "@/shared/api/client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { isAxiosError } from "axios";
 
-// No backend for these yet — flip VITE_MOCK_PROFILE=false once /users/me and
-// /auth/change-password exist.
-const USE_MOCK = import.meta.env.VITE_MOCK_PROFILE !== "false";
+// The backend has no avatar field yet, so avatars live in localStorage only.
+// Once it does (PATCH /api/me with { avatar_id }), flip this to false.
+const AVATAR_LOCAL_ONLY = true;
 
 /** Map of userId → avatarId (preset id like "avatar3" or a data URL). */
 const AVATAR_KEY = "ai_helpdesk_user_avatar";
@@ -27,9 +25,9 @@ function readAvatarMap(): Record<string, string> {
 }
 
 async function fetchAvatar(userId: string): Promise<string | null> {
-  if (USE_MOCK) return readAvatarMap()[userId] ?? null;
-  const { data } = await apiClient.get<{ avatarId: string | null }>("/users/me");
-  return data.avatarId;
+  if (AVATAR_LOCAL_ONLY) return readAvatarMap()[userId] ?? null;
+  const { data } = await apiClient.get<{ avatar_id: string | null }>("/me");
+  return data.avatar_id;
 }
 
 /** Current user's avatar id, or null when not set. */
@@ -50,14 +48,13 @@ export function useUpdateAvatar() {
   return useMutation({
     mutationFn: async ({ avatarId }: { avatarId: string }) => {
       if (!user) throw new Error("unauthenticated");
-      if (USE_MOCK) {
-        await delay();
+      if (AVATAR_LOCAL_ONLY) {
         // setItem throws QuotaExceededError for oversized images — surfaces as a mutation error.
         localStorage.setItem(AVATAR_KEY, JSON.stringify({ ...readAvatarMap(), [user.id]: avatarId }));
         return avatarId;
       }
-      const { data } = await apiClient.patch<{ avatarId: string }>("/users/me", { avatarId });
-      return data.avatarId;
+      const { data } = await apiClient.patch<{ avatar_id: string }>("/me", { avatar_id: avatarId });
+      return data.avatar_id;
     },
     onSuccess: (avatarId) => {
       if (user) qc.setQueryData(profileKeys.avatar(user.id), avatarId);
@@ -69,26 +66,15 @@ export function useUpdateAvatar() {
 export const WRONG_CURRENT_PASSWORD = "wrong-current-password";
 
 export function usePasswordChange() {
-  const { user } = useAuth();
   return useMutation({
     mutationFn: async (input: { currentPassword: string; newPassword: string }) => {
-      if (!user) throw new Error("unauthenticated");
-      if (USE_MOCK) {
-        await delay();
-        try {
-          authenticate(user.email, input.currentPassword);
-        } catch {
-          throw new Error(WRONG_CURRENT_PASSWORD);
-        }
-        updatePassword(user.email, input.newPassword);
-        return;
-      }
       try {
-        await apiClient.post("/auth/change-password", input);
+        await apiClient.post("/me/password", {
+          current_password: input.currentPassword,
+          new_password: input.newPassword,
+        });
       } catch (err) {
-        if (isAxiosError(err) && (err.response?.status === 400 || err.response?.status === 401)) {
-          throw new Error(WRONG_CURRENT_PASSWORD);
-        }
+        if (getErrorStatus(err) === 401) throw new Error(WRONG_CURRENT_PASSWORD);
         throw err;
       }
     },

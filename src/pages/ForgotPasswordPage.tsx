@@ -1,6 +1,7 @@
 import { useAuth } from "@/app/AuthContext";
-import { accountExists, delay, startVerification } from "@/features/auth/demoAuth";
+import { forgotPasswordRequest, savePending } from "@/features/auth/api";
 import { useLocale } from "@/i18n/LocaleContext";
+import { getErrorStatus } from "@/shared/api/client";
 import { AuthLayout } from "@/shared/layout/AuthLayout";
 import { isUniversityEmail } from "@/shared/lib/format";
 import { Button } from "@/shared/ui/Button";
@@ -14,6 +15,7 @@ export function ForgotPasswordPage() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [emailError, setEmailError] = useState<string>();
+  const [formError, setFormError] = useState<string>();
   const [loading, setLoading] = useState(false);
 
   if (isAuthenticated) {
@@ -23,20 +25,22 @@ export function ForgotPasswordPage() {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setEmailError(undefined);
+    setFormError(undefined);
     if (!isUniversityEmail(email)) {
       setEmailError(t("invalidEmail"));
-      return;
-    }
-    if (!accountExists(email)) {
-      setEmailError(t("accountNotFound"));
       return;
     }
 
     setLoading(true);
     try {
-      await delay();
-      startVerification({ email, purpose: "reset" });
-      navigate("/verify", { state: { email: email.trim().toLowerCase(), purpose: "reset" } });
+      // The backend answers the same way whether or not the account exists,
+      // so it can't be used to discover registered emails.
+      const normalized = email.trim().toLowerCase();
+      const devCode = await forgotPasswordRequest(normalized);
+      savePending({ purpose: "reset", email: normalized, devCode });
+      navigate("/verify");
+    } catch (err) {
+      setFormError(getErrorStatus(err) === 429 ? t("tooManyRequests") : t("serverUnavailable"));
     } finally {
       setLoading(false);
     }
@@ -57,6 +61,11 @@ export function ForgotPasswordPage() {
           onChange={(e) => setEmail(e.target.value)}
           error={emailError}
         />
+        {formError ? (
+          <p className="text-sm text-error" role="alert">
+            {formError}
+          </p>
+        ) : null}
         <Button type="submit" size="lg" disabled={loading}>
           {loading ? t("loading") : t("sendCode")}
         </Button>

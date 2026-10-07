@@ -26,7 +26,7 @@ export function ThreadCard({ thread }: { thread: Thread }) {
           <div className="mt-2 flex items-center gap-3 text-xs text-label">
             <span className="inline-flex items-center gap-1">
               <ChevronUp className="h-3.5 w-3.5" />
-              {thread.topAnswerLikes}
+              {thread.score}
             </span>
             <span className="inline-flex items-center gap-1">
               <MessageCircle className="h-3.5 w-3.5" />

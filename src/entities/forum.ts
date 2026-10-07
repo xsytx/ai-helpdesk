@@ -6,7 +6,8 @@ export interface Thread {
   body: string;
   createdAt: string;
   answerCount: number;
-  topAnswerLikes: number;
+  /** Net upvotes on the thread itself. */
+  score: number;
 }
 
 export interface Answer {

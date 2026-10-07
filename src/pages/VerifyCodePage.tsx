@@ -1,50 +1,46 @@
 import { useAuth } from "@/app/AuthContext";
 import {
   clearPending,
-  createAccount,
-  delay,
+  forgotPasswordRequest,
   readPending,
-  startVerification,
-  toUser,
-  verifyCode,
-  type VerifyPurpose,
-} from "@/features/auth/demoAuth";
+  resendVerificationRequest,
+  savePending,
+  verifyEmailRequest,
+  verifyResetCodeRequest,
+} from "@/features/auth/api";
 import { useLocale } from "@/i18n/LocaleContext";
+import { getErrorStatus } from "@/shared/api/client";
 import { AuthLayout } from "@/shared/layout/AuthLayout";
 import { Button } from "@/shared/ui/Button";
 import { OtpInput } from "@/shared/ui/OtpInput";
-import { FormEvent, useMemo, useState } from "react";
-import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
+import { FormEvent, useState } from "react";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 
+/** Enter the emailed 6-digit code — after sign up, or after "Forgot password?". */
 export function VerifyCodePage() {
   const { isAuthenticated, login } = useAuth();
   const { t } = useLocale();
   const navigate = useNavigate();
-  const location = useLocation();
-  const pending = readPending();
-  const fromState = location.state as { email?: string; purpose?: VerifyPurpose } | null;
-  const email = fromState?.email ?? pending?.email ?? "";
-  const purpose: VerifyPurpose = fromState?.purpose ?? pending?.purpose ?? "signup";
-  const hasSession = Boolean((fromState?.email ?? pending?.email) && (fromState?.purpose ?? pending?.purpose));
+  const [pending, setPending] = useState(readPending);
 
   const [code, setCode] = useState("");
   const [error, setError] = useState<string>();
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
-  const [demoCode, setDemoCode] = useState(pending?.code);
-
-  const maskedEmail = useMemo(() => email ?? "", [email]);
 
   if (isAuthenticated) {
     return <Navigate to="/" replace />;
   }
 
-  if (!hasSession) {
+  if (!pending) {
     return <Navigate to="/login" replace />;
   }
 
+  const email = pending.purpose === "signup" ? pending.user.email : pending.email;
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
+    if (!pending) return;
     setError(undefined);
     if (code.length !== 6) {
       setError(t("codeIncomplete"));
@@ -52,40 +48,43 @@ export function VerifyCodePage() {
     }
     setLoading(true);
     try {
-      await delay();
-      const verified = verifyCode(email, code);
-      if (verified.purpose === "signup") {
-        const account = createAccount({
-          email: verified.email,
-          username: verified.username ?? verified.email.split("@")[0] ?? "Student",
-          password: verified.password ?? "",
-        });
+      if (pending.purpose === "signup") {
+        await verifyEmailRequest(pending.token, code);
         clearPending();
-        login(toUser(account), "demo-jwt-token");
+        login({ ...pending.user, emailVerified: true }, pending.token);
         navigate("/");
-        return;
+      } else {
+        // Checked here so a wrong code is caught before the new-password step;
+        // the code is only used up by /reset-password itself.
+        await verifyResetCodeRequest(pending.email, code);
+        clearPending();
+        navigate("/reset-password", { state: { email: pending.email, code } });
       }
-      navigate("/reset-password", { state: { email: verified.email, verified: true } });
-    } catch {
-      setError(t("wrongCode"));
+    } catch (err) {
+      const status = getErrorStatus(err);
+      setError(
+        status === 400 ? t("wrongCode") : status === 429 ? t("tooManyRequests") : t("serverUnavailable"),
+      );
     } finally {
       setLoading(false);
     }
   }
 
   async function handleResend() {
+    if (!pending) return;
     setResending(true);
     setError(undefined);
     try {
-      await delay(400);
-      const next = startVerification({
-        email,
-        purpose,
-        username: pending?.username,
-        password: pending?.password,
-      });
-      setDemoCode(next.code);
+      const devCode =
+        pending.purpose === "signup"
+          ? await resendVerificationRequest(pending.token)
+          : await forgotPasswordRequest(pending.email);
+      const next = { ...pending, devCode };
+      savePending(next);
+      setPending(next);
       setCode("");
+    } catch (err) {
+      setError(getErrorStatus(err) === 429 ? t("tooManyRequests") : t("serverUnavailable"));
     } finally {
       setResending(false);
     }
@@ -95,7 +94,7 @@ export function VerifyCodePage() {
     <AuthLayout>
       <h1 className="mb-2 text-2xl font-bold text-primary">{t("checkEmailTitle")}</h1>
       <p className="mb-6 text-sm text-label">
-        {t("checkEmailSubtitle")} <span className="font-medium text-primary">{maskedEmail}</span>
+        {t("checkEmailSubtitle")} <span className="font-medium text-primary">{email}</span>
       </p>
       <form className="space-y-5" onSubmit={handleSubmit}>
         <OtpInput value={code} onChange={setCode} error={Boolean(error)} />
@@ -104,9 +103,9 @@ export function VerifyCodePage() {
             {error}
           </p>
         ) : null}
-        {demoCode ? (
+        {pending.devCode ? (
           <p className="rounded-xl bg-background-2 px-3 py-2 text-center text-xs text-label">
-            {t("demoCodeHint")}: <span className="font-semibold text-primary">{demoCode}</span>
+            {t("demoCodeHint")}: <span className="font-semibold text-primary">{pending.devCode}</span>
           </p>
         ) : null}
         <Button type="submit" size="lg" disabled={loading}>
@@ -122,7 +121,7 @@ export function VerifyCodePage() {
         >
           {resending ? t("loading") : t("resendCode")}
         </button>
-        <Link to="/login" className="text-label hover:underline">
+        <Link to="/login" className="text-label hover:underline" onClick={clearPending}>
           {t("backToLogin")}
         </Link>
       </div>

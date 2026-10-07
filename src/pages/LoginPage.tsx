@@ -1,5 +1,11 @@
 import { useAuth } from "@/app/AuthContext";
-import { authenticate, delay, toUser } from "@/features/auth/demoAuth";
+import {
+  loginRequest,
+  resendVerificationRequest,
+  savePending,
+  toUser,
+} from "@/features/auth/api";
+import { getErrorStatus } from "@/shared/api/client";
 import { useLocale } from "@/i18n/LocaleContext";
 import { AuthLayout } from "@/shared/layout/AuthLayout";
 import { isUniversityEmail } from "@/shared/lib/format";
@@ -20,6 +26,7 @@ export function LoginPage() {
   const [password, setPassword] = useState("");
   const [emailError, setEmailError] = useState<string>();
   const [passwordError, setPasswordError] = useState<string>();
+  const [formError, setFormError] = useState<string>();
   const [loading, setLoading] = useState(false);
 
   if (isAuthenticated) {
@@ -30,6 +37,7 @@ export function LoginPage() {
     e.preventDefault();
     setPasswordError(undefined);
     setEmailError(undefined);
+    setFormError(undefined);
 
     if (!isUniversityEmail(email)) {
       setEmailError(t("corporateEmail"));
@@ -42,12 +50,21 @@ export function LoginPage() {
 
     setLoading(true);
     try {
-      await delay();
-      const account = authenticate(email, password);
-      login(toUser(account), "demo-jwt-token");
+      const { token, user } = await loginRequest(email, password);
+      if (!user.email_verified) {
+        const devCode = await resendVerificationRequest(token).catch(() => undefined);
+        savePending({ purpose: "signup", token, user: toUser(user), devCode });
+        navigate("/verify");
+        return;
+      }
+      login(toUser(user), token);
       navigate("/");
-    } catch {
-      setPasswordError(t("invalidCredentials"));
+    } catch (err) {
+      const status = getErrorStatus(err);
+      if (status === 401) setPasswordError(t("invalidCredentials"));
+      else if (status === 403) setFormError(t("accountSuspended"));
+      else if (status === 429) setFormError(t("tooManyRequests"));
+      else setFormError(t("serverUnavailable"));
     } finally {
       setLoading(false);
     }
@@ -79,6 +96,12 @@ export function LoginPage() {
           onChange={(e) => setPassword(e.target.value)}
           error={passwordError}
         />
+
+        {formError ? (
+          <p className="text-sm text-error" role="alert">
+            {formError}
+          </p>
+        ) : null}
 
         <div className="flex justify-end">
           <Link to="/forgot-password" className="text-sm font-medium text-primary-light hover:underline">

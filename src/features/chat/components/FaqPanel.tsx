@@ -1,4 +1,4 @@
-import { FAQ_ENTRIES } from "@/entities/faq";
+import { useFaqs } from "@/features/chat/api";
 import { useLocale } from "@/i18n/LocaleContext";
 import { cn } from "@/shared/lib/cn";
 import { Card } from "@/shared/ui/Card";
@@ -8,13 +8,20 @@ import { useState } from "react";
 export function FaqPanel({ compact = true }: { compact?: boolean }) {
   const { t } = useLocale();
   const [openId, setOpenId] = useState<string | null>(null);
+  const { data: entries = [], isLoading, isError } = useFaqs();
 
   return (
     <Card className={compact ? "h-full" : ""}>
       <h3 className="text-lg font-bold text-primary">{t("faq")}</h3>
       <p className="mt-1 text-sm text-label">{t("faqSubtitle")}</p>
+      {isLoading ? <p className="mt-4 text-sm text-label">{t("loading")}</p> : null}
+      {isError ? (
+        <p className="mt-4 text-sm text-error" role="alert">
+          {t("faqLoadFailed")}
+        </p>
+      ) : null}
       <ul className="mt-4 space-y-2">
-        {FAQ_ENTRIES.map((entry) => {
+        {entries.map((entry) => {
           const isOpen = openId === entry.id;
           return (
             <li key={entry.id}>
