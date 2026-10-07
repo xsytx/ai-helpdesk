@@ -102,11 +102,10 @@ normal password>`, `SMTP_FROM=SDU Helpdesk <your gmail>`.
   (bold/italic/links/code/lists — rendered server-side via `goldmark`),
   optional tags, and up to one image attachment upload after posting.
   Reply to a thread or to any comment (unlimited depth on the backend,
-  capped visual indent on the frontend). **Posting is currently
-  anonymous — no account needed** (a temporary state; see "Anonymous
-  posting" below). Editing/deleting a post still requires being logged
-  in as its owner, which no anonymous post has, so in practice only a
-  moderator can remove one for now.
+  capped visual indent on the frontend). Posting requires a logged-in
+  account with a verified email; posts show their real author. (Posts
+  from an earlier anonymous-posting period belong to a shared
+  "Anonymous" system account — see "Anonymous posts" below.)
 - **Upvotes**: upvote/downvote threads and comments; clicking the same
   arrow again removes your vote, the other arrow flips it.
 - **Tags**: free-form labels — the only way threads are organized. A
@@ -141,31 +140,18 @@ normal password>`, `SMTP_FROM=SDU Helpdesk <your gmail>`.
   forgot-password) and on content creation (threads/comments) — see
   `middleware.RateLimit`.
 
-## Anonymous posting (temporary)
+## Anonymous posts
 
-`CreateThread` and `CreateComment` currently accept requests with no
-`Authorization` header at all — posting doesn't require an account right
-now. Every anonymous post is attributed to a shared system account
-(email `anonymous@system.local`, seeded idempotently by the migration;
-its `password_hash`/`salt` are empty, which can never match a real
-password, so nobody can log in as it) rather than a real user, and
-`h.AnonymousUserID` (looked up once at startup in `cmd/server/main.go`
-and threaded through `Handlers`) is what the two handlers pass to the
-store instead of a real `uid`.
-
-This is a deliberate, temporary step back from the account-based posting
-this forum had before — the plan is to reintroduce a login requirement
-for posting later. To do that, reverse this section: restore the
-`h.userID(r)` / `requireNotBanned` / `requireVerified` checks at the top
-of `CreateThread`/`CreateComment` (`requireVerified` was left in place,
-unused, specifically for this), and re-add `authMw` to their routes in
-`main.go`. Everything else — voting, profiles, moderation, notifications,
-subscriptions — was never touched and still requires login exactly as
-before; only thread/comment *creation* changed. Editing or deleting a
-post still checks ownership by `user_id`, so an anonymous post (owned by
-the shared account, which nobody can log in as) can in practice only be
-removed by a moderator via `AdminDeleteThread`/`AdminDeleteComment`, not
-by whoever originally wrote it.
+For a while the MVP let anyone post without an account; those posts
+were attributed to a shared system account (email
+`anonymous@system.local`, display name "Anonymous", seeded idempotently
+by the migration). Posting now requires login again — `CreateThread`/
+`CreateComment` sit behind `authMw` and check `requireNotBanned` and
+`requireVerified` — so new posts carry their real author. The system
+account is kept because older posts still reference it: its
+`password_hash`/`salt` are empty, which can never match a real password,
+so nobody can log in as it, and its posts can only be removed by a
+moderator via `AdminDeleteThread`/`AdminDeleteComment`.
 
 ## Project layout
 
@@ -214,12 +200,12 @@ inbox at that point.
 | GET    | `/api/stats`                      | –    | Platform-wide counts (users/threads/comments/tags) |
 | GET    | `/api/search`                     | –    | `?q=&page=&page_size=` — full-text search |
 | GET    | `/api/tags/trending` / `/api/tags/{name}/threads` | – | Trending tags / browse by tag |
-| POST   | `/api/threads`                    | –    | `{title, body, tags?}` — anonymous for now, see "Anonymous posting" |
+| POST   | `/api/threads`                    | ✓    | `{title, body, tags?}` — verified email required |
 | GET    | `/api/threads/{id}`               | –    | `{thread, comments, subscribed}` (comments are flat; nest client-side via `parent_comment_id`) |
 | PATCH / DELETE | `/api/threads/{id}`       | ✓    | Owner, or moderator for delete    |
 | POST   | `/api/threads/{id}/attachments`   | ✓    | Multipart `file` field (owner only, image ≤5MB) |
 | POST / DELETE | `/api/threads/{id}/subscribe` | ✓ | Follow / unfollow a thread's activity |
-| POST   | `/api/threads/{id}/comments`      | –    | `{body, parent_comment_id?}` — anonymous for now, see "Anonymous posting" |
+| POST   | `/api/threads/{id}/comments`      | ✓    | `{body, parent_comment_id?}` — verified email required |
 | PATCH / DELETE | `/api/comments/{id}`      | ✓    | Owner, or moderator for delete    |
 | POST   | `/api/threads/{id}/vote` / `/api/comments/{id}/vote` | ✓ | `{value: 1 \| -1}` |
 | GET    | `/api/users/{id}` / `/threads` / `/comments` | – | Public profile + their posts |

@@ -82,13 +82,17 @@ func normalizeTags(raw []string) []string {
 	return out
 }
 
-// CreateThread doesn't require an account right now — posting is
-// anonymous (a temporary state; real authorization is coming back
-// later). Every thread is attributed to the shared AnonymousUserID
-// rather than a real one, so ban/verification checks (which are about a
-// real account's standing) don't apply here — there's no real account
-// to check.
+// CreateThread posts a thread as the logged-in user, who must have a
+// verified email and not be banned.
 func (h *Handlers) CreateThread(w http.ResponseWriter, r *http.Request) {
+	uid, ok := h.userID(r)
+	if !ok {
+		writeError(w, http.StatusUnauthorized, "not authenticated")
+		return
+	}
+	if !h.requireNotBanned(w, r, uid) || !h.requireVerified(w, r, uid) {
+		return
+	}
 	var req threadReq
 	if err := decodeJSON(r, &req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
@@ -100,7 +104,7 @@ func (h *Handlers) CreateThread(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "title and body are required")
 		return
 	}
-	t, err := h.Store.CreateThread(r.Context(), h.AnonymousUserID, store.ThreadInput{
+	t, err := h.Store.CreateThread(r.Context(), uid, store.ThreadInput{
 		Title: req.Title, Body: req.Body, Tags: normalizeTags(req.Tags),
 	})
 	if err != nil {
@@ -206,9 +210,17 @@ type createCommentReq struct {
 	ParentCommentID *int64 `json:"parent_comment_id,omitempty"`
 }
 
-// CreateComment doesn't require an account right now, for the same
-// reason as CreateThread — see its comment.
+// CreateComment posts a reply as the logged-in user, under the same
+// rules as CreateThread.
 func (h *Handlers) CreateComment(w http.ResponseWriter, r *http.Request) {
+	uid, ok := h.userID(r)
+	if !ok {
+		writeError(w, http.StatusUnauthorized, "not authenticated")
+		return
+	}
+	if !h.requireNotBanned(w, r, uid) || !h.requireVerified(w, r, uid) {
+		return
+	}
 	threadID, err := pathInt64(r, "id")
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "invalid thread id")
@@ -224,12 +236,12 @@ func (h *Handlers) CreateComment(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "body is required")
 		return
 	}
-	c, err := h.Store.CreateComment(r.Context(), threadID, h.AnonymousUserID, req.Body, req.ParentCommentID)
+	c, err := h.Store.CreateComment(r.Context(), threadID, uid, req.Body, req.ParentCommentID)
 	if err != nil {
 		writeStoreErr(w, err, "could not create comment")
 		return
 	}
-	h.notifySubscribersByEmail(r.Context(), threadID, h.AnonymousUserID, c.AuthorName)
+	h.notifySubscribersByEmail(r.Context(), threadID, uid, c.AuthorName)
 	writeJSON(w, http.StatusCreated, c)
 }
 

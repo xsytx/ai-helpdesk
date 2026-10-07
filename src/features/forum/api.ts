@@ -156,7 +156,7 @@ export function useCreateThread() {
       body: string;
     }) => {
       if (USE_MOCK_API) return repo.createThread(input);
-      // Posting is anonymous on the backend for now — the author is ignored.
+      // The backend takes the author from the login token, not the request body.
       const { data } = await apiClient.post<ApiThread>("/threads", {
         title: input.title,
         body: input.body,

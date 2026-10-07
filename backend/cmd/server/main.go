@@ -151,15 +151,7 @@ func main() {
 		}
 	}
 
-	// Posting doesn't require an account right now (see CreateThread/
-	// CreateComment) — every post is attributed to this shared system
-	// account instead, seeded idempotently by the migration.
-	anonUser, err := pgStore.GetUserByEmail(ctx, "anonymous@system.local")
-	if err != nil {
-		log.Fatalf("could not load the anonymous system user: %v", err)
-	}
-
-	h := handlers.New(pgStore, secret, mailer.New(), uploadDir, baseURL, allowedEmailDomains, anonUser.ID)
+	h := handlers.New(pgStore, secret, mailer.New(), uploadDir, baseURL, allowedEmailDomains)
 
 	mux := http.NewServeMux()
 	authMw := middleware.Auth(secret)
@@ -198,17 +190,13 @@ func main() {
 	// both need the same per-IP throttle as login/register.
 	mux.Handle("POST /api/verify-email", authMw(authLimiter(http.HandlerFunc(h.VerifyEmail))))
 	mux.Handle("POST /api/resend-verification", authMw(authLimiter(http.HandlerFunc(h.ResendVerification))))
-	// CreateThread/CreateComment deliberately skip authMw: posting doesn't
-	// require an account right now (anonymous posting, a temporary state
-	// — see those handlers), though they keep writeLimiter since anyone
-	// can now hit them. Everything else here still requires login.
-	mux.Handle("POST /api/threads", writeLimiter(http.HandlerFunc(h.CreateThread)))
+	mux.Handle("POST /api/threads", authMw(writeLimiter(http.HandlerFunc(h.CreateThread))))
 	mux.Handle("PATCH /api/threads/{id}", authMw(http.HandlerFunc(h.UpdateThread)))
 	mux.Handle("DELETE /api/threads/{id}", authMw(http.HandlerFunc(h.DeleteThread)))
 	mux.Handle("POST /api/threads/{id}/attachments", authMw(http.HandlerFunc(h.UploadAttachment)))
 	mux.Handle("POST /api/threads/{id}/subscribe", authMw(http.HandlerFunc(h.SubscribeThread)))
 	mux.Handle("DELETE /api/threads/{id}/subscribe", authMw(http.HandlerFunc(h.UnsubscribeThread)))
-	mux.Handle("POST /api/threads/{id}/comments", writeLimiter(http.HandlerFunc(h.CreateComment)))
+	mux.Handle("POST /api/threads/{id}/comments", authMw(writeLimiter(http.HandlerFunc(h.CreateComment))))
 	mux.Handle("PATCH /api/comments/{id}", authMw(http.HandlerFunc(h.UpdateComment)))
 	mux.Handle("DELETE /api/comments/{id}", authMw(http.HandlerFunc(h.DeleteComment)))
 	mux.Handle("POST /api/threads/{id}/vote", authMw(http.HandlerFunc(h.VoteThread)))

@@ -44,9 +44,9 @@ WHERE users.id = ranked.id AND ranked.rn > 1;
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_users_display_name_lower ON users (lower(display_name));
 
--- The shared system account CreateThread/CreateComment attribute posts
--- to while posting doesn't require a real account (a temporary state —
--- see those handlers). password_hash/salt are left empty, which
+-- The shared system account that owns posts made during the earlier
+-- anonymous-posting period (posting now requires a real account, but
+-- those rows still reference this user). password_hash/salt are left empty, which
 -- VerifyPassword can never match against any real password (a
 -- length-mismatched constant-time compare is just false), so nobody can
 -- log in as this account through the normal login flow.

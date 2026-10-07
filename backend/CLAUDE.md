@@ -45,8 +45,8 @@ written). Handlers never touch SQL directly; everything they need is a
 method on `store.Store` (`internal/store/store.go`).
 
 - **`cmd/server/main.go`** — reads env/`.env`, connects to Postgres, runs
-  migrations, promotes `ADMIN_EMAILS` to admin, looks up the shared
-  anonymous-posting system user, constructs `handlers.Handlers`, and
+  migrations, promotes `ADMIN_EMAILS` to admin, constructs
+  `handlers.Handlers`, and
   registers every route on `http.ServeMux` (Go 1.22+ method+pattern
   routing, e.g. `"POST /api/threads"`). This is the one file that knows
   the full route table and which middleware wraps which route — check it
@@ -56,7 +56,7 @@ method on `store.Store` (`internal/store/store.go`).
   `profile.go`, `subscriptions.go`, `tags.go`, `faq.go`,
   `attachments.go`, `feed.go`). All share the single `Handlers` struct
   (`handlers.go`) holding `Store`, `JWTSecret`, `Mailer`, `UploadDir`,
-  `BaseURL`, `AllowedEmailDomains`, `AnonymousUserID`. `helpers.go` has
+  `BaseURL`, `AllowedEmailDomains`. `helpers.go` has
   shared JSON/pagination helpers.
 - **`internal/store`** — `store.go` defines the `Store` interface and
   sentinel errors (`ErrNotFound`, `ErrConflict`, `ErrForbidden`,
@@ -99,12 +99,10 @@ method on `store.Store` (`internal/store/store.go`).
 
 ## Notable behavioral points worth knowing before touching related code
 
-- **Anonymous posting is currently enabled** (`CreateThread`/
-  `CreateComment` skip auth and attribute the post to a shared
-  `anonymous@system.local` system account) — a deliberate, temporary
-  state documented in detail in the README's "Anonymous posting"
-  section, including exactly how to revert it. Don't "fix" this as a
-  bug without reading that section first.
+- Posting requires a logged-in, verified, unbanned user. Older posts
+  from the MVP's anonymous-posting period belong to the
+  `anonymous@system.local` system account (see README "Anonymous
+  posts") — keep that account, those rows reference it.
 - Vote counts (`threads.score`/`comments.score`) are denormalized and
   kept in sync inside a transaction with `SELECT ... FOR UPDATE` in the
   `Vote` query — don't update scores by any other path.

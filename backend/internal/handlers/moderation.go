@@ -46,11 +46,7 @@ func (h *Handlers) requireNotBanned(w http.ResponseWriter, r *http.Request, uid 
 }
 
 // requireVerified writes a 403 and returns false if uid hasn't verified
-// their email yet. Currently unused: CreateThread/CreateComment dropped
-// their login requirement (posting is anonymous for now — see those
-// handlers), so there's no logged-in identity left to check at the point
-// this used to run. Kept around, not deleted, for when authorization
-// comes back and content creation is gated behind an account again.
+// their email yet. Gates content creation (CreateThread/CreateComment).
 func (h *Handlers) requireVerified(w http.ResponseWriter, r *http.Request, uid int64) bool {
 	u, err := h.Store.GetUserByID(r.Context(), uid)
 	if err != nil {

@@ -22,17 +22,12 @@ type Handlers struct {
 	// AllowedEmailDomains restricts registration to these domains
 	// (lowercase, no "@") when non-empty; empty means any domain.
 	AllowedEmailDomains []string
-	// AnonymousUserID is the shared system account CreateThread/
-	// CreateComment attribute every post to while posting doesn't
-	// require an account (see those handlers) — a temporary state until
-	// real authorization comes back.
-	AnonymousUserID int64
 }
 
-func New(s store.Store, jwtSecret []byte, m mailer.Mailer, uploadDir, baseURL string, allowedEmailDomains []string, anonymousUserID int64) *Handlers {
+func New(s store.Store, jwtSecret []byte, m mailer.Mailer, uploadDir, baseURL string, allowedEmailDomains []string) *Handlers {
 	return &Handlers{
 		Store: s, JWTSecret: jwtSecret, Mailer: m, UploadDir: uploadDir, BaseURL: baseURL,
-		AllowedEmailDomains: allowedEmailDomains, AnonymousUserID: anonymousUserID,
+		AllowedEmailDomains: allowedEmailDomains,
 	}
 }
 
