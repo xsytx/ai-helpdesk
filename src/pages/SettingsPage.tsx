@@ -1,4 +1,6 @@
 import { useAuth } from "@/app/AuthContext";
+import { AvatarPicker } from "@/features/profile/components/AvatarPicker";
+import { PasswordChangeForm } from "@/features/profile/components/PasswordChangeForm";
 import { useLocale } from "@/i18n/LocaleContext";
 import { Card } from "@/shared/ui/Card";
 import { Button } from "@/shared/ui/Button";
@@ -18,7 +20,7 @@ export function SettingsPage() {
         <dl className="mt-4 space-y-2 text-sm">
           <div>
             <dt className="text-label">{t("emailLabel")}</dt>
-            <dd className="font-medium text-primary">{user.email}</dd>
+            <dd className="break-all font-medium text-primary">{user.email}</dd>
           </div>
           <div>
             <dt className="text-label">{t("roleLabel")}</dt>
@@ -29,10 +31,16 @@ export function SettingsPage() {
           <span className="text-sm font-medium text-label">{t("languageLabel")}</span>
           <LanguageSwitcher />
         </div>
-        <Button variant="secondary" className="mt-6 w-full" onClick={logout}>
-          {t("logOut")}
-        </Button>
       </Card>
+      <Card>
+        <AvatarPicker />
+      </Card>
+      <Card>
+        <PasswordChangeForm />
+      </Card>
+      <Button variant="secondary" className="w-full" onClick={logout}>
+        {t("logOut")}
+      </Button>
     </div>
   );
 }

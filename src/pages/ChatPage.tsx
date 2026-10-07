@@ -1,3 +1,5 @@
+import { useAuth } from "@/app/AuthContext";
+import { UserAvatar } from "@/features/profile/components/UserAvatar";
 import { useLocale } from "@/i18n/LocaleContext";
 import { Card } from "@/shared/ui/Card";
 import { ArrowUp } from "lucide-react";
@@ -12,6 +14,7 @@ interface Message {
 
 export function ChatPage() {
   const { t } = useLocale();
+  const { user } = useAuth();
   const location = useLocation();
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
@@ -60,18 +63,23 @@ export function ChatPage() {
           {messages.length === 0 ? (
             <p className="text-sm text-label">{t("askPlaceholder")}</p>
           ) : (
-            messages.map((msg) => (
-              <div
-                key={msg.id}
-                className={
-                  msg.role === "user"
-                    ? "ml-auto max-w-[85%] rounded-2xl rounded-br-md bg-primary px-4 py-2.5 text-sm text-white"
-                    : "mr-auto max-w-[90%] rounded-2xl rounded-bl-md bg-background-2 px-4 py-2.5 text-sm text-primary"
-                }
-              >
-                {msg.text}
-              </div>
-            ))
+            messages.map((msg) =>
+              msg.role === "user" ? (
+                <div key={msg.id} className="flex items-end justify-end gap-2">
+                  <div className="max-w-[85%] rounded-2xl rounded-br-md bg-primary px-4 py-2.5 text-sm text-white">
+                    {msg.text}
+                  </div>
+                  <UserAvatar name={user?.name ?? ""} className="h-7 w-7 text-[10px]" />
+                </div>
+              ) : (
+                <div
+                  key={msg.id}
+                  className="mr-auto max-w-[90%] rounded-2xl rounded-bl-md bg-background-2 px-4 py-2.5 text-sm text-primary"
+                >
+                  {msg.text}
+                </div>
+              ),
+            )
           )}
           {typing ? (
             <p className="text-sm text-label" aria-live="polite">

@@ -2,7 +2,7 @@ import { accountExists, delay, startVerification } from "@/features/auth/demoAut
 import { useAuth } from "@/app/AuthContext";
 import { useLocale } from "@/i18n/LocaleContext";
 import { AuthLayout } from "@/shared/layout/AuthLayout";
-import { isUniversityEmail } from "@/shared/lib/format";
+import { isStrongPassword, isUniversityEmail } from "@/shared/lib/format";
 import { Button } from "@/shared/ui/Button";
 import { Input } from "@/shared/ui/Input";
 import { PasswordField } from "@/shared/ui/PasswordField";
@@ -46,7 +46,7 @@ export function SignUpPage() {
       setEmailError(t("emailAlreadyUsed"));
       invalid = true;
     }
-    if (!/^(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z0-9\s]).{8,}$/.test(password)) {
+    if (!isStrongPassword(password)) {
       setPasswordError(t("passwordRequirements"));
       invalid = true;
     }

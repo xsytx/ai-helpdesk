@@ -3,7 +3,7 @@ import { ReplyForm } from "@/features/forum/components/ReplyForm";
 import { useAnswers, useThread } from "@/features/forum/api";
 import { useLocale } from "@/i18n/LocaleContext";
 import { formatRelativeTime } from "@/shared/lib/format";
-import { Avatar } from "@/shared/ui/Avatar";
+import { UserAvatar } from "@/features/profile/components/UserAvatar";
 import { Card } from "@/shared/ui/Card";
 import { ArrowLeft } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
@@ -43,7 +43,7 @@ export function ThreadDetailPage() {
 
       <Card>
         <div className="flex gap-3">
-          <Avatar name={thread.authorName} />
+          <UserAvatar userId={thread.authorId} name={thread.authorName} />
           <div>
             <p className="text-xs text-label">
               {thread.authorName} · {formatRelativeTime(thread.createdAt, locale)}

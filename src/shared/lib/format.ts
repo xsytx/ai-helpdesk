@@ -9,6 +9,11 @@ export function isUniversityEmail(email: string): boolean {
   return /^[^\s@]+@sdu\.edu\.kz$/i.test(email.trim());
 }
 
+/** 8+ chars with at least one letter, one digit and one symbol. */
+export function isStrongPassword(password: string): boolean {
+  return /^(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z0-9\s]).{8,}$/.test(password);
+}
+
 export function formatRelativeTime(iso: string, locale: string): string {
   const date = new Date(iso);
   const diffMs = Date.now() - date.getTime();

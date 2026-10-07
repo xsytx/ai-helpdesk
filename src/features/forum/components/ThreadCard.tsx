@@ -1,7 +1,7 @@
 import type { Thread } from "@/entities/forum";
 import { useLocale } from "@/i18n/LocaleContext";
 import { formatRelativeTime } from "@/shared/lib/format";
-import { Avatar } from "@/shared/ui/Avatar";
+import { UserAvatar } from "@/features/profile/components/UserAvatar";
 import { ChevronUp, MessageCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -15,7 +15,7 @@ export function ThreadCard({ thread }: { thread: Thread }) {
         to={`/forum/${thread.id}`}
         className="flex gap-3 rounded-xl p-2 transition-colors hover:bg-background-2/80"
       >
-        <Avatar name={thread.authorName} />
+        <UserAvatar userId={thread.authorId} name={thread.authorName} />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
             <span className="text-sm font-semibold text-primary">{thread.authorName}</span>

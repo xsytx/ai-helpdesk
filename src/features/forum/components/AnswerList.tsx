@@ -3,7 +3,7 @@ import { useAuth } from "@/app/AuthContext";
 import { useLikeAnswer } from "@/features/forum/api";
 import { useLocale } from "@/i18n/LocaleContext";
 import { formatRelativeTime } from "@/shared/lib/format";
-import { Avatar } from "@/shared/ui/Avatar";
+import { UserAvatar } from "@/features/profile/components/UserAvatar";
 import { LikeButton } from "./LikeButton";
 
 export function AnswerList({ threadId, answers }: { threadId: string; answers: Answer[] }) {
@@ -43,7 +43,7 @@ export function AnswerList({ threadId, answers }: { threadId: string; answers: A
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
-                <Avatar name={answer.authorName} className="h-8 w-8 text-[10px]" />
+                <UserAvatar userId={answer.authorId} name={answer.authorName} className="h-8 w-8 text-[10px]" />
                 <div>
                   <p className="text-sm font-semibold text-primary">{answer.authorName}</p>
                   <p className="text-xs text-label">
