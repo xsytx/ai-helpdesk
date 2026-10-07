@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sign up — SDU Threads</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <header class="site">
+    <a class="brand" href="index.html">🧵 SDU Threads</a>
+    <nav id="site-nav"></nav>
+  </header>
+  <main>
+    <div class="card auth-card">
+      <h1>Create your account</h1>
+      <p class="muted">Use your @sdu.edu.kz student email to join the forum.</p>
+      <div id="error" class="error-box hidden"></div>
+      <form id="register-form" class="stack">
+        <input type="text" id="display_name" placeholder="Display name" required />
+        <input type="email" id="email" placeholder="you@sdu.edu.kz" required />
+        <input type="password" id="password" placeholder="Password (min 8 characters)" minlength="8" required />
+        <button class="primary" type="submit">Sign up</button>
+      </form>
+      <p class="muted" style="margin-top:14px;">Already have an account? <a href="login.html">Log in</a></p>
+    </div>
+  </main>
+  <script src="js/api.js"></script>
+  <script src="js/register.js"></script>
+</body>
+</html>

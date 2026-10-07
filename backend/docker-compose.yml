@@ -1,0 +1,51 @@
+# Runs the MVP app plus its PostgreSQL database. The app applies the
+# schema itself on startup (internal/store/migrations/001_init.sql is
+# embedded in the binary), so no separate migration step is needed here.
+# Pinned so the containers (sdu_ai_helpdesk-db-1, -app-1) and the data
+# volumes keep the same names no matter which folder this is run from.
+name: sdu_ai_helpdesk
+
+services:
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      ADDR: ":8080"
+      DATABASE_URL: "postgres://campus_forum:campus_forum@db:5432/campus_forum?sslmode=disable"
+      JWT_SECRET_FILE: "/data/jwt.secret"
+      UPLOAD_DIR: "/data/uploads"
+      BASE_URL: "http://localhost:8080"
+      # Real email delivery (verification and password reset codes). Set
+      # these in .env next to this file; left empty, codes are only logged.
+      SMTP_HOST: "${SMTP_HOST:-}"
+      SMTP_PORT: "${SMTP_PORT:-587}"
+      SMTP_USER: "${SMTP_USER:-}"
+      SMTP_PASS: "${SMTP_PASS:-}"
+      SMTP_FROM: "${SMTP_FROM:-}"
+    volumes:
+      - app-data:/data
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: campus_forum
+      POSTGRES_PASSWORD: campus_forum
+      POSTGRES_DB: campus_forum
+    ports:
+      - "5432:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U campus_forum -d campus_forum"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  app-data:
+  db-data:

@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SDU Threads</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <header class="site">
+    <a class="brand" href="index.html">🧵 SDU Threads</a>
+    <nav id="site-nav"></nav>
+  </header>
+
+  <div class="feed-layout">
+    <aside class="col-sidebar-left">
+      <div class="sidebar-card">
+        <h3>Community stats</h3>
+        <div class="stats-grid" id="stats-grid"></div>
+      </div>
+    </aside>
+
+    <main class="col-main">
+      <div id="error" class="error-box hidden"></div>
+
+      <div id="welcome-banner"></div>
+
+      <div class="card" id="composer-card">
+        <form id="composer-form" class="stack">
+          <input type="text" id="composer-title" placeholder="Title" required maxlength="200" />
+          <textarea id="composer-body" placeholder="What's happening on campus? (Markdown supported)" required></textarea>
+          <input type="text" id="composer-tags" placeholder="Tags, comma-separated (e.g. housing, marketplace, courses)" />
+          <button class="primary" type="submit">Post</button>
+        </form>
+      </div>
+      <p class="muted hidden" id="login-prompt">
+        <a href="login.html">Log in</a> to post.
+      </p>
+
+      <div class="sort-tabs" id="sort-tabs">
+        <button class="sort-tab" data-sort="new">🧭 New</button>
+        <button class="sort-tab" data-sort="top">📈 Top</button>
+        <button class="sort-tab" data-sort="comments">💬 Most commented</button>
+        <button class="sort-tab" data-sort="saved">🔖 Saved</button>
+      </div>
+
+      <div id="feed"></div>
+      <p class="muted hidden" id="feed-empty">Nothing here yet.</p>
+      <button class="load-more-btn hidden" id="load-more-btn">Load more discussions</button>
+    </main>
+
+    <aside class="col-sidebar-right">
+      <div class="sidebar-card">
+        <h3>Trending tags</h3>
+        <div class="pill-row" id="trending-tags"></div>
+      </div>
+    </aside>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script src="js/index.js"></script>
+</body>
+</html>

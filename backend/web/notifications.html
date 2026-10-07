@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Notifications — SDU Threads</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <header class="site">
+    <a class="brand" href="index.html">🧵 SDU Threads</a>
+    <nav id="site-nav"></nav>
+  </header>
+  <main>
+    <div class="post-actions" style="justify-content: space-between; margin-top: 0;">
+      <h1 style="margin: 0;">Notifications</h1>
+      <button id="mark-all-read" class="link-btn">Mark all as read</button>
+    </div>
+    <div id="error" class="error-box hidden"></div>
+
+    <div id="notif-list"></div>
+    <div class="pager hidden" id="pager">
+      <button id="pager-prev">← Prev</button>
+      <span class="muted" id="pager-info"></span>
+      <button id="pager-next">Next →</button>
+    </div>
+  </main>
+  <script src="js/api.js"></script>
+  <script src="js/notifications.js"></script>
+</body>
+</html>

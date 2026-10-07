@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Search — SDU Threads</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <header class="site">
+    <a class="brand" href="index.html">🧵 SDU Threads</a>
+    <nav id="site-nav"></nav>
+  </header>
+  <main>
+    <h1 id="search-heading">Search</h1>
+    <div id="error" class="error-box hidden"></div>
+
+    <div class="sidebar-card hidden" id="browse-tags-card">
+      <h3>Browse by tag</h3>
+      <div class="pill-row" id="browse-tags"></div>
+    </div>
+
+    <div id="results"></div>
+    <div class="pager hidden" id="pager">
+      <button id="pager-prev">← Prev</button>
+      <span class="muted" id="pager-info"></span>
+      <button id="pager-next">Next →</button>
+    </div>
+  </main>
+  <script src="js/api.js"></script>
+  <script src="js/search.js"></script>
+</body>
+</html>

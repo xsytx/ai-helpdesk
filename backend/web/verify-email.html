@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Verify email — SDU Threads</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <header class="site">
+    <a class="brand" href="index.html">🧵 SDU Threads</a>
+    <nav id="site-nav"></nav>
+  </header>
+  <main>
+    <div class="card auth-card">
+      <h1>Verify your email</h1>
+      <p class="muted" id="verify-intro">Enter the 6-digit code we emailed you.</p>
+      <div id="error" class="error-box hidden"></div>
+      <p class="muted hidden" id="dev-code-hint" style="background:#eff6ff; border:1px solid #bfdbfe; color:#1e40af; padding:10px 14px; border-radius:var(--radius-sm);"></p>
+      <form id="verify-form" class="stack">
+        <input type="text" id="verify-code" inputmode="numeric" pattern="[0-9]*" maxlength="6"
+               placeholder="000000" autocomplete="one-time-code" required
+               style="letter-spacing:0.3em; text-align:center; font-size:1.3rem;" />
+        <button class="primary" type="submit">Verify</button>
+      </form>
+      <p class="muted" style="margin-top:14px;">
+        Didn't get a code? <button type="button" class="link-btn" id="resend-btn">Resend it</button>
+      </p>
+      <p class="muted hidden" id="resend-status"></p>
+      <p class="muted" style="margin-top:6px;"><a href="index.html">Skip for now</a></p>
+    </div>
+  </main>
+  <script src="js/api.js"></script>
+  <script src="js/verify-email.js"></script>
+</body>
+</html>

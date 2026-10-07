@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Thread — SDU Threads</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <header class="site">
+    <a class="brand" href="index.html">🧵 SDU Threads</a>
+    <nav id="site-nav"></nav>
+  </header>
+  <main>
+    <div class="breadcrumb"><a id="back-link" href="index.html">← Back</a></div>
+    <div id="error" class="error-box hidden"></div>
+
+    <div class="card" id="thread-card"></div>
+
+    <h2>Comments</h2>
+
+    <div class="card" id="new-comment-card">
+      <form id="comment-form" class="stack">
+        <textarea id="comment-body" placeholder="Add a comment…" required></textarea>
+        <button class="primary" type="submit">Post comment</button>
+      </form>
+    </div>
+    <p class="muted hidden" id="login-prompt">
+      <a href="login.html">Log in</a> to comment.
+    </p>
+
+    <div id="comments" class="card"></div>
+  </main>
+  <script src="js/api.js"></script>
+  <script src="js/thread.js"></script>
+</body>
+</html>

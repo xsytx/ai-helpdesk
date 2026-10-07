@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Log in — SDU Threads</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <header class="site">
+    <a class="brand" href="index.html">🧵 SDU Threads</a>
+    <nav id="site-nav"></nav>
+  </header>
+  <main>
+    <div class="card auth-card">
+      <h1>Log in</h1>
+      <div id="error" class="error-box hidden"></div>
+      <form id="login-form" class="stack">
+        <input type="email" id="email" placeholder="you@university.edu" required />
+        <input type="password" id="password" placeholder="Password" required />
+        <button class="primary" type="submit">Log in</button>
+      </form>
+      <p class="muted" style="margin-top:14px;">No account yet? <a href="register.html">Sign up</a></p>
+      <p class="muted" style="margin-top:4px;"><a href="forgot-password.html">Forgot your password?</a></p>
+    </div>
+  </main>
+  <script src="js/api.js"></script>
+  <script src="js/login.js"></script>
+</body>
+</html>
