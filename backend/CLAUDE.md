@@ -18,7 +18,7 @@ code alone.
 go run ./cmd/server           # run the server (needs Postgres — see below)
 go build ./...                # build everything
 go vet ./...                  # static checks
-docker compose up --build     # app + Postgres 16 in containers
+(cd .. && docker compose up -d --build)   # whole stack (compose file is in the repo root)
 ```
 
 There are no automated tests in this repo (`*_test.go` — none exist) and

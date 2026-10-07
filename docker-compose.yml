@@ -1,0 +1,70 @@
+# Runs the whole SDU Helpdesk: database, Go backend, and the React website.
+#
+#   docker compose up -d --build     then open http://localhost:3000
+#
+# Settings come from .env next to this file (copy .env.example). See README.md.
+
+# Pinned so container and volume names (sdu_ai_helpdesk-db-1, ...) stay the
+# same no matter which folder the repo is cloned into.
+name: sdu_ai_helpdesk
+
+services:
+  # The website: the built React app, served by nginx, which also forwards
+  # /api and /uploads to the backend so everything is on one address.
+  web:
+    build: .
+    ports:
+      - "${WEB_PORT:-3000}:80"
+    depends_on:
+      - app
+    restart: unless-stopped
+
+  # Go backend (backend/). Applies the database schema itself on startup.
+  app:
+    build: ./backend
+    environment:
+      ADDR: ":8080"
+      DATABASE_URL: "postgres://campus_forum:${DB_PASSWORD:-campus_forum}@db:5432/campus_forum?sslmode=disable"
+      JWT_SECRET_FILE: "/data/jwt.secret"
+      UPLOAD_DIR: "/data/uploads"
+      BASE_URL: "${PUBLIC_URL:-http://localhost:3000}"
+      ADMIN_EMAILS: "${ADMIN_EMAILS:-}"
+      # Real email delivery for verification / password reset codes. Left
+      # empty, codes are shown on screen instead (local testing only).
+      SMTP_HOST: "${SMTP_HOST:-}"
+      SMTP_PORT: "${SMTP_PORT:-587}"
+      SMTP_USER: "${SMTP_USER:-}"
+      SMTP_PASS: "${SMTP_PASS:-}"
+      SMTP_FROM: "${SMTP_FROM:-}"
+    # Only reachable from this computer — used by `npm run dev`. Visitors go
+    # through the web service above.
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - app-data:/data
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: campus_forum
+      POSTGRES_PASSWORD: "${DB_PASSWORD:-campus_forum}"
+      POSTGRES_DB: campus_forum
+    # Only reachable from this computer (for database tools like DBeaver).
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U campus_forum -d campus_forum"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  app-data:
+  db-data:

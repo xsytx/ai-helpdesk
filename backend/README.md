@@ -1,5 +1,11 @@
 # SDU Helpdesk — backend
 
+> **Running the whole project?** Use `docker compose up -d --build` from the
+> repository root and see [`../README.md`](../README.md). This file documents
+> the Go backend itself (API, database, configuration). The React app in the
+> repo root is the real frontend; `web/` below is the backend's original
+> plain-HTML UI, still served on port 8080 but no longer maintained.
+
 A student forum with a Threads/Twitter/Reddit-style feel: a scrolling
 home feed of posts organized entirely by free-form tags (no boards or
 categories), nested reply threads, image attachments, upvotes,
@@ -58,9 +64,9 @@ the log (or the `dev_verification_code` / `dev_reset_code` field in the
 API response). Fill in `SMTP_HOST`/`SMTP_PORT`/`SMTP_USER`/`SMTP_PASS`/
 `SMTP_FROM` to send for real; nothing else needs to change.
 
-With Docker Compose, put those `SMTP_*` values in a `.env` file next to
-`docker-compose.yml` (it's gitignored) — Compose passes them into the app
-container. For Gmail: `SMTP_HOST=smtp.gmail.com`, `SMTP_PORT=587`,
+With Docker Compose, put those `SMTP_*` values in the `.env` file in the
+repository root, next to `docker-compose.yml` (it's gitignored) — Compose
+passes them into the app container. For Gmail: `SMTP_HOST=smtp.gmail.com`, `SMTP_PORT=587`,
 `SMTP_USER=<your gmail>`, `SMTP_PASS=<a Google app password, not your
 normal password>`, `SMTP_FROM=SDU Helpdesk <your gmail>`.
 
@@ -167,7 +173,6 @@ internal/middleware/                  Auth, CORS, rate limiting
 internal/handlers/                    HTTP handlers (the REST API)
 web/                                  Static frontend (HTML/CSS/vanilla JS)
 uploads/                              Uploaded images (UPLOAD_DIR), gitignored
-docker-compose.yml                    App + Postgres for local dev
 ```
 
 ## API reference
@@ -291,14 +296,17 @@ Notable design points:
 
 ## Running with Docker Compose
 
+The compose file lives in the repository root (`../docker-compose.yml`)
+and runs this backend together with Postgres 16 and the React website:
+
 ```bash
-docker compose up --build
+cd ..
+docker compose up -d --build
 ```
 
-This starts the app (built from the `Dockerfile`) alongside a Postgres
-16 container; the app waits for Postgres to be healthy, connects, and
-applies the schema on boot. Uploaded images and the JWT secret persist
-in the `app-data` volume.
+The app (built from this folder's `Dockerfile`) waits for Postgres to be
+healthy, connects, and applies the schema on boot. Uploaded images and the
+JWT secret persist in the `app-data` volume, the database in `db-data`.
 
 ## Security notes for going beyond MVP
 
