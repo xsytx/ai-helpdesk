@@ -3,6 +3,10 @@
 #   docker compose up -d --build     then open http://localhost:3000
 #
 # Settings come from .env next to this file (copy .env.example). See README.md.
+#
+# The AI part (ai_ml folder + Ollama) runs on the HOST computer, not in Docker.
+# The backend container reaches it through host.docker.internal:8001, so start
+# the ML service with:  --host 0.0.0.0 --port 8001
 
 # Pinned so container and volume names (sdu_ai_helpdesk-db-1, ...) stay the
 # same no matter which folder the repo is cloned into.
@@ -36,6 +40,14 @@ services:
       SMTP_USER: "${SMTP_USER:-}"
       SMTP_PASS: "${SMTP_PASS:-}"
       SMTP_FROM: "${SMTP_FROM:-}"
+      # AI chat: the ML service (ai_ml) running on the host computer.
+      # Inside a container 127.0.0.1 is the container itself, so use host.docker.internal.
+      ML_SERVICE_URL: "${ML_SERVICE_URL:-http://host.docker.internal:8001}"
+      ML_REQUEST_TIMEOUT_SECONDS: "${ML_REQUEST_TIMEOUT_SECONDS:-180}"
+    # Makes host.docker.internal work on Linux too (Docker Desktop on
+    # Windows/macOS already has it; this line is harmless there).
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     # Only reachable from this computer — used by `npm run dev`. Visitors go
     # through the web service above.
     ports:
@@ -55,7 +67,7 @@ services:
       POSTGRES_DB: campus_forum
     # Only reachable from this computer (for database tools like DBeaver).
     ports:
-      - "127.0.0.1:5432:5432"
+      - "127.0.0.1:5433:5432"
     volumes:
       - db-data:/var/lib/postgresql/data
     healthcheck:

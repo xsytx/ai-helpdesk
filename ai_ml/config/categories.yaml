@@ -1,0 +1,14 @@
+# Maps raw free-text category strings (as typed in the Google Form, mixed
+# ru/kk/en) to one normalized category. Add new raw variants as they show up
+# in new form responses; anything not listed falls into "other".
+
+university_general:
+  - "University related/По университету/Университет бойынша"
+  - "University related"
+  - "По университету"
+  - "Университет бойынша"
+
+portal:
+  - "портал жайлы"
+  - "про портал"
+  - "portal"

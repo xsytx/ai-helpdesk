@@ -10,11 +10,13 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
 	"campus-forum/internal/handlers"
 	"campus-forum/internal/mailer"
+	"campus-forum/internal/mlclient"
 	"campus-forum/internal/middleware"
 	"campus-forum/internal/store"
 )
@@ -151,7 +153,17 @@ func main() {
 		}
 	}
 
+	mlURL := getenv("ML_SERVICE_URL", "http://127.0.0.1:8001")
+	mlTimeoutSec := 180
+	if v := getenv("ML_REQUEST_TIMEOUT_SECONDS", "180"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			mlTimeoutSec = n
+		}
+	}
+	mlTimeout := time.Duration(mlTimeoutSec) * time.Second
+
 	h := handlers.New(pgStore, secret, mailer.New(), uploadDir, baseURL, allowedEmailDomains)
+	h.ML = mlclient.New(mlURL, mlTimeout)
 
 	mux := http.NewServeMux()
 	authMw := middleware.Auth(secret)
@@ -163,6 +175,7 @@ func main() {
 	// doesn't get punished the way a fixed-window counter would.
 	authLimiter := middleware.RateLimit(0.2, 5) // ~1 attempt/5s, bursts of 5
 	writeLimiter := middleware.RateLimit(2, 20) // ~2/s sustained, bursts of 20
+	chatLimiter := middleware.NewChatRateLimit()
 
 	// --- Public API ---
 	mux.Handle("POST /api/register", authLimiter(http.HandlerFunc(h.Register)))
@@ -208,6 +221,10 @@ func main() {
 	mux.Handle("POST /api/threads/{id}/report", authMw(http.HandlerFunc(h.ReportThread)))
 	mux.Handle("POST /api/comments/{id}/report", authMw(http.HandlerFunc(h.ReportComment)))
 
+	mux.Handle("GET /api/chat/status", authMw(http.HandlerFunc(h.ChatStatus)))
+	mux.Handle("GET /api/chat/history", authMw(http.HandlerFunc(h.ChatHistory)))
+	mux.Handle("POST /api/chat/ask", authMw(chatLimiter.Wrap(http.HandlerFunc(h.ChatAsk))))
+
 	// --- Moderator/admin API (role checked inside each handler) ---
 	mux.Handle("POST /api/threads/{id}/lock", authMw(http.HandlerFunc(h.LockThread)))
 	mux.Handle("POST /api/users/{id}/ban", authMw(http.HandlerFunc(h.BanUser)))
@@ -224,11 +241,17 @@ func main() {
 	var rootHandler http.Handler = mux
 	rootHandler = middleware.CORS(corsOrigin)(rootHandler)
 
+	// Chat/ask can take up to ML_REQUEST_TIMEOUT_SECONDS; keep a small buffer.
+	writeTimeout := mlTimeout + 15*time.Second
+	if writeTimeout < 30*time.Second {
+		writeTimeout = 30 * time.Second
+	}
+
 	srv := &http.Server{
 		Addr:         addr,
 		Handler:      rootHandler,
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 10 * time.Second,
+		ReadTimeout:  30 * time.Second,
+		WriteTimeout: writeTimeout,
 		IdleTimeout:  60 * time.Second,
 	}
 

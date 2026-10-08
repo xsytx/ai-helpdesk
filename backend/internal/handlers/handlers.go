@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"campus-forum/internal/mailer"
+	"campus-forum/internal/mlclient"
 	appmw "campus-forum/internal/middleware"
 	"campus-forum/internal/store"
 )
@@ -22,6 +23,8 @@ type Handlers struct {
 	// AllowedEmailDomains restricts registration to these domains
 	// (lowercase, no "@") when non-empty; empty means any domain.
 	AllowedEmailDomains []string
+	// ML is the Python helpdesk service client (generate-answer / health).
+	ML *mlclient.Client
 }
 
 func New(s store.Store, jwtSecret []byte, m mailer.Mailer, uploadDir, baseURL string, allowedEmailDomains []string) *Handlers {

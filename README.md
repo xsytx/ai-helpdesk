@@ -10,7 +10,7 @@ Sign-in is restricted to `@sdu.edu.kz` university email addresses.
 | Forum (questions, answers, likes, best answer on top) | Working |
 | FAQ | Working (content managed in the database) |
 | Settings (avatar, password, language) | Working (avatar is saved in the browser only) |
-| AI chat assistant | Interface only, waiting for the ML service |
+| AI chat assistant | Working (via Go backend → Python ML service) |
 | Campus maps, courses | Placeholder pages |
 
 ## What's in this repo
@@ -150,6 +150,37 @@ HTTPS (for example Caddy, or Cloudflare) in front of the website port.
 | "Too many attempts" | Login, sign up and code checks are limited to about one try every 5 seconds. Wait a moment. |
 | Code email doesn't arrive | Check spam. Check the `SMTP_*` values in `.env`, then `docker compose up -d`. Without `SMTP_HOST` the code is shown on screen instead. |
 | Changes to the code don't show up | Rebuild: `docker compose up -d --build`. |
+
+## AI chat assistant (local)
+
+The React app calls **only** the Go backend (`POST /api/chat/ask`). The backend
+proxies to the Python ML service in `ai_ml/` — the browser never sees
+`ML_SERVICE_URL`.
+
+1. Start Ollama and pull `qwen3:4b`, then `ollama serve`.
+2. From `ai_ml/`, run the ML API on port **8001** (see `ai_ml/README.md`).
+3. Start Postgres + backend (`docker compose up -d db app` or `go run ./cmd/server`
+   from `backend/`).
+4. Start the website (`npm run dev` or Docker `web`).
+
+Backend env (in `backend/.env` or Docker `app` service):
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `ML_SERVICE_URL` | `http://127.0.0.1:8001` | ML service base URL |
+| `ML_REQUEST_TIMEOUT_SECONDS` | `180` | Upstream timeout for one answer |
+
+If the backend runs **inside Docker** but ML runs on your PC, set
+`ML_SERVICE_URL=http://host.docker.internal:8001` for the `app` service.
+
+Quick check (replace `<token>` with a JWT from login):
+
+```bash
+curl -s -X POST http://localhost:8080/api/chat/ask \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
+  -d "{\"question\":\"What is GPA?\"}"
+```
 
 ## Tech stack
 

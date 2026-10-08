@@ -1309,3 +1309,57 @@ func (s *PostgresStore) ChangePassword(ctx context.Context, userID int64, newPas
 	}
 	return nil
 }
+
+// --- AI chat history ---
+
+func (s *PostgresStore) CreateChatMessage(ctx context.Context, userID int64, msg models.ChatMessage) (models.ChatMessage, error) {
+	var out models.ChatMessage
+	err := s.pool.QueryRow(ctx,
+		`INSERT INTO chat_messages (user_id, role, text, forum_answer, ai_explanation, basis, language)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7)
+		 RETURNING id, user_id, role, text, forum_answer, ai_explanation, basis, language, created_at`,
+		userID, msg.Role, msg.Text, msg.ForumAnswer, msg.AIExplanation, msg.Basis, msg.Language,
+	).Scan(&out.ID, &out.UserID, &out.Role, &out.Text, &out.ForumAnswer, &out.AIExplanation, &out.Basis, &out.Language, &out.CreatedAt)
+	return out, err
+}
+
+func (s *PostgresStore) ListChatMessages(ctx context.Context, userID int64, page, pageSize int) ([]models.ChatMessage, int, error) {
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 {
+		pageSize = 50
+	}
+	var total int
+	if err := s.pool.QueryRow(ctx, `SELECT count(*) FROM chat_messages WHERE user_id = $1`, userID).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+	rows, err := s.pool.Query(ctx,
+		`SELECT id, user_id, role, text, forum_answer, ai_explanation, basis, language, created_at
+		 FROM chat_messages WHERE user_id = $1
+		 ORDER BY created_at DESC, id DESC
+		 LIMIT $2 OFFSET $3`,
+		userID, pageSize, (page-1)*pageSize,
+	)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	var messages []models.ChatMessage
+	for rows.Next() {
+		var m models.ChatMessage
+		if err := rows.Scan(&m.ID, &m.UserID, &m.Role, &m.Text, &m.ForumAnswer, &m.AIExplanation, &m.Basis, &m.Language, &m.CreatedAt); err != nil {
+			return nil, 0, err
+		}
+		messages = append(messages, m)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, 0, err
+	}
+	// Page 1 is the NEWEST page; return it oldest-first so the chat reads top to bottom.
+	for i, j := 0, len(messages)-1; i < j; i, j = i+1, j-1 {
+		messages[i], messages[j] = messages[j], messages[i]
+	}
+	return messages, total, nil
+}
