@@ -9,9 +9,9 @@ export function isUniversityEmail(email: string): boolean {
   return /^[^\s@]+@sdu\.edu\.kz$/i.test(email.trim());
 }
 
-/** 8+ chars with at least one letter, one digit and one symbol. */
-export function isStrongPassword(password: string): boolean {
-  return /^(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z0-9\s]).{8,}$/.test(password);
+/** 3–20 letters (any alphabet), digits, "_", "." or "-"; no spaces. */
+export function isValidUsername(username: string): boolean {
+  return /^[\p{L}\p{N}_.-]{3,20}$/u.test(username);
 }
 
 export function formatRelativeTime(iso: string, locale: string): string {

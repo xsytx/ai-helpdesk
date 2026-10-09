@@ -3,10 +3,12 @@ import { getErrorMessage, getErrorStatus } from "@/shared/api/client";
 import { useAuth } from "@/app/AuthContext";
 import { useLocale } from "@/i18n/LocaleContext";
 import { AuthLayout } from "@/shared/layout/AuthLayout";
-import { isStrongPassword, isUniversityEmail } from "@/shared/lib/format";
+import { isUniversityEmail, isValidUsername } from "@/shared/lib/format";
+import { checkPassword, emailName } from "@/shared/lib/password";
 import { Button } from "@/shared/ui/Button";
 import { Input } from "@/shared/ui/Input";
 import { PasswordField } from "@/shared/ui/PasswordField";
+import { PasswordHint, passwordProblemMessage } from "@/shared/ui/PasswordHint";
 import { FormEvent, useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 
@@ -39,13 +41,17 @@ export function SignUpPage() {
     if (!username.trim()) {
       setUsernameError(t("createUsername"));
       invalid = true;
+    } else if (!isValidUsername(username.trim())) {
+      setUsernameError(t("usernameFormat"));
+      invalid = true;
     }
     if (!isUniversityEmail(email)) {
       setEmailError(t("corporateEmail"));
       invalid = true;
     }
-    if (!isStrongPassword(password)) {
-      setPasswordError(t("passwordRequirements"));
+    const passwordProblem = checkPassword(password, [emailName(email), username]);
+    if (passwordProblem) {
+      setPasswordError(t(passwordProblemMessage[passwordProblem]));
       invalid = true;
     }
     if (invalid) return;
@@ -87,6 +93,7 @@ export function SignUpPage() {
           placeholder={t("usernamePlaceholder")}
           value={username}
           onChange={(e) => setUsername(e.target.value)}
+          maxLength={20}
           error={usernameError}
         />
         <Input
@@ -105,9 +112,15 @@ export function SignUpPage() {
           autoComplete="new-password"
           placeholder={t("passwordPlaceholder")}
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          onChange={(e) => {
+            setPassword(e.target.value);
+            setPasswordError(undefined);
+          }}
           error={passwordError}
         />
+        {passwordError ? null : (
+          <PasswordHint password={password} personal={[emailName(email), username]} />
+        )}
         {formError ? (
           <p className="text-sm text-error" role="alert">
             {formError}

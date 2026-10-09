@@ -1,12 +1,16 @@
 import { useLocale } from "@/i18n/LocaleContext";
-import { isStrongPassword } from "@/shared/lib/format";
+import { useAuth } from "@/app/AuthContext";
+import { checkPassword, emailName } from "@/shared/lib/password";
 import { Button } from "@/shared/ui/Button";
 import { PasswordField } from "@/shared/ui/PasswordField";
+import { PasswordHint, passwordProblemMessage } from "@/shared/ui/PasswordHint";
 import { useState, type FormEvent } from "react";
 import { usePasswordChange, WRONG_CURRENT_PASSWORD } from "../api";
 
 export function PasswordChangeForm() {
   const { t } = useLocale();
+  const { user } = useAuth();
+  const personal = [emailName(user?.email), user?.name ?? ""];
   const changePassword = usePasswordChange();
 
   const [current, setCurrent] = useState("");
@@ -31,8 +35,9 @@ export function PasswordChangeForm() {
       setCurrentError(t("currentPasswordRequired"));
       invalid = true;
     }
-    if (!isStrongPassword(password)) {
-      setPasswordError(t("passwordRequirements"));
+    const passwordProblem = checkPassword(password, personal);
+    if (passwordProblem) {
+      setPasswordError(t(passwordProblemMessage[passwordProblem]));
       invalid = true;
     } else if (password !== confirm) {
       setConfirmError(t("passwordsDoNotMatch"));
@@ -77,9 +82,13 @@ export function PasswordChangeForm() {
         autoComplete="new-password"
         placeholder={t("newPasswordPlaceholder")}
         value={password}
-        onChange={(e) => setPassword(e.target.value)}
+        onChange={(e) => {
+          setPassword(e.target.value);
+          setPasswordError(undefined);
+        }}
         error={passwordError}
       />
+      {passwordError ? null : <PasswordHint password={password} personal={personal} />}
       <PasswordField
         id="confirm-password"
         label={t("confirmNewPassword")}

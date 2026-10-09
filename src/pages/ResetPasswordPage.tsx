@@ -3,9 +3,10 @@ import { useAuth } from "@/app/AuthContext";
 import { useLocale } from "@/i18n/LocaleContext";
 import { getErrorStatus } from "@/shared/api/client";
 import { AuthLayout } from "@/shared/layout/AuthLayout";
-import { isStrongPassword } from "@/shared/lib/format";
+import { checkPassword, emailName } from "@/shared/lib/password";
 import { Button } from "@/shared/ui/Button";
 import { PasswordField } from "@/shared/ui/PasswordField";
+import { PasswordHint, passwordProblemMessage } from "@/shared/ui/PasswordHint";
 import { FormEvent, useState } from "react";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 
@@ -39,8 +40,9 @@ export function ResetPasswordPage() {
     setPasswordError(undefined);
     setConfirmError(undefined);
     setFormError(undefined);
-    if (!isStrongPassword(password)) {
-      setPasswordError(t("passwordRequirements"));
+    const passwordProblem = checkPassword(password, [emailName(email)]);
+    if (passwordProblem) {
+      setPasswordError(t(passwordProblemMessage[passwordProblem]));
       return;
     }
     if (password !== confirm) {
@@ -70,9 +72,13 @@ export function ResetPasswordPage() {
           autoComplete="new-password"
           placeholder={t("passwordPlaceholder")}
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          onChange={(e) => {
+            setPassword(e.target.value);
+            setPasswordError(undefined);
+          }}
           error={passwordError}
         />
+        {passwordError ? null : <PasswordHint password={password} personal={[emailName(email)]} />}
         <PasswordField
           id="confirm-password"
           label={t("confirmPassword")}
