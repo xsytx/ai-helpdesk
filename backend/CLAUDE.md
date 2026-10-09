@@ -6,8 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 SDU Helpdesk (backend) — a student forum (Threads/Twitter/Reddit-style feed, nested
 reply threads, tags instead of boards, upvotes, notifications, search,
-moderation). Go backend + PostgreSQL, plain HTML/CSS/vanilla-JS frontend,
-single binary. See `README.md` for the full feature list, API reference,
+moderation). Go backend + PostgreSQL, single binary, JSON API only — the
+website is the React app in the repository root. See `README.md` for the full feature list, API reference,
 and database design notes — it's kept thorough and current; read it
 before making non-trivial changes rather than re-deriving behavior from
 code alone.
@@ -89,13 +89,6 @@ method on `store.Store` (`internal/store/store.go`).
   `Mailer.IsStub()` before assuming delivery happened.
 - **`internal/markdown`** — thread/comment bodies render server-side to
   safe HTML via `goldmark`.
-- **`web/`** — static frontend, one HTML page per view plus a matching
-  `web/js/<page>.js`. `web/js/api.js` is shared by every page: a
-  `Session` object (JWT + user cached in `localStorage`), a thin
-  `api(path, options)` fetch wrapper that attaches the bearer token and
-  throws on non-2xx, plus shared render helpers (avatar initials,
-  author links, HTML escaping). No build step, no framework, no bundler
-  — edit the HTML/JS files directly and reload.
 
 ## Notable behavioral points worth knowing before touching related code
 

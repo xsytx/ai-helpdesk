@@ -15,7 +15,7 @@ func (h *Handlers) notifySubscribersByEmail(ctx context.Context, threadID, actor
 	if err != nil || len(emails) == 0 {
 		return
 	}
-	link := fmt.Sprintf("%s/thread.html?id=%d", h.BaseURL, threadID)
+	link := fmt.Sprintf("%s/forum/%d", h.BaseURL, threadID)
 	body := fmt.Sprintf("%s posted a new comment on a thread you're following:\n\n%s", actorName, link)
 	for _, email := range emails {
 		_ = h.Mailer.Send(email, "New activity on a thread you're following", body)

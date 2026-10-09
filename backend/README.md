@@ -2,16 +2,16 @@
 
 > **Running the whole project?** Use `docker compose up -d --build` from the
 > repository root and see [`../README.md`](../README.md). This file documents
-> the Go backend itself (API, database, configuration). The React app in the
-> repo root is the real frontend; `web/` below is the backend's original
-> plain-HTML UI, still served on port 8080 but no longer maintained.
+> the Go backend itself (API, database, configuration). The website is the
+> React app in the repository root.
 
-A student forum with a Threads/Twitter/Reddit-style feel: a scrolling
-home feed of posts organized entirely by free-form tags (no boards or
-categories), nested reply threads, image attachments, upvotes,
-notifications, thread subscriptions, full-text search, and moderation
-tools. Go backend, PostgreSQL storage, plain HTML/CSS/JS frontend,
-single binary to run.
+The JSON API behind SDU Helpdesk: accounts with email verification, a
+forum (threads, nested replies, votes, tags, image attachments, full-text
+search), notifications and thread subscriptions, FAQ, and moderation
+tools. Go, PostgreSQL storage, a single binary to run. It started as the
+"SDU Threads" MVP, which shipped its own plain-HTML pages; those were
+removed in favour of the React app, so the feature notes below describe
+what the API supports.
 
 ## Quick start
 
@@ -38,9 +38,9 @@ Requires Go 1.25+ and a running PostgreSQL server.
    automatically — every statement in it is idempotent, so this is safe
    on every restart. A handful of FAQ entries are seeded the same way.
 
-3. Open http://localhost:8080 in your browser. The server serves the API
-   (`/api/...`), uploaded images (`/uploads/...`), and the static
-   frontend (`web/`) all on the same port.
+3. The API is now at http://localhost:8080/api (uploaded images at
+   `/uploads/...`). Run the React app from the repository root to use it
+   in a browser.
 
 On first run it also creates `jwt.secret` next to the binary — a
 randomly generated signing key for login tokens. Safe to delete to
@@ -77,7 +77,6 @@ normal password>`, `SMTP_FROM=SDU Helpdesk <your gmail>`.
 | `ADDR`                  | `:8080`                                                              | Address/port to listen on             |
 | `DATABASE_URL`          | `postgres://campus_forum:campus_forum@localhost:5432/campus_forum?sslmode=disable` | PostgreSQL connection string |
 | `JWT_SECRET_FILE`       | `jwt.secret`                                                         | Path to the persisted JWT signing key |
-| `WEB_DIR`               | `web`                                                                | Path to the static frontend folder    |
 | `UPLOAD_DIR`            | `uploads`                                                            | Where uploaded images are stored, served at `/uploads/` |
 | `BASE_URL`              | `http://localhost<ADDR>`                                             | Used to build absolute links in emails |
 | `CORS_ALLOWED_ORIGIN`   | `*`                                                                  | Lock down for a real deployment       |
@@ -92,56 +91,47 @@ normal password>`, `SMTP_FROM=SDU Helpdesk <your gmail>`.
   `@sdu.edu.kz` addresses by default (`ALLOWED_EMAIL_DOMAINS`, empty to
   lift it) — this is SDU's own forum. Display name (this forum's
   username) must be unique, case-insensitively. A 6-digit verification
-  code is emailed/logged on registration, and registering walks you
-  straight into entering it (`verify-email.html`); an unverified account
-  can still browse, vote, and edit its profile, but can't create threads
-  or comments (a banner on your own profile links back to the code-entry
-  page for anyone who skipped it). Forgot/reset-password flow for a
+  code is emailed/logged on registration; an unverified account can
+  still browse, vote, and edit its profile, but can't create threads or
+  comments. Forgot/reset-password flow for a
   locked-out account — also a 6-digit emailed code (15-minute expiry,
   dead after 5 wrong guesses) — plus a change-password form on your own
   profile for a routine update.
-- **Home feed**: `index.html` is a Threads-style feed of every thread,
-  with a compose box up top, New/Top/Most-commented/Saved sort tabs, and
-  a "Load more" button. There's no board/category page — tags are the
-  only organizing structure.
+- **Feed**: `GET /api/feed` lists every thread, sorted new / top /
+  most-commented, paginated. There are no boards or categories — tags
+  are the only organizing structure.
 - **Threads & nested replies**: create a post with Markdown formatting
   (bold/italic/links/code/lists — rendered server-side via `goldmark`),
   optional tags, and up to one image attachment upload after posting.
-  Reply to a thread or to any comment (unlimited depth on the backend,
-  capped visual indent on the frontend). Posting requires a logged-in
+  Reply to a thread or to any comment (unlimited depth). Posting requires a logged-in
   account with a verified email; posts show their real author. (Posts
   from an earlier anonymous-posting period belong to a shared
   "Anonymous" system account — see "Anonymous posts" below.)
 - **Upvotes**: upvote/downvote threads and comments; clicking the same
   arrow again removes your vote, the other arrow flips it.
-- **Tags**: free-form labels — the only way threads are organized. A
-  trending-tags widget and a dedicated browse-by-tag view
-  (`search.html?tag=...`) make them discoverable; typing `#tagname` into
-  the header search box jumps straight there. The browse-by-tag shortcut
-  list is capped at 8 tags — it's a scannable shortcut, not a full index
-  of every tag (that's what typing `#tag` is for).
-- **Search**: full-text search (`search.html`) across thread titles and
+- **Tags**: free-form labels (up to 8 per thread) — the only way threads
+  are organized. `GET /api/tags/trending` lists popular tags and
+  `GET /api/tags/{name}/threads` browses one.
+- **Search**: full-text search (`GET /api/search`) across thread titles and
   bodies, weighted so a match in the title ranks above the same match in
   the body. A trigram word-similarity fallback also catches partial
   words and small typos ("hous" finds "Housing question…") that
   full-text search's whole-token matching misses on its own.
 - **Notifications & subscriptions**: creating a thread or commenting on
-  one auto-subscribes you to it; a bell in the header tells you about
-  new activity on threads you're subscribed to (and specifically about
-  replies to your own comments), with a best-effort email alongside the
-  in-app notification. Repeated activity on the same thread before you
-  read the first notification collapses into that one row (fresh
-  actor/comment, bumped timestamp) instead of piling up duplicates, and
-  the header bell polls a dedicated lightweight count endpoint rather
-  than loading a full page of notifications just to show a badge number.
-- **Profiles**: every username links to a public profile listing that
-  user's threads/comments, plus an editable major/bio and a "✓ Verified"
-  badge next to the name for accounts with a confirmed `@sdu.edu.kz`
-  email (the address itself stays private — only the yes/no is public).
-- **FAQ**: a public `faq.html` page, content managed from the admin panel.
+  one auto-subscribes you to it; subscribers get a notification about
+  new activity (and specifically about replies to their own comments),
+  with a best-effort email alongside it. Repeated activity on the same
+  thread before you read the first notification collapses into that one
+  row (fresh actor/comment, bumped timestamp) instead of piling up
+  duplicates, and `GET /api/notifications/unread-count` is a lightweight
+  endpoint for showing a badge number.
+- **Profiles**: public profile per user with their threads/comments, an
+  editable major/bio, and whether their `@sdu.edu.kz` email is verified
+  (the address itself stays private — only the yes/no is public).
+- **FAQ**: public `GET /api/faq`, managed by moderators/admins.
 - **Moderation**: `moderator`/`admin` roles (granted via `ADMIN_EMAILS`
   only) can lock threads, delete anyone's post, ban/unban users, and
-  work through user-filed reports from `admin.html`.
+  work through user-filed reports.
 - **Rate limiting**: per-IP limits on auth endpoints (register/login/
   forgot-password) and on content creation (threads/comments) — see
   `middleware.RateLimit`.
@@ -171,7 +161,6 @@ internal/mailer/                      Email sending — logs instead of sending 
 internal/markdown/                    Markdown → safe HTML rendering (goldmark)
 internal/middleware/                  Auth, CORS, rate limiting
 internal/handlers/                    HTTP handlers (the REST API)
-web/                                  Static frontend (HTML/CSS/vanilla JS)
 uploads/                              Uploaded images (UPLOAD_DIR), gitignored
 ```
 
@@ -190,8 +179,7 @@ All request/response bodies are JSON. Authenticated requests need
 
 With no `SMTP_HOST` configured, `/api/register` and `/api/resend-verification`
 also return `dev_verification_code` in their JSON response, and the
-frontend (`verify-email.html`) displays and prefills it automatically —
-otherwise there'd be nowhere to read the code from except the server's
+frontend shows it on the code screen — otherwise there'd be nowhere to read the code from except the server's
 stdout. This never happens once real SMTP is configured (see
 `Mailer.IsStub()` in `internal/mailer`); the code only reaches the actual
 inbox at that point.

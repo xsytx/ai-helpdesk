@@ -107,7 +107,6 @@ func main() {
 	addr := getenv("ADDR", ":8080")
 	databaseURL := getenv("DATABASE_URL", "postgres://campus_forum:campus_forum@localhost:5432/campus_forum?sslmode=disable")
 	secretFile := getenv("JWT_SECRET_FILE", "jwt.secret")
-	webDir := getenv("WEB_DIR", "web")
 	uploadDir := getenv("UPLOAD_DIR", "uploads")
 	baseURL := strings.TrimSuffix(getenv("BASE_URL", "http://localhost"+addr), "/")
 	corsOrigin := getenv("CORS_ALLOWED_ORIGIN", "*")
@@ -217,9 +216,9 @@ func main() {
 	mux.Handle("PATCH /api/faq/{id}", authMw(http.HandlerFunc(h.UpdateFAQ)))
 	mux.Handle("DELETE /api/faq/{id}", authMw(http.HandlerFunc(h.DeleteFAQ)))
 
-	// --- Uploaded attachments + static frontend ---
+	// --- Uploaded attachments --- (the website itself is the React app,
+	// served separately by nginx; see the repository root)
 	mux.Handle("/uploads/", http.StripPrefix("/uploads/", http.FileServer(http.Dir(uploadDir))))
-	mux.Handle("/", http.FileServer(http.Dir(webDir)))
 
 	var rootHandler http.Handler = mux
 	rootHandler = middleware.CORS(corsOrigin)(rootHandler)
@@ -232,7 +231,7 @@ func main() {
 		IdleTimeout:  60 * time.Second,
 	}
 
-	log.Printf("sdu helpdesk listening on %s (web dir: %s, uploads: %s)", addr, webDir, uploadDir)
+	log.Printf("sdu helpdesk listening on %s (uploads: %s)", addr, uploadDir)
 	if err := srv.ListenAndServe(); err != nil {
 		log.Fatal(err)
 	}
