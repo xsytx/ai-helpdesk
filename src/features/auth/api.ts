@@ -101,7 +101,13 @@ export function readPending(): PendingVerify | null {
   const raw = sessionStorage.getItem(PENDING_KEY);
   if (!raw) return null;
   try {
-    return JSON.parse(raw) as PendingVerify;
+    const p = JSON.parse(raw) as Partial<PendingVerify>;
+    // Ignore anything not in the current shape (e.g. left by the old demo login).
+    if (p.purpose === "signup" && "token" in p && "user" in p && p.token && p.user) {
+      return p as PendingVerify;
+    }
+    if (p.purpose === "reset" && "email" in p && p.email) return p as PendingVerify;
+    return null;
   } catch {
     return null;
   }

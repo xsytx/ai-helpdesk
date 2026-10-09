@@ -112,7 +112,7 @@ export function CreateThreadDialog({ open, onClose }: { open: boolean; onClose: 
             />
           </div>
           {error ? (
-            <p className="text-sm text-red-600" role="alert">
+            <p className="text-sm text-error" role="alert">
               {error}
             </p>
           ) : null}

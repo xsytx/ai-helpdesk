@@ -46,7 +46,7 @@ export function ReplyForm({ threadId }: { threadId: string }) {
         className="w-full resize-y rounded-xl border border-border bg-white px-3.5 py-2.5 text-sm text-primary placeholder:text-grey focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20"
       />
       {error ? (
-        <p className="text-xs text-red-600" role="alert">
+        <p className="text-xs text-error" role="alert">
           {error}
         </p>
       ) : null}

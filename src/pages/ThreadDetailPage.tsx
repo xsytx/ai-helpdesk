@@ -22,7 +22,7 @@ export function ThreadDetailPage() {
     return (
       <div className="mx-auto max-w-2xl">
         <Card>
-          <p className="text-sm text-red-600">{t("threadNotFound")}</p>
+          <p className="text-sm text-error">{t("threadNotFound")}</p>
           <Link to="/forum" className="mt-3 inline-block text-sm font-medium text-primary-light">
             ← {t("backToForum")}
           </Link>

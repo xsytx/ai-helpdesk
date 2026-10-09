@@ -1,25 +1,39 @@
-import { ChatPage } from "@/pages/ChatPage";
-import { FaqPage } from "@/pages/FaqPage";
-import { ForgotPasswordPage } from "@/pages/ForgotPasswordPage";
-import { ForumPage } from "@/pages/ForumPage";
 import { HomePage } from "@/pages/HomePage";
 import { LoginPage } from "@/pages/LoginPage";
 import { PlaceholderPage } from "@/pages/PlaceholderPage";
-import { ResetPasswordPage } from "@/pages/ResetPasswordPage";
-import { SettingsPage } from "@/pages/SettingsPage";
-import { SignUpPage } from "@/pages/SignUpPage";
-import { ThreadDetailPage } from "@/pages/ThreadDetailPage";
-import { VerifyCodePage } from "@/pages/VerifyCodePage";
 import { AppShell } from "@/shared/layout/AppShell";
+import { PageLoading } from "@/shared/ui/PageLoading";
+import { lazy, Suspense, type ComponentType } from "react";
 import { Navigate, createBrowserRouter } from "react-router-dom";
 import { ProtectedRoute } from "./ProtectedRoute";
 
+/**
+ * Loads a page's code only when it's first opened. The login and home pages
+ * are imported directly above, since nearly every visit starts on one of them.
+ */
+function lazyPage<K extends string>(load: () => Promise<Record<K, ComponentType>>, name: K) {
+  const Page = lazy(async (): Promise<{ default: ComponentType }> => ({
+    default: (await load())[name],
+  }));
+  return (
+    <Suspense fallback={<PageLoading />}>
+      <Page />
+    </Suspense>
+  );
+}
+
 export const router = createBrowserRouter([
   { path: "/login", element: <LoginPage /> },
-  { path: "/signup", element: <SignUpPage /> },
-  { path: "/forgot-password", element: <ForgotPasswordPage /> },
-  { path: "/verify", element: <VerifyCodePage /> },
-  { path: "/reset-password", element: <ResetPasswordPage /> },
+  { path: "/signup", element: lazyPage(() => import("@/pages/SignUpPage"), "SignUpPage") },
+  {
+    path: "/forgot-password",
+    element: lazyPage(() => import("@/pages/ForgotPasswordPage"), "ForgotPasswordPage"),
+  },
+  { path: "/verify", element: lazyPage(() => import("@/pages/VerifyCodePage"), "VerifyCodePage") },
+  {
+    path: "/reset-password",
+    element: lazyPage(() => import("@/pages/ResetPasswordPage"), "ResetPasswordPage"),
+  },
   {
     element: <ProtectedRoute />,
     children: [
@@ -27,9 +41,12 @@ export const router = createBrowserRouter([
         element: <AppShell />,
         children: [
           { index: true, element: <HomePage /> },
-          { path: "chat", element: <ChatPage /> },
-          { path: "forum", element: <ForumPage /> },
-          { path: "forum/:threadId", element: <ThreadDetailPage /> },
+          { path: "chat", element: lazyPage(() => import("@/pages/ChatPage"), "ChatPage") },
+          { path: "forum", element: lazyPage(() => import("@/pages/ForumPage"), "ForumPage") },
+          {
+            path: "forum/:threadId",
+            element: lazyPage(() => import("@/pages/ThreadDetailPage"), "ThreadDetailPage"),
+          },
           {
             path: "navigation",
             element: (
@@ -57,8 +74,11 @@ export const router = createBrowserRouter([
               />
             ),
           },
-          { path: "faq", element: <FaqPage /> },
-          { path: "settings", element: <SettingsPage /> },
+          { path: "faq", element: lazyPage(() => import("@/pages/FaqPage"), "FaqPage") },
+          {
+            path: "settings",
+            element: lazyPage(() => import("@/pages/SettingsPage"), "SettingsPage"),
+          },
         ],
       },
     ],

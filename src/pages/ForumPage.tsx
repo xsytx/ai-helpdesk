@@ -31,7 +31,7 @@ export function ForumPage() {
         {isLoading ? (
           <p className="py-6 text-center text-sm text-label">{t("loading")}</p>
         ) : isError ? (
-          <p className="py-6 text-center text-sm text-red-600">{t("forumLoadFailed")}</p>
+          <p className="py-6 text-center text-sm text-error">{t("forumLoadFailed")}</p>
         ) : threads.length === 0 ? (
           <div className="py-4 text-center">
             <p className="text-sm text-label">{t("noThreadsYet")}</p>

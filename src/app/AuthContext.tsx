@@ -50,7 +50,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // Refresh the cached user from the backend; drop the session if the token
-  // is no longer valid (expired, or left over from the old demo login).
+  // is no longer valid (expired, or left over from the old demo login) or the
+  // account no longer exists (deleted from the database).
   useEffect(() => {
     if (!getAuthToken()) return;
     fetchMe()
@@ -60,7 +61,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(next);
       })
       .catch((err) => {
-        if (getErrorStatus(err) === 401) logout();
+        const status = getErrorStatus(err);
+        if (status === 401 || status === 404) logout();
       });
   }, [logout]);
 
