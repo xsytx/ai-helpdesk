@@ -203,7 +203,8 @@ export function useLikeAnswer(threadId: string) {
       if (previous) {
         qc.setQueryData<ThreadDetail>(key, {
           ...previous,
-          answers: previous.answers.map((a) => {
+          // Re-sorted right away so the list reorders on click, not after the refetch.
+          answers: sortAnswers(previous.answers.map((a) => {
             if (a.id !== answerId) return a;
             const liked = a.likedByUserIds.includes(userId);
             return {
@@ -213,7 +214,7 @@ export function useLikeAnswer(threadId: string) {
                 ? a.likedByUserIds.filter((id) => id !== userId)
                 : [...a.likedByUserIds, userId],
             };
-          }),
+          })),
         });
       }
       return { previous };

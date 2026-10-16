@@ -3,6 +3,8 @@ import { useAuth } from "@/app/AuthContext";
 import { useLikeAnswer } from "@/features/forum/api";
 import { useLocale } from "@/i18n/LocaleContext";
 import { formatRelativeTime } from "@/shared/lib/format";
+import { slideFromPrevious } from "@/shared/lib/motion";
+import { useLayoutEffect, useRef } from "react";
 import { UserAvatar } from "@/features/profile/components/UserAvatar";
 import { LikeButton } from "./LikeButton";
 
@@ -10,6 +12,22 @@ export function AnswerList({ threadId, answers }: { threadId: string; answers: A
   const { user } = useAuth();
   const { locale, t } = useLocale();
   const likeAnswer = useLikeAnswer(threadId);
+
+  // When likes reorder the answers, slide each one from its old spot.
+  const itemRefs = useRef(new Map<string, HTMLElement>());
+  const lastPositions = useRef(new Map<string, number>());
+  const lastOrder = useRef("");
+  const order = answers.map((a) => a.id).join(",");
+  // Runs after every render so the saved positions are never stale.
+  useLayoutEffect(() => {
+    if (lastOrder.current && lastOrder.current !== order) {
+      slideFromPrevious(itemRefs.current, lastPositions.current);
+    }
+    lastOrder.current = order;
+    lastPositions.current = new Map(
+      [...itemRefs.current].map(([id, el]) => [id, el.offsetTop]),
+    );
+  });
 
   if (answers.length === 0) {
     return <p className="text-sm text-label">{t("noAnswersYet")}</p>;
@@ -22,6 +40,10 @@ export function AnswerList({ threadId, answers }: { threadId: string; answers: A
         return (
           <li
             key={answer.id}
+            ref={(el) => {
+              if (el) itemRefs.current.set(answer.id, el);
+              else itemRefs.current.delete(answer.id);
+            }}
             className="flex gap-3 rounded-xl border border-border/50 bg-white p-3"
           >
             <div className="flex flex-col items-center gap-1 pt-1">

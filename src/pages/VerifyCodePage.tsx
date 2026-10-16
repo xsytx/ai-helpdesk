@@ -25,6 +25,7 @@ export function VerifyCodePage() {
 
   const [code, setCode] = useState("");
   const [error, setError] = useState<string>();
+  const [shakeKey, setShakeKey] = useState(0);
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
 
@@ -44,6 +45,7 @@ export function VerifyCodePage() {
     setError(undefined);
     if (code.length !== 6) {
       setError(t("codeIncomplete"));
+      setShakeKey((k) => k + 1);
       return;
     }
     setLoading(true);
@@ -62,6 +64,7 @@ export function VerifyCodePage() {
       }
     } catch (err) {
       const status = getErrorStatus(err);
+      if (status === 400) setShakeKey((k) => k + 1);
       setError(
         status === 400 ? t("wrongCode") : status === 429 ? t("tooManyRequests") : t("serverUnavailable"),
       );
@@ -97,7 +100,7 @@ export function VerifyCodePage() {
         {t("checkEmailSubtitle")} <span className="font-medium text-primary">{email}</span>
       </p>
       <form className="space-y-5" onSubmit={handleSubmit}>
-        <OtpInput value={code} onChange={setCode} error={Boolean(error)} />
+        <OtpInput value={code} onChange={setCode} error={Boolean(error)} shakeKey={shakeKey} />
         {error ? (
           <p className="text-center text-xs text-error" role="alert">
             {error}

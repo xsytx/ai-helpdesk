@@ -1,5 +1,6 @@
 import { cn } from "@/shared/lib/cn";
-import { useRef, type ClipboardEvent, type KeyboardEvent } from "react";
+import { shake } from "@/shared/lib/motion";
+import { useEffect, useRef, type ClipboardEvent, type KeyboardEvent } from "react";
 
 const LENGTH = 6;
 
@@ -7,12 +8,20 @@ export function OtpInput({
   value,
   onChange,
   error,
+  shakeKey = 0,
 }: {
   value: string;
   onChange: (next: string) => void;
   error?: boolean;
+  /** Bump this number to shake the boxes, e.g. after each wrong code. */
+  shakeKey?: number;
 }) {
   const refs = useRef<Array<HTMLInputElement | null>>([]);
+  const groupRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (shakeKey > 0) shake(groupRef.current);
+  }, [shakeKey]);
   const digits = Array.from({ length: LENGTH }, (_, i) => value[i] ?? "");
 
   function setDigit(index: number, char: string) {
@@ -54,7 +63,7 @@ export function OtpInput({
   }
 
   return (
-    <div className="flex justify-center gap-2" role="group" aria-label="Verification code">
+    <div ref={groupRef} className="flex justify-center gap-2" role="group" aria-label="Verification code">
       {digits.map((digit, index) => (
         <input
           key={index}

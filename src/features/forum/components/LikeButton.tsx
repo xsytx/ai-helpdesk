@@ -1,5 +1,7 @@
 import { cn } from "@/shared/lib/cn";
+import { playPopSound, pop } from "@/shared/lib/motion";
 import { ChevronUp } from "lucide-react";
+import { useRef } from "react";
 
 export function LikeButton({
   likes,
@@ -14,11 +16,19 @@ export function LikeButton({
   onClick: () => void;
   label: string;
 }) {
+  const iconRef = useRef<SVGSVGElement>(null);
   return (
     <button
       type="button"
       disabled={disabled}
-      onClick={onClick}
+      onClick={() => {
+        // Celebrate likes only; un-liking stays quiet.
+        if (!active) {
+          pop(iconRef.current);
+          playPopSound();
+        }
+        onClick();
+      }}
       aria-label={label}
       className={cn(
         "inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold transition-colors",
@@ -29,8 +39,8 @@ export function LikeButton({
       )}
       aria-pressed={active}
     >
-      <ChevronUp className={cn("h-4 w-4", active && "fill-primary")} />
-      {likes}
+      <ChevronUp ref={iconRef} className={cn("h-4 w-4", active && "fill-primary")} />
+      <span className="tabular-nums">{likes}</span>
     </button>
   );
 }
