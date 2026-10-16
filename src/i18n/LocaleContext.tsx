@@ -10,10 +10,21 @@ import { translations, type Locale, type TranslationKey } from "./translations";
 
 const STORAGE_KEY = "ai_helpdesk_locale";
 
+/** Keys with plural forms: "replies" for repliesOne / repliesFew / repliesMany / repliesOther. */
+type PluralBase<K> = K extends `${infer Base}One` ? Base : never;
+export type PluralKey = PluralBase<TranslationKey>;
+
+const PLURAL_SUFFIX = { one: "One", few: "Few", many: "Many", other: "Other" } as const;
+
+// Our "kz" is "kk" (Kazakh) in Intl.
+const INTL_LOCALE: Record<Locale, string> = { en: "en", kz: "kk", ru: "ru" };
+
 interface LocaleContextValue {
   locale: Locale;
   setLocale: (locale: Locale) => void;
   t: (key: TranslationKey) => string;
+  /** Count with the right word form: "1 reply", "2 ответа", "5 ответов". */
+  plural: (count: number, key: PluralKey) => string;
 }
 
 const LocaleContext = createContext<LocaleContextValue | null>(null);
@@ -37,9 +48,20 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
     [locale],
   );
 
+  const plural = useMemo(() => {
+    const rules = new Intl.PluralRules(INTL_LOCALE[locale]);
+    return (count: number, key: PluralKey) => {
+      const category = rules.select(count);
+      const suffix = category in PLURAL_SUFFIX
+        ? PLURAL_SUFFIX[category as keyof typeof PLURAL_SUFFIX]
+        : "Other";
+      return `${count} ${translations[locale][`${key}${suffix}`]}`;
+    };
+  }, [locale]);
+
   const value = useMemo(
-    () => ({ locale, setLocale, t }),
-    [locale, setLocale, t],
+    () => ({ locale, setLocale, t, plural }),
+    [locale, setLocale, t, plural],
   );
 
   return (

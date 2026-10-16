@@ -6,7 +6,7 @@ import { ChevronUp, MessageCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 
 export function ThreadCard({ thread }: { thread: Thread }) {
-  const { locale, t } = useLocale();
+  const { locale, plural } = useLocale();
   const time = formatRelativeTime(thread.createdAt, locale);
 
   return (
@@ -31,7 +31,7 @@ export function ThreadCard({ thread }: { thread: Thread }) {
             </span>
             <span className="inline-flex items-center gap-1">
               <MessageCircle className="h-3.5 w-3.5" />
-              {thread.answerCount} {t("replies")}
+              {plural(thread.answerCount, "replies")}
             </span>
           </div>
         </div>
