@@ -12,6 +12,37 @@
   --color-border: #d1d5db;
   --color-error: #900b09;
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+
+  /* Odometer digits (RollingNumber). */
+  --animate-roll-in-up: roll-in-up 280ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  --animate-roll-out-up: roll-out-up 280ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  --animate-roll-in-down: roll-in-down 280ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  --animate-roll-out-down: roll-out-down 280ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+
+  @keyframes roll-in-up {
+    from {
+      transform: translateY(100%);
+      opacity: 0;
+    }
+  }
+  @keyframes roll-out-up {
+    to {
+      transform: translateY(-100%);
+      opacity: 0;
+    }
+  }
+  @keyframes roll-in-down {
+    from {
+      transform: translateY(-100%);
+      opacity: 0;
+    }
+  }
+  @keyframes roll-out-down {
+    to {
+      transform: translateY(100%);
+      opacity: 0;
+    }
+  }
 }
 
 * {

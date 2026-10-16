@@ -1,5 +1,6 @@
 import { cn } from "@/shared/lib/cn";
 import { playPopSound, pop } from "@/shared/lib/motion";
+import { RollingNumber } from "@/shared/ui/RollingNumber";
 import { ChevronUp } from "lucide-react";
 import { useRef } from "react";
 
@@ -40,7 +41,7 @@ export function LikeButton({
       aria-pressed={active}
     >
       <ChevronUp ref={iconRef} className={cn("h-4 w-4", active && "fill-primary")} />
-      <span className="tabular-nums">{likes}</span>
+      <RollingNumber value={likes} />
     </button>
   );
 }
