@@ -12,6 +12,7 @@ export function Logo({ className, showText = true, to = "/" }: LogoProps) {
   const { t } = useLocale();
   return (
     <Link
+      viewTransition
       to={to}
       className={cn("flex items-center gap-2.5 whitespace-nowrap", className)}
     >

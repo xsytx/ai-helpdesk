@@ -130,10 +130,22 @@ export function useThreads(sort: ThreadSort) {
 // Thread and its answers come from one request; both hooks share the cache entry.
 function useThreadDetail<T>(threadId: string, select: (d: ThreadDetail) => T) {
   const { user } = useAuth();
+  const qc = useQueryClient();
   return useQuery({
     queryKey: forumKeys.thread(threadId),
     queryFn: () => fetchThreadDetail(threadId, user?.id),
     enabled: Boolean(threadId),
+    // Opened from a list: show the thread from the list right away while the
+    // answers load (this also gives the title's page transition a target).
+    placeholderData: () => {
+      for (const [, threads] of qc.getQueriesData<Thread[]>({
+        queryKey: [...forumKeys.all, "threads"],
+      })) {
+        const thread = threads?.find((t) => t.id === threadId);
+        if (thread) return { thread, answers: [] };
+      }
+      return undefined;
+    },
     select,
   });
 }

@@ -12,7 +12,10 @@ export function ThreadDetailPage() {
   const { threadId = "" } = useParams();
   const { locale, t } = useLocale();
   const { data: thread, isLoading, isError } = useThread(threadId);
-  const { data: answers = [], isLoading: answersLoading } = useAnswers(threadId);
+  const answersQuery = useAnswers(threadId);
+  const answers = answersQuery.data ?? [];
+  // Placeholder data (the thread from the list) has no answers yet.
+  const answersLoading = answersQuery.isLoading || answersQuery.isPlaceholderData;
 
   if (isLoading) {
     return <p className="text-sm text-label">{t("loading")}</p>;
@@ -23,7 +26,7 @@ export function ThreadDetailPage() {
       <div className="mx-auto max-w-2xl">
         <Card>
           <p className="text-sm text-error">{t("threadNotFound")}</p>
-          <Link to="/forum" className="mt-3 inline-block text-sm font-medium text-primary-light">
+          <Link viewTransition to="/forum" className="mt-3 inline-block text-sm font-medium text-primary-light">
             ← {t("backToForum")}
           </Link>
         </Card>
@@ -34,6 +37,7 @@ export function ThreadDetailPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-4">
       <Link
+        viewTransition
         to="/forum"
         className="inline-flex items-center gap-1 text-sm font-medium text-primary-light hover:underline"
       >

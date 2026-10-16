@@ -56,7 +56,7 @@ export function CreateThreadDialog({ open, onClose }: { open: boolean; onClose: 
         body,
       });
       onClose();
-      navigate(`/forum/${thread.id}`);
+      navigate(`/forum/${thread.id}`, { viewTransition: true });
     } catch {
       setError(t("threadCreateFailed"));
     }

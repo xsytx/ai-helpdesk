@@ -17,7 +17,7 @@ export function ForumPreview() {
     <Card>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-lg font-bold text-primary">
-          <Link to="/forum" className="hover:underline">
+          <Link viewTransition to="/forum" className="hover:underline">
             {t("discussionForum")}
           </Link>
         </h3>
@@ -30,6 +30,7 @@ export function ForumPreview() {
       )}
       {threads.length > 3 ? (
         <Link
+          viewTransition
           to="/forum"
           className="mt-3 inline-block text-sm font-medium text-primary-light hover:underline"
         >

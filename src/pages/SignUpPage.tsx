@@ -65,7 +65,7 @@ export function SignUpPage() {
         user: toUser(res.user),
         devCode: res.dev_verification_code,
       });
-      navigate("/verify");
+      navigate("/verify", { viewTransition: true });
     } catch (err) {
       const status = getErrorStatus(err);
       if (status === 429) {
@@ -132,7 +132,7 @@ export function SignUpPage() {
       </form>
       <p className="mt-5 text-center text-sm text-label">
         {t("alreadyHaveAccount")}{" "}
-        <Link to="/login" className="font-semibold text-primary hover:underline">
+        <Link viewTransition to="/login" className="font-semibold text-primary hover:underline">
           {t("logIn")}
         </Link>
       </p>

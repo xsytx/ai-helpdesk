@@ -54,13 +54,13 @@ export function VerifyCodePage() {
         await verifyEmailRequest(pending.token, code);
         clearPending();
         login({ ...pending.user, emailVerified: true }, pending.token);
-        navigate("/");
+        navigate("/", { viewTransition: true });
       } else {
         // Checked here so a wrong code is caught before the new-password step;
         // the code is only used up by /reset-password itself.
         await verifyResetCodeRequest(pending.email, code);
         clearPending();
-        navigate("/reset-password", { state: { email: pending.email, code } });
+        navigate("/reset-password", { viewTransition: true, state: { email: pending.email, code } });
       }
     } catch (err) {
       const status = getErrorStatus(err);
@@ -124,7 +124,7 @@ export function VerifyCodePage() {
         >
           {resending ? t("loading") : t("resendCode")}
         </button>
-        <Link to="/login" className="text-label hover:underline" onClick={clearPending}>
+        <Link viewTransition to="/login" className="text-label hover:underline" onClick={clearPending}>
           {t("backToLogin")}
         </Link>
       </div>

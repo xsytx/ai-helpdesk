@@ -54,11 +54,11 @@ export function LoginPage() {
       if (!user.email_verified) {
         const devCode = await resendVerificationRequest(token).catch(() => undefined);
         savePending({ purpose: "signup", token, user: toUser(user), devCode });
-        navigate("/verify");
+        navigate("/verify", { viewTransition: true });
         return;
       }
       login(toUser(user), token);
-      navigate("/");
+      navigate("/", { viewTransition: true });
     } catch (err) {
       const status = getErrorStatus(err);
       if (status === 401) setPasswordError(t("invalidCredentials"));
@@ -104,7 +104,7 @@ export function LoginPage() {
         ) : null}
 
         <div className="flex justify-end">
-          <Link to="/forgot-password" className="text-sm font-medium text-primary-light hover:underline">
+          <Link viewTransition to="/forgot-password" className="text-sm font-medium text-primary-light hover:underline">
             {t("forgotPassword")}
           </Link>
         </div>
@@ -115,7 +115,7 @@ export function LoginPage() {
       </form>
       <p className="mt-5 text-center text-sm text-label">
         {t("noAccount")}{" "}
-        <Link to="/signup" className="font-semibold text-primary hover:underline">
+        <Link viewTransition to="/signup" className="font-semibold text-primary hover:underline">
           {t("signUp")}
         </Link>
       </p>

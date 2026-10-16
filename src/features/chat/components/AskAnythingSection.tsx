@@ -18,7 +18,7 @@ export function AskAnythingSection() {
   function submit(value: string) {
     const q = value.trim();
     if (!q) return;
-    navigate("/chat", { state: { initialQuery: q } });
+    navigate("/chat", { viewTransition: true, state: { initialQuery: q } });
   }
 
   return (

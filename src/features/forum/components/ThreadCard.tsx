@@ -12,6 +12,7 @@ export function ThreadCard({ thread }: { thread: Thread }) {
   return (
     <li>
       <Link
+        viewTransition
         to={`/forum/${thread.id}`}
         className="flex gap-3 rounded-xl p-2 transition-colors hover:bg-background-2/80"
       >

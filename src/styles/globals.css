@@ -29,3 +29,39 @@ body {
 #root {
   min-height: 100dvh;
 }
+
+/*
+ * Page transitions (links use React Router's `viewTransition`). Only the
+ * area named "page" moves; the sidebar and header stay put. Browsers without
+ * View Transitions just switch pages instantly.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  ::view-transition-old(page) {
+    animation: 120ms ease-in both page-out;
+  }
+  ::view-transition-new(page) {
+    animation: 260ms cubic-bezier(0.2, 0.8, 0.2, 1) 60ms both page-in;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}
+
+@keyframes page-out {
+  to {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}

@@ -52,7 +52,7 @@ export function ResetPasswordPage() {
     setLoading(true);
     try {
       await resetPasswordRequest(email, code, password);
-      navigate("/login", { state: { notice: t("passwordUpdated") } });
+      navigate("/login", { viewTransition: true, state: { notice: t("passwordUpdated") } });
     } catch (err) {
       setFormError(getErrorStatus(err) === 400 ? t("resetCodeInvalid") : t("serverUnavailable"));
     } finally {
@@ -99,7 +99,7 @@ export function ResetPasswordPage() {
         </Button>
       </form>
       <p className="mt-5 text-center text-sm">
-        <Link to="/login" className="font-semibold text-primary hover:underline">
+        <Link viewTransition to="/login" className="font-semibold text-primary hover:underline">
           {t("backToLogin")}
         </Link>
       </p>

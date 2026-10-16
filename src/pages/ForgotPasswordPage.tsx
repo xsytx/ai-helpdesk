@@ -38,7 +38,7 @@ export function ForgotPasswordPage() {
       const normalized = email.trim().toLowerCase();
       const devCode = await forgotPasswordRequest(normalized);
       savePending({ purpose: "reset", email: normalized, devCode });
-      navigate("/verify");
+      navigate("/verify", { viewTransition: true });
     } catch (err) {
       setFormError(getErrorStatus(err) === 429 ? t("tooManyRequests") : t("serverUnavailable"));
     } finally {
@@ -71,7 +71,7 @@ export function ForgotPasswordPage() {
         </Button>
       </form>
       <p className="mt-5 text-center text-sm text-label">
-        <Link to="/login" className="font-semibold text-primary hover:underline">
+        <Link viewTransition to="/login" className="font-semibold text-primary hover:underline">
           {t("backToLogin")}
         </Link>
       </p>

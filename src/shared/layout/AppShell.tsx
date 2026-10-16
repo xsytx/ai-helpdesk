@@ -37,7 +37,7 @@ export function AppShell() {
         <Button
           variant="secondary"
           className="w-full justify-start bg-background-2 font-semibold text-primary hover:bg-background-2-hover"
-          onClick={() => navigate("/chat")}
+          onClick={() => navigate("/chat", { viewTransition: true })}
         >
           <Plus className="h-4 w-4" />
           {t("newChat")}
@@ -45,6 +45,7 @@ export function AppShell() {
         <nav className="flex flex-col gap-1">
           {desktopNav.map(({ to, key, icon: Icon }) => (
             <NavLink
+              viewTransition
               key={to}
               to={to}
               className={({ isActive }) =>
@@ -73,7 +74,7 @@ export function AppShell() {
           </div>
         </header>
 
-        <main className="flex-1 overflow-auto px-4 py-5 pb-24 md:px-6 md:pb-6">
+        <main className="flex-1 overflow-auto [view-transition-name:page] px-4 py-5 pb-24 md:px-6 md:pb-6">
           <Outlet />
         </main>
 
@@ -85,7 +86,7 @@ export function AppShell() {
           <MobileTab to="/forum" label={t("forum")} icon={MessageSquare} />
           <button
             type="button"
-            onClick={() => navigate("/chat")}
+            onClick={() => navigate("/chat", { viewTransition: true })}
             className="flex flex-col items-center gap-0.5 px-2"
           >
             <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-background-2 text-primary shadow-sm">
@@ -112,6 +113,7 @@ function MobileTab({
 }) {
   return (
     <NavLink
+      viewTransition
       to={to}
       className={({ isActive }) =>
         cn(
