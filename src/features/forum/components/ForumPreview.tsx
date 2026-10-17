@@ -14,7 +14,7 @@ export function ForumPreview() {
   const preview = threads.slice(0, 3);
 
   return (
-    <Card>
+    <Card data-tour="forum">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-lg font-bold text-primary">
           <Link viewTransition to="/forum" className="hover:underline">

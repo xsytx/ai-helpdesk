@@ -22,7 +22,7 @@ export function AskAnythingSection() {
   }
 
   return (
-    <Card className="border-none bg-white shadow-sm">
+    <Card className="border-none bg-white shadow-sm" data-tour="ask">
       <h2 className="mb-4 text-xl font-bold text-primary">{t("askAnything")}</h2>
       <div className="relative">
         <textarea

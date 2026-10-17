@@ -37,6 +37,7 @@ export function AppShell() {
         <Button
           variant="secondary"
           className="w-full justify-start bg-background-2 font-semibold text-primary hover:bg-background-2-hover"
+          data-tour="new-chat"
           onClick={() => navigate("/chat", { viewTransition: true })}
         >
           <Plus className="h-4 w-4" />
@@ -48,6 +49,7 @@ export function AppShell() {
               viewTransition
               key={to}
               to={to}
+              data-tour={to === "/settings" ? "settings" : undefined}
               className={({ isActive }) =>
                 cn(
                   "flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium text-primary/80 transition-colors hover:bg-background-2",
@@ -88,6 +90,7 @@ export function AppShell() {
             type="button"
             onClick={() => navigate("/chat", { viewTransition: true })}
             className="flex flex-col items-center gap-0.5 px-2"
+            data-tour="new-chat"
           >
             <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-background-2 text-primary shadow-sm">
               <Plus className="h-5 w-5" />
@@ -95,7 +98,7 @@ export function AppShell() {
             <span className="text-[10px] font-semibold text-primary">{t("newChat")}</span>
           </button>
           <MobileTab to="/faq" label={t("faq")} icon={BookOpen} />
-          <MobileTab to="/settings" label={t("profile")} icon={Settings} />
+          <MobileTab to="/settings" label={t("profile")} icon={Settings} tour="settings" />
         </nav>
       </div>
     </div>
@@ -106,15 +109,18 @@ function MobileTab({
   to,
   label,
   icon: Icon,
+  tour,
 }: {
   to: string;
   label: string;
   icon: typeof Home;
+  tour?: string;
 }) {
   return (
     <NavLink
       viewTransition
       to={to}
+      data-tour={tour}
       className={({ isActive }) =>
         cn(
           "flex min-w-[3.5rem] flex-col items-center gap-0.5 px-2 py-1 text-[10px] font-semibold text-primary/60",

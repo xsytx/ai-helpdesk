@@ -5,11 +5,14 @@ import { useLocale } from "@/i18n/LocaleContext";
 import { Card } from "@/shared/ui/Card";
 import { Button } from "@/shared/ui/Button";
 import { LanguageSwitcher } from "@/shared/layout/LanguageSwitcher";
-import { Navigate } from "react-router-dom";
+import { requestTour } from "@/features/onboarding/tour";
+import { Compass } from "lucide-react";
+import { Navigate, useNavigate } from "react-router-dom";
 
 export function SettingsPage() {
   const { user, logout } = useAuth();
   const { t } = useLocale();
+  const navigate = useNavigate();
 
   if (!user) return <Navigate to="/login" replace />;
 
@@ -31,6 +34,18 @@ export function SettingsPage() {
           <span className="text-sm font-medium text-label">{t("languageLabel")}</span>
           <LanguageSwitcher />
         </div>
+        <Button
+          variant="secondary"
+          size="sm"
+          className="mt-4 w-full"
+          onClick={() => {
+            requestTour();
+            navigate("/", { viewTransition: true });
+          }}
+        >
+          <Compass className="h-4 w-4" />
+          {t("replayTour")}
+        </Button>
       </Card>
       <Card>
         <AvatarPicker />

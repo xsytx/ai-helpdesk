@@ -13,6 +13,7 @@ import { getErrorStatus } from "@/shared/api/client";
 import { AuthLayout } from "@/shared/layout/AuthLayout";
 import { Button } from "@/shared/ui/Button";
 import { OtpInput } from "@/shared/ui/OtpInput";
+import { requestTour } from "@/features/onboarding/tour";
 import { FormEvent, useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 
@@ -54,6 +55,7 @@ export function VerifyCodePage() {
         await verifyEmailRequest(pending.token, code);
         clearPending();
         login({ ...pending.user, emailVerified: true }, pending.token);
+        requestTour();
         navigate("/", { viewTransition: true });
       } else {
         // Checked here so a wrong code is caught before the new-password step;

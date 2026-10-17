@@ -83,6 +83,54 @@ body {
   }
 }
 
+/* First-run tour (driver.js popovers), matched to the app's cards and buttons. */
+.driver-popover.sdu-tour {
+  max-width: 320px;
+  padding: 18px 18px 14px;
+  border-radius: 16px;
+  font-family: var(--font-sans);
+  color: var(--color-primary);
+  box-shadow: 0 12px 32px rgb(30 33 81 / 0.25);
+}
+.sdu-tour .driver-popover-title {
+  font-family: var(--font-sans);
+  font-size: 16px;
+  font-weight: 700;
+}
+.sdu-tour .driver-popover-description {
+  margin-top: 6px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--color-label);
+}
+.sdu-tour .driver-popover-footer {
+  margin-top: 14px;
+}
+.sdu-tour .driver-popover-progress-text {
+  font-size: 12px;
+  color: var(--color-label);
+}
+.sdu-tour .driver-popover-footer button {
+  padding: 7px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-background-2);
+  color: var(--color-primary);
+  font: 600 13px var(--font-sans);
+  text-shadow: none;
+}
+.sdu-tour .driver-popover-footer .driver-popover-next-btn {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: #fff;
+}
+.sdu-tour .driver-popover-footer .driver-popover-next-btn:hover {
+  background: var(--color-primary-light);
+}
+.sdu-tour .driver-popover-close-btn {
+  color: var(--color-grey);
+}
+
 @keyframes page-out {
   to {
     opacity: 0;
