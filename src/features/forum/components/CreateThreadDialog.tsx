@@ -5,6 +5,7 @@ import { Button } from "@/shared/ui/Button";
 import { Input } from "@/shared/ui/Input";
 import { X } from "lucide-react";
 import { FormEvent, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 
 export function CreateThreadDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -62,7 +63,9 @@ export function CreateThreadDialog({ open, onClose }: { open: boolean; onClose: 
     }
   }
 
-  return (
+  // Rendered on <body> so the overlay covers the whole app, header included:
+  // the page area is its own layer (for page transitions) and would trap it.
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-primary/30 p-4 sm:items-center">
       <div
         className="absolute inset-0"
@@ -126,6 +129,7 @@ export function CreateThreadDialog({ open, onClose }: { open: boolean; onClose: 
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
