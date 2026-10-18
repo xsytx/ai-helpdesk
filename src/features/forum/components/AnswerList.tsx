@@ -50,11 +50,16 @@ export function AnswerList({ threadId, answers }: { threadId: string; answers: A
               <LikeButton
                 likes={answer.likes}
                 active={liked}
-                disabled={!user || likeAnswer.isPending}
+                disabled={!user}
+                busy={likeAnswer.isPending}
                 label={liked ? t("unlikeAnswer") : t("likeAnswer")}
                 onClick={() => {
                   if (!user) return;
-                  likeAnswer.mutate({ answerId: answer.id, userId: user.id });
+                  likeAnswer.mutate({
+                    answerId: answer.id,
+                    userId: user.id,
+                    scoreBefore: answer.likes,
+                  });
                 }}
               />
               {index === 0 ? (

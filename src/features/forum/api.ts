@@ -57,7 +57,9 @@ function toAnswer(c: ApiComment, userId: string | undefined): Answer {
     body: c.body,
     createdAt: c.created_at,
     likes: c.score,
-    likedByUserIds: userId && readLikes(userId).has(id) ? [userId] : [],
+    // A remembered like on an answer with no likes is stale (e.g. un-liked on
+    // another device), so it doesn't count.
+    likedByUserIds: userId && c.score > 0 && readLikes(userId).has(id) ? [userId] : [],
   };
 }
 
@@ -200,13 +202,33 @@ export function useCreateAnswer(threadId: string) {
 export function useLikeAnswer(threadId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ answerId, userId }: { answerId: string; userId: string }) => {
-      if (USE_MOCK_API) return repo.toggleLikeAnswer(answerId, userId);
-      await apiClient.post<{ score: number }>(`/comments/${answerId}/vote`, { value: 1 });
+    mutationFn: async ({
+      answerId,
+      userId,
+      scoreBefore,
+    }: {
+      answerId: string;
+      userId: string;
+      /** The answer's score from the server before this click. */
+      scoreBefore: number;
+    }) => {
+      if (USE_MOCK_API) {
+        repo.toggleLikeAnswer(answerId, userId);
+        return undefined;
+      }
+      const { data } = await apiClient.post<{ score: number }>(`/comments/${answerId}/vote`, {
+        value: 1,
+      });
+      // The backend toggles our vote without saying which way it went: our +1
+      // raises the score when it adds a like and lowers it when it removes one.
+      // Trusting that (instead of flipping our own guess) keeps the like state
+      // in sync even if it was changed in another browser or on another device.
+      const liked = data.score > scoreBefore;
       const likes = readLikes(userId);
-      if (likes.has(answerId)) likes.delete(answerId);
-      else likes.add(answerId);
+      if (liked) likes.add(answerId);
+      else likes.delete(answerId);
       writeLikes(userId, likes);
+      return { score: data.score, liked };
     },
     onMutate: async ({ answerId, userId }) => {
       const key = forumKeys.thread(threadId);
@@ -221,7 +243,7 @@ export function useLikeAnswer(threadId: string) {
             const liked = a.likedByUserIds.includes(userId);
             return {
               ...a,
-              likes: liked ? a.likes - 1 : a.likes + 1,
+              likes: liked ? Math.max(0, a.likes - 1) : a.likes + 1,
               likedByUserIds: liked
                 ? a.likedByUserIds.filter((id) => id !== userId)
                 : [...a.likedByUserIds, userId],
@@ -230,6 +252,26 @@ export function useLikeAnswer(threadId: string) {
         });
       }
       return { previous };
+    },
+    // Replace the optimistic guess with what the server actually did.
+    onSuccess: (result, { answerId, userId }) => {
+      if (!result) return;
+      qc.setQueryData<ThreadDetail>(forumKeys.thread(threadId), (current) =>
+        current && {
+          ...current,
+          answers: sortAnswers(
+            current.answers.map((a) =>
+              a.id !== answerId
+                ? a
+                : {
+                    ...a,
+                    likes: result.score,
+                    likedByUserIds: result.liked ? [userId] : [],
+                  },
+            ),
+          ),
+        },
+      );
     },
     onError: (_err, _vars, ctx) => {
       if (ctx?.previous) {
