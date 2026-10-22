@@ -1,5 +1,7 @@
 import { useAuth } from "@/app/AuthContext";
 import { useCreateThread } from "@/features/forum/api";
+import { ModerationNoticeCard } from "@/features/moderation/components/ModerationNoticeCard";
+import type { ModerationNotice } from "@/features/moderation/notice";
 import { useLocale } from "@/i18n/LocaleContext";
 import { Button } from "@/shared/ui/Button";
 import { Input } from "@/shared/ui/Input";
@@ -15,12 +17,14 @@ export function CreateThreadDialog({ open, onClose }: { open: boolean; onClose: 
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [error, setError] = useState<string>();
+  const [notice, setNotice] = useState<ModerationNotice>();
 
   useEffect(() => {
     if (!open) {
       setTitle("");
       setBody("");
       setError(undefined);
+      setNotice(undefined);
       return;
     }
     const onKey = (e: KeyboardEvent) => {
@@ -49,14 +53,19 @@ export function CreateThreadDialog({ open, onClose }: { open: boolean; onClose: 
     }
     setError(undefined);
     try {
-      const thread = await createThread.mutateAsync({
+      const result = await createThread.mutateAsync({
         authorId: user.id,
         authorName: user.name,
         title,
         body,
       });
+      if (result.kind === "pending") {
+        // Not published yet: tell the author instead of opening a thread that does not exist.
+        setNotice(result.notice);
+        return;
+      }
       onClose();
-      navigate(`/forum/${thread.id}`);
+      navigate(`/forum/${result.thread.id}`);
     } catch {
       setError(t("threadCreateFailed"));
     }
@@ -88,6 +97,14 @@ export function CreateThreadDialog({ open, onClose }: { open: boolean; onClose: 
             <X className="h-5 w-5" />
           </button>
         </div>
+        {notice ? (
+          <div className="space-y-4">
+            <ModerationNoticeCard notice={notice} />
+            <Button type="button" className="w-full" onClick={onClose}>
+              {t("close")}
+            </Button>
+          </div>
+        ) : (
         <form className="space-y-4" onSubmit={handleSubmit}>
           <Input
             label={t("threadTitle")}
@@ -125,6 +142,7 @@ export function CreateThreadDialog({ open, onClose }: { open: boolean; onClose: 
             </Button>
           </div>
         </form>
+        )}
       </div>
     </div>
   );

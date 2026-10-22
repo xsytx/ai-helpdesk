@@ -5,8 +5,8 @@ import (
 	"net/http"
 
 	"campus-forum/internal/mailer"
-	"campus-forum/internal/mlclient"
 	appmw "campus-forum/internal/middleware"
+	"campus-forum/internal/mlclient"
 	"campus-forum/internal/store"
 )
 
@@ -23,14 +23,19 @@ type Handlers struct {
 	// AllowedEmailDomains restricts registration to these domains
 	// (lowercase, no "@") when non-empty; empty means any domain.
 	AllowedEmailDomains []string
-	// ML is the Python helpdesk service client (generate-answer / health).
+	// ML is the Python helpdesk service client (generate-answer / moderate / health).
 	ML *mlclient.Client
+	// Mod is the queue of forum posts the AI moderation held back.
+	Mod store.ModerationStore
+	// ModCfg controls how new forum posts are checked by the AI moderation.
+	ModCfg ModerationConfig
 }
 
 func New(s store.Store, jwtSecret []byte, m mailer.Mailer, uploadDir, baseURL string, allowedEmailDomains []string) *Handlers {
 	return &Handlers{
 		Store: s, JWTSecret: jwtSecret, Mailer: m, UploadDir: uploadDir, BaseURL: baseURL,
 		AllowedEmailDomains: allowedEmailDomains,
+		ModCfg:              DefaultModerationConfig(),
 	}
 }
 

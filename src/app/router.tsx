@@ -4,6 +4,7 @@ import { ForgotPasswordPage } from "@/pages/ForgotPasswordPage";
 import { ForumPage } from "@/pages/ForumPage";
 import { HomePage } from "@/pages/HomePage";
 import { LoginPage } from "@/pages/LoginPage";
+import { ModerationPage } from "@/pages/ModerationPage";
 import { PlaceholderPage } from "@/pages/PlaceholderPage";
 import { ResetPasswordPage } from "@/pages/ResetPasswordPage";
 import { SettingsPage } from "@/pages/SettingsPage";
@@ -57,6 +58,7 @@ export const router = createBrowserRouter([
               />
             ),
           },
+          { path: "moderation", element: <ModerationPage /> },
           { path: "faq", element: <FaqPage /> },
           { path: "settings", element: <SettingsPage /> },
         ],
