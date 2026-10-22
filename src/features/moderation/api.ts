@@ -108,6 +108,9 @@ export function useModerationQueue(status: QueueStatus, range: QueueDateRange = 
   return useQuery({
     queryKey: moderationKeys.queue(status, range, sort),
     enabled: isStaffRole(user?.role) && !USE_MOCK_API,
+    // New posts held by the AI show up without reloading the page.
+    refetchInterval: 5_000,
+    refetchOnWindowFocus: true,
     queryFn: async () => {
       const { data } = await apiClient.get<ApiQueue>("/moderation/queue", {
         params: { status, sort, page_size: 50, from: range.from || undefined, to: range.to || undefined },
@@ -123,7 +126,8 @@ export function usePendingModerationCount() {
   return useQuery({
     queryKey: moderationKeys.pending,
     enabled: isStaffRole(user?.role) && !USE_MOCK_API,
-    refetchInterval: 60_000,
+    refetchInterval: 10_000,
+    refetchOnWindowFocus: true,
     queryFn: async () => {
       const { data } = await apiClient.get<ApiQueue>("/moderation/queue", {
         params: { status: "pending", page_size: 1 },

@@ -127,10 +127,21 @@ async function fetchThreadDetail(id: string, userId: string | undefined): Promis
 
 // --- Hooks ---
 
+// --- Auto-refresh (only while the tab is visible; TanStack Query pauses
+// intervals in background tabs) ---
+const FEED_REFRESH_MS = 15_000;
+const THREAD_REFRESH_MS = 10_000;
+/** While the AI is still checking a post on the page, look again quickly. */
+const CHECKING_REFRESH_MS = 1_500;
+
+const likeMutationKey = (threadId: string) => [...forumKeys.all, "like", threadId] as const;
+
 export function useThreads(sort: ThreadSort) {
   return useQuery({
     queryKey: forumKeys.threads(sort),
     queryFn: () => fetchThreads(sort),
+    refetchInterval: FEED_REFRESH_MS,
+    refetchOnWindowFocus: true,
   });
 }
 
@@ -142,6 +153,16 @@ function useThreadDetail<T>(threadId: string, select: (d: ThreadDetail) => T) {
     queryKey: forumKeys.thread(threadId),
     queryFn: () => fetchThreadDetail(threadId, user?.id),
     enabled: Boolean(threadId),
+    refetchOnWindowFocus: true,
+    refetchInterval: (query) => {
+      // Don't refetch over a like that is still saving (it would flash the old count).
+      if (qc.isMutating({ mutationKey: likeMutationKey(threadId) }) > 0) return false;
+      const d = query.state.data;
+      const checking =
+        d?.thread.moderationStatus === "checking" ||
+        d?.answers.some((a) => a.moderationStatus === "checking");
+      return checking ? CHECKING_REFRESH_MS : THREAD_REFRESH_MS;
+    },
     // Opened from a list: show the thread from the list right away while the
     // answers load (this also gives the title's page transition a target).
     placeholderData: () => {
@@ -225,6 +246,7 @@ export function useCreateAnswer(threadId: string) {
 export function useLikeAnswer(threadId: string) {
   const qc = useQueryClient();
   return useMutation({
+    mutationKey: likeMutationKey(threadId),
     mutationFn: async ({
       answerId,
       userId,
