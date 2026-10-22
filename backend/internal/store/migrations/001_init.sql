@@ -291,3 +291,17 @@ ALTER TABLE password_resets DROP CONSTRAINT IF EXISTS password_resets_token_key;
 DELETE FROM password_resets a USING password_resets b
     WHERE a.user_id = b.user_id AND a.id < b.id;
 CREATE UNIQUE INDEX IF NOT EXISTS idx_password_resets_user ON password_resets(user_id);
+
+CREATE TABLE IF NOT EXISTS chat_messages (
+    id              BIGSERIAL PRIMARY KEY,
+    user_id         BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    role            TEXT NOT NULL CHECK (role IN ('user', 'assistant')),
+    text            TEXT NOT NULL,
+    forum_answer    TEXT,
+    ai_explanation  TEXT,
+    basis           TEXT,
+    language        TEXT,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_chat_messages_user_created ON chat_messages (user_id, created_at);

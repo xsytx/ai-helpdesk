@@ -175,4 +175,9 @@ type Store interface {
 	// user changing their own password (the handler checks the current
 	// password first) — unlike ResetPassword, no reset code is involved.
 	ChangePassword(ctx context.Context, userID int64, newPasswordHash, newSalt string) error
+
+	// --- AI chat history ---
+
+	CreateChatMessage(ctx context.Context, userID int64, msg models.ChatMessage) (models.ChatMessage, error)
+	ListChatMessages(ctx context.Context, userID int64, page, pageSize int) (messages []models.ChatMessage, total int, err error)
 }

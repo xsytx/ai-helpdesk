@@ -141,3 +141,16 @@ type Vote struct {
 	TargetID   int64  `json:"target_id"`
 	Value      int    `json:"value"` // 1 or -1
 }
+
+// ChatMessage is one row in the AI assistant chat history for a user.
+type ChatMessage struct {
+	ID            int64     `json:"id"`
+	UserID        int64     `json:"user_id"`
+	Role          string    `json:"role"` // "user" or "assistant"
+	Text          string    `json:"text"`
+	ForumAnswer   *string   `json:"forum_answer,omitempty"`
+	AIExplanation *string   `json:"ai_explanation,omitempty"`
+	Basis         *string   `json:"basis,omitempty"`
+	Language      *string   `json:"language,omitempty"`
+	CreatedAt     time.Time `json:"created_at"`
+}

@@ -10,7 +10,8 @@ Sign-in is restricted to `@sdu.edu.kz` university email addresses.
 | Forum (questions, answers, likes, best answer on top) | Working |
 | FAQ | Working (content managed in the database) |
 | Settings (avatar, password, language) | Working (avatar is saved in the browser only) |
-| AI chat assistant | Interface only, waiting for the ML service |
+| AI chat assistant | Working: answers from the SDU knowledge base + a local Ollama model |
+| Forum moderation | Working: new posts are checked by the AI; doubtful ones wait for a moderator |
 | Campus maps, courses | Placeholder pages |
 
 ## What's in this repo
@@ -18,7 +19,8 @@ Sign-in is restricted to `@sdu.edu.kz` university email addresses.
 ```
 src/                React + TypeScript website (Vite, Tailwind, React Query)
 backend/            Go API + PostgreSQL schema (see backend/README.md)
-docker-compose.yml  Runs everything: database, backend, website
+ai_ml/              AI service: knowledge-base search, answers, moderation (see ai_ml/README.md)
+docker-compose.yml  Runs everything: database, backend, AI service, website
 Dockerfile          Builds the website and serves it with nginx
 nginx.conf          Serves the website, forwards /api to the backend
 .env.example        Settings template: copy to .env
@@ -27,7 +29,9 @@ nginx.conf          Serves the website, forwards /api to the backend
 ## Run it (Docker, recommended)
 
 You need [Docker Desktop](https://www.docker.com/products/docker-desktop/),
-and it must be **open and running**.
+and it must be **open and running**. For the AI assistant you also need
+[Ollama](https://ollama.com/download) (Windows, macOS, Linux) with a model
+pulled once (see [AI assistant](#ai-assistant)).
 
 ```bash
 git clone https://github.com/xsytx/ai-helpdesk-frontend.git
@@ -36,7 +40,8 @@ cp .env.example .env          # Windows PowerShell: copy .env.example .env
 docker compose up -d --build
 ```
 
-The first start takes a few minutes. Then open **http://localhost:3000**.
+The first start takes a few minutes (the AI service also downloads a
+~1.1 GB search model once). Then open **http://localhost:3000**.
 
 Sign up with an `@sdu.edu.kz` address. If you haven't set up email (next
 section), the 6-digit code is shown on the screen as "Demo only", so you
@@ -49,6 +54,31 @@ docker compose stop           # stop everything (data is kept)
 docker compose up -d          # start again
 docker compose up -d --build  # start again after changing the code
 ```
+
+## AI assistant
+
+The chat and the forum moderation use the `ai_ml` service, which Docker
+starts together with everything else. The language model itself runs in
+[Ollama](https://ollama.com/download), installed normally on your computer
+so it can use your GPU on any OS:
+
+```bash
+ollama pull qwen3.5:4b        # once; ~3.3 GB
+```
+
+Ollama must be running (it starts with the computer after installing). To
+use another model, pull it and set `LLM_MODEL` in `.env`, then
+`docker compose up -d`. Pick one that fits your GPU memory (`qwen3.5:4b`
+for 4 GB, larger models for more); `ollama ps` should show it mostly on GPU.
+
+Check it: `docker compose logs -f ai_ml`, or try questions by hand at
+http://localhost:8001/docs. A first answer can take 10–60 seconds on a
+laptop.
+
+Without Ollama the site still works: the chat says the assistant is
+unavailable, and new forum posts wait in the Moderation page for a
+moderator or admin to publish them (`MODERATION_ENABLED=false` in `.env`
+skips the check instead).
 
 ## Sending real emails
 
@@ -145,7 +175,8 @@ HTTPS (for example Caddy, or Cloudflare) in front of the website port.
 | Problem | Fix |
 |---|---|
 | `docker: ... cannot find the file specified` / "daemon is not running" | Open Docker Desktop and wait until it says it's running. |
-| `port is already allocated` | Something else uses 3000, 8080 or 5432. Change `WEB_PORT` in `.env`, or stop the other program. |
+| Chat says the assistant is unavailable | Ollama isn't running, or the model in `LLM_MODEL` isn't pulled: `ollama list`. Then `docker compose logs ai_ml`. |
+| `port is already allocated` | Something else uses 3000, 8080, 8001 or 5432. Change `WEB_PORT` in `.env`, or stop the other program. |
 | Site loads but login says it can't reach the server | Backend isn't up yet or crashed: `docker compose logs app`. |
 | "Too many attempts" | Login, sign up and code checks are limited to about one try every 5 seconds. Wait a moment. |
 | Code email doesn't arrive | Check spam. Check the `SMTP_*` values in `.env`, then `docker compose up -d`. Without `SMTP_HOST` the code is shown on screen instead. |

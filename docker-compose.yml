@@ -36,6 +36,10 @@ services:
       SMTP_USER: "${SMTP_USER:-}"
       SMTP_PASS: "${SMTP_PASS:-}"
       SMTP_FROM: "${SMTP_FROM:-}"
+      # AI chat answers and forum moderation come from the ai_ml service below.
+      ML_SERVICE_URL: "${ML_SERVICE_URL:-http://ai_ml:8001}"
+      ML_REQUEST_TIMEOUT_SECONDS: "${ML_REQUEST_TIMEOUT_SECONDS:-180}"
+      MODERATION_ENABLED: "${MODERATION_ENABLED:-true}"
     # Only reachable from this computer — used by `npm run dev`. Visitors go
     # through the web service above.
     ports:
@@ -65,6 +69,35 @@ services:
       retries: 10
     restart: unless-stopped
 
+  # AI service (ai_ml/): finds matching FAQ answers and asks the language
+  # model to write the reply; also checks new forum posts. The model itself
+  # runs in Ollama, installed normally on this computer (so it can use the
+  # GPU on any OS) — see README.md. Not reachable by visitors; only the
+  # backend talks to it.
+  ai_ml:
+    build: ./ai_ml
+    environment:
+      LLM_PROVIDER: ollama
+      LLM_MODEL: "${LLM_MODEL:-qwen3.5:4b}"
+      # Inside a container 127.0.0.1 is the container itself, so Ollama on
+      # the host is reached through host.docker.internal.
+      LLM_BASE_URL: "${OLLAMA_URL:-http://host.docker.internal:11434}"
+      LLM_TIMEOUT_SECONDS: "${LLM_TIMEOUT_SECONDS:-120}"
+      LLM_NUM_PREDICT: "${LLM_NUM_PREDICT:-350}"
+    # Makes host.docker.internal work on Linux too (Docker Desktop has it already).
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      # The ~1.1 GB search model is downloaded on first start into
+      # ai_ml/.cache (ignored by git) and reused afterwards — also by run.bat.
+      - ./ai_ml/.cache:/app/.cache
+      - ml-logs:/app/data/logs
+    # For trying the API by hand: http://localhost:8001/docs (this computer only).
+    ports:
+      - "127.0.0.1:8001:8001"
+    restart: unless-stopped
+
 volumes:
   app-data:
   db-data:
+  ml-logs:

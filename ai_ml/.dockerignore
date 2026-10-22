@@ -1,0 +1,7 @@
+# Local-only files that must not end up in the image.
+.env
+.venv/
+.cache/
+__pycache__/
+*.pyc
+data/logs/

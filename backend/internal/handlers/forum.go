@@ -104,8 +104,14 @@ func (h *Handlers) CreateThread(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "title and body are required")
 		return
 	}
+	tags := normalizeTags(req.Tags)
+	// AI moderation: only a clear "allow" is published right away; everything else
+	// is saved to the moderators' queue and answered with 202 (see moderation_queue.go).
+	if !h.moderationGate(w, r, uid, pendingPost{Kind: "thread", Title: req.Title, Body: req.Body, Tags: tags}) {
+		return
+	}
 	t, err := h.Store.CreateThread(r.Context(), uid, store.ThreadInput{
-		Title: req.Title, Body: req.Body, Tags: normalizeTags(req.Tags),
+		Title: req.Title, Body: req.Body, Tags: tags,
 	})
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "could not create thread")
@@ -136,8 +142,12 @@ func (h *Handlers) UpdateThread(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "title and body are required")
 		return
 	}
+	tags := normalizeTags(req.Tags)
+	if !h.moderationEditGate(w, r, moderationText(req.Title, req.Body, tags)) {
+		return
+	}
 	t, err := h.Store.UpdateThread(r.Context(), id, uid, store.ThreadInput{
-		Title: req.Title, Body: req.Body, Tags: normalizeTags(req.Tags),
+		Title: req.Title, Body: req.Body, Tags: tags,
 	})
 	if err != nil {
 		writeStoreErr(w, err, "could not update thread")
@@ -236,6 +246,9 @@ func (h *Handlers) CreateComment(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "body is required")
 		return
 	}
+	if !h.moderationGate(w, r, uid, pendingPost{Kind: "comment", Body: req.Body, ThreadID: &threadID, ParentCommentID: req.ParentCommentID}) {
+		return
+	}
 	c, err := h.Store.CreateComment(r.Context(), threadID, uid, req.Body, req.ParentCommentID)
 	if err != nil {
 		writeStoreErr(w, err, "could not create comment")
@@ -268,6 +281,9 @@ func (h *Handlers) UpdateComment(w http.ResponseWriter, r *http.Request) {
 	req.Body = strings.TrimSpace(req.Body)
 	if req.Body == "" {
 		writeError(w, http.StatusBadRequest, "body is required")
+		return
+	}
+	if !h.moderationEditGate(w, r, req.Body) {
 		return
 	}
 	c, err := h.Store.UpdateComment(r.Context(), id, uid, req.Body)

@@ -74,6 +74,10 @@ export const router = createBrowserRouter([
               />
             ),
           },
+          {
+            path: "moderation",
+            element: lazyPage(() => import("@/pages/ModerationPage"), "ModerationPage"),
+          },
           { path: "faq", element: lazyPage(() => import("@/pages/FaqPage"), "FaqPage") },
           {
             path: "settings",

@@ -1,6 +1,7 @@
 import { useAuth } from "@/app/AuthContext";
 import { useLocale } from "@/i18n/LocaleContext";
 import { UserAvatar } from "@/features/profile/components/UserAvatar";
+import { isStaffRole, usePendingModerationCount } from "@/features/moderation/api";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { Logo } from "./Logo";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
@@ -12,6 +13,7 @@ import {
   Settings,
   GraduationCap,
   Home,
+  ShieldCheck,
 } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
 import { Button } from "@/shared/ui/Button";
@@ -24,11 +26,17 @@ const desktopNav = [
   { to: "/settings", key: "settings" as const, icon: Settings },
 ];
 
+const moderationNav = { to: "/moderation", key: "moderation" as const, icon: ShieldCheck };
+
 export function AppShell() {
   const { user } = useAuth();
   const { t } = useLocale();
   const navigate = useNavigate();
   const displayName = user?.name ?? "Student";
+  const isStaff = isStaffRole(user?.role);
+  const pending = usePendingModerationCount().data ?? 0;
+  // Moderators and admins get the moderation queue just above "Settings".
+  const nav = isStaff ? [...desktopNav.slice(0, -1), moderationNav, ...desktopNav.slice(-1)] : desktopNav;
 
   return (
     <div className="flex min-h-dvh flex-col bg-[#f4f6fb] md:flex-row">
@@ -44,7 +52,7 @@ export function AppShell() {
           {t("newChat")}
         </Button>
         <nav className="flex flex-col gap-1">
-          {desktopNav.map(({ to, key, icon: Icon }) => (
+          {nav.map(({ to, key, icon: Icon }) => (
             <NavLink
               viewTransition
               key={to}
@@ -59,6 +67,14 @@ export function AppShell() {
             >
               <Icon className="h-4 w-4 shrink-0" />
               <span className="whitespace-nowrap">{t(key)}</span>
+              {to === "/moderation" && pending > 0 ? (
+                <span
+                  className="ml-auto rounded-full bg-red-600 px-1.5 text-[11px] font-bold leading-5 text-white"
+                  aria-label={`${pending}`}
+                >
+                  {pending}
+                </span>
+              ) : null}
             </NavLink>
           ))}
         </nav>

@@ -10,12 +10,14 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
 	"campus-forum/internal/handlers"
 	"campus-forum/internal/mailer"
 	"campus-forum/internal/middleware"
+	"campus-forum/internal/mlclient"
 	"campus-forum/internal/store"
 )
 
@@ -139,6 +141,9 @@ func main() {
 	if err := pgStore.Migrate(ctx); err != nil {
 		log.Fatalf("could not apply database schema: %v", err)
 	}
+	if err := pgStore.MigrateModeration(ctx); err != nil {
+		log.Fatalf("could not apply moderation schema: %v", err)
+	}
 
 	// ADMIN_EMAILS (comma-separated) are promoted to the admin role on
 	// every startup. There's no API for granting admin — it's bootstrapped
@@ -150,7 +155,30 @@ func main() {
 		}
 	}
 
+	mlURL := getenv("ML_SERVICE_URL", "http://127.0.0.1:8001")
+	mlTimeoutSec := 180
+	if v := getenv("ML_REQUEST_TIMEOUT_SECONDS", "180"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			mlTimeoutSec = n
+		}
+	}
+	mlTimeout := time.Duration(mlTimeoutSec) * time.Second
+
 	h := handlers.New(pgStore, secret, mailer.New(), uploadDir, baseURL, allowedEmailDomains)
+	h.ML = mlclient.New(mlURL, mlTimeout)
+
+	// AI moderation of forum posts (questions and answers). The ML service
+	// (ai_ml) classifies each new post as allow / review / block; review and
+	// block go to the moderators' queue instead of being published.
+	h.Mod = pgStore
+	h.ModCfg = handlers.DefaultModerationConfig()
+	h.ModCfg.Enabled = !strings.EqualFold(getenv("MODERATION_ENABLED", "true"), "false")
+	if strings.EqualFold(getenv("MODERATION_ON_ML_FAILURE", "review"), "error") {
+		h.ModCfg.FailMode = "error"
+	}
+	if n, err := strconv.Atoi(getenv("MODERATION_TIMEOUT_SECONDS", "45")); err == nil && n > 0 {
+		h.ModCfg.Timeout = time.Duration(n) * time.Second
+	}
 
 	mux := http.NewServeMux()
 	authMw := middleware.Auth(secret)
@@ -162,6 +190,7 @@ func main() {
 	// doesn't get punished the way a fixed-window counter would.
 	authLimiter := middleware.RateLimit(0.2, 5) // ~1 attempt/5s, bursts of 5
 	writeLimiter := middleware.RateLimit(2, 20) // ~2/s sustained, bursts of 20
+	chatLimiter := middleware.NewChatRateLimit()
 
 	// --- Public API ---
 	mux.Handle("POST /api/register", authLimiter(http.HandlerFunc(h.Register)))
@@ -207,11 +236,18 @@ func main() {
 	mux.Handle("POST /api/threads/{id}/report", authMw(http.HandlerFunc(h.ReportThread)))
 	mux.Handle("POST /api/comments/{id}/report", authMw(http.HandlerFunc(h.ReportComment)))
 
+	mux.Handle("GET /api/chat/status", authMw(http.HandlerFunc(h.ChatStatus)))
+	mux.Handle("GET /api/chat/history", authMw(http.HandlerFunc(h.ChatHistory)))
+	mux.Handle("POST /api/chat/ask", authMw(chatLimiter.Wrap(http.HandlerFunc(h.ChatAsk))))
+
 	// --- Moderator/admin API (role checked inside each handler) ---
 	mux.Handle("POST /api/threads/{id}/lock", authMw(http.HandlerFunc(h.LockThread)))
 	mux.Handle("POST /api/users/{id}/ban", authMw(http.HandlerFunc(h.BanUser)))
 	mux.Handle("GET /api/reports", authMw(http.HandlerFunc(h.ListReports)))
 	mux.Handle("POST /api/reports/{id}/resolve", authMw(http.HandlerFunc(h.ResolveReport)))
+	mux.Handle("GET /api/moderation/queue", authMw(http.HandlerFunc(h.ListModerationQueue)))
+	mux.Handle("POST /api/moderation/queue/{id}/approve", authMw(http.HandlerFunc(h.ApproveModeration)))
+	mux.Handle("POST /api/moderation/queue/{id}/reject", authMw(http.HandlerFunc(h.RejectModeration)))
 	mux.Handle("POST /api/faq", authMw(http.HandlerFunc(h.CreateFAQ)))
 	mux.Handle("PATCH /api/faq/{id}", authMw(http.HandlerFunc(h.UpdateFAQ)))
 	mux.Handle("DELETE /api/faq/{id}", authMw(http.HandlerFunc(h.DeleteFAQ)))
@@ -223,11 +259,17 @@ func main() {
 	var rootHandler http.Handler = mux
 	rootHandler = middleware.CORS(corsOrigin)(rootHandler)
 
+	// Chat/ask can take up to ML_REQUEST_TIMEOUT_SECONDS; keep a small buffer.
+	writeTimeout := mlTimeout + 15*time.Second
+	if writeTimeout < 30*time.Second {
+		writeTimeout = 30 * time.Second
+	}
+
 	srv := &http.Server{
 		Addr:         addr,
 		Handler:      rootHandler,
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 10 * time.Second,
+		ReadTimeout:  30 * time.Second,
+		WriteTimeout: writeTimeout,
 		IdleTimeout:  60 * time.Second,
 	}
 

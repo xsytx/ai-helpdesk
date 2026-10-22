@@ -322,4 +322,23 @@ JWT secret persist in the `app-data` volume, the database in `db-data`.
   plaintext dev password — use a real secret (env var from a secrets
   manager, not committed anywhere) in any shared or production
   deployment. Keep `.env` out of version control (it's gitignored).
+## AI chat (ML service proxy)
+
+Authenticated routes (Bearer JWT):
+
+| Method | Path | Description |
+|---|---|---|
+| POST | `/api/chat/ask` | Ask the assistant (proxies to ML `POST /generate-answer`) |
+| GET | `/api/chat/history` | Paginated chat history (`page`, `page_size`) |
+| GET | `/api/chat/status` | Proxies ML `GET /health` → `ok` / `degraded` |
+
+Environment (see `.env.example`):
+
+- `ML_SERVICE_URL` — default `http://127.0.0.1:8001`
+- `ML_REQUEST_TIMEOUT_SECONDS` — default `180` (also drives the HTTP server write timeout)
+
+Per-user limits: one in-flight `/ask` at a time and about ten questions per minute.
+
+Tests: `go test ./...` from this directory (includes `internal/mlclient` and chat handler tests).
+
 # go_learn

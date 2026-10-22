@@ -1,5 +1,7 @@
 import { useAuth } from "@/app/AuthContext";
 import { useCreateAnswer } from "@/features/forum/api";
+import { ModerationNoticeCard } from "@/features/moderation/components/ModerationNoticeCard";
+import type { ModerationNotice } from "@/features/moderation/notice";
 import { useLocale } from "@/i18n/LocaleContext";
 import { Button } from "@/shared/ui/Button";
 import { FormEvent, useState } from "react";
@@ -10,6 +12,7 @@ export function ReplyForm({ threadId }: { threadId: string }) {
   const createAnswer = useCreateAnswer(threadId);
   const [body, setBody] = useState("");
   const [error, setError] = useState<string>();
+  const [notice, setNotice] = useState<ModerationNotice>();
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -19,12 +22,15 @@ export function ReplyForm({ threadId }: { threadId: string }) {
       return;
     }
     setError(undefined);
+    setNotice(undefined);
     try {
-      await createAnswer.mutateAsync({
+      const result = await createAnswer.mutateAsync({
         authorId: user.id,
         authorName: user.name,
         body,
       });
+      // The text is saved for the moderators either way, so the box is cleared.
+      setNotice(result.kind === "pending" ? result.notice : undefined);
       setBody("");
     } catch {
       setError(t("answerPostFailed"));
@@ -45,6 +51,7 @@ export function ReplyForm({ threadId }: { threadId: string }) {
         maxLength={2000}
         className="w-full resize-y rounded-xl border border-border bg-white px-3.5 py-2.5 text-sm text-primary placeholder:text-grey focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20"
       />
+      {notice ? <ModerationNoticeCard notice={notice} /> : null}
       {error ? (
         <p className="text-xs text-error" role="alert">
           {error}

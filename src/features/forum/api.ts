@@ -1,5 +1,6 @@
 import type { Answer, Thread, ThreadSort } from "@/entities/forum";
 import { useAuth } from "@/app/AuthContext";
+import { parseModerationNotice, type ModerationNotice } from "@/features/moderation/notice";
 import { apiClient, USE_MOCK_API } from "@/shared/api/client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as repo from "./forumRepository";
@@ -160,6 +161,16 @@ export function useAnswers(threadId: string) {
   return useThreadDetail(threadId, (d) => d.answers);
 }
 
+// A new question/answer is either published right away, or held back by the AI moderation
+// and sent to the moderators ("pending"). The backend answers 201 or 202 respectively.
+export type CreateThreadResult =
+  | { kind: "published"; thread: Thread }
+  | { kind: "pending"; notice: ModerationNotice };
+
+export type CreateAnswerResult =
+  | { kind: "published"; answer: Answer }
+  | { kind: "pending"; notice: ModerationNotice };
+
 export function useCreateThread() {
   const qc = useQueryClient();
   return useMutation({
@@ -168,17 +179,19 @@ export function useCreateThread() {
       authorName: string;
       title: string;
       body: string;
-    }) => {
-      if (USE_MOCK_API) return repo.createThread(input);
+    }): Promise<CreateThreadResult> => {
+      if (USE_MOCK_API) return { kind: "published", thread: repo.createThread(input) };
       // The backend takes the author from the login token, not the request body.
       const { data } = await apiClient.post<ApiThread>("/threads", {
         title: input.title,
         body: input.body,
       });
-      return toThread(data);
+      const notice = parseModerationNotice(data);
+      if (notice) return { kind: "pending", notice };
+      return { kind: "published", thread: toThread(data) };
     },
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: forumKeys.all });
+    onSuccess: (result) => {
+      if (result.kind === "published") void qc.invalidateQueries({ queryKey: forumKeys.all });
     },
   });
 }
@@ -186,15 +199,21 @@ export function useCreateThread() {
 export function useCreateAnswer(threadId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (input: { authorId: string; authorName: string; body: string }) => {
-      if (USE_MOCK_API) return repo.createAnswer({ ...input, threadId });
+    mutationFn: async (input: {
+      authorId: string;
+      authorName: string;
+      body: string;
+    }): Promise<CreateAnswerResult> => {
+      if (USE_MOCK_API) return { kind: "published", answer: repo.createAnswer({ ...input, threadId }) };
       const { data } = await apiClient.post<ApiComment>(`/threads/${threadId}/comments`, {
         body: input.body,
       });
-      return toAnswer(data, input.authorId);
+      const notice = parseModerationNotice(data);
+      if (notice) return { kind: "pending", notice };
+      return { kind: "published", answer: toAnswer(data, input.authorId) };
     },
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: forumKeys.all });
+    onSuccess: (result) => {
+      if (result.kind === "published") void qc.invalidateQueries({ queryKey: forumKeys.all });
     },
   });
 }
