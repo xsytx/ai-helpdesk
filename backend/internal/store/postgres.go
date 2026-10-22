@@ -165,6 +165,24 @@ func (s *PostgresStore) PromoteAdmins(ctx context.Context, emails []string) erro
 	return err
 }
 
+// PromoteModerators sets role='moderator' for plain users whose email is in
+// emails (MODERATOR_EMAILS). Admins are left alone.
+func (s *PostgresStore) PromoteModerators(ctx context.Context, emails []string) error {
+	if len(emails) == 0 {
+		return nil
+	}
+	_, err := s.pool.Exec(ctx, `UPDATE users SET role = 'moderator' WHERE email = ANY($1) AND role = 'user'`, emails)
+	return err
+}
+
+func (s *PostgresStore) SetStaffRole(ctx context.Context, userID int64, role string) error {
+	if role != "moderator" && role != "admin" {
+		return ErrInvalidTarget
+	}
+	_, err := s.pool.Exec(ctx, `UPDATE users SET role = $2 WHERE id = $1 AND role <> 'admin'`, userID, role)
+	return err
+}
+
 func (s *PostgresStore) ListThreadsByUser(ctx context.Context, userID int64, page, pageSize int) ([]models.Thread, int, error) {
 	if page < 1 {
 		page = 1
@@ -175,12 +193,12 @@ func (s *PostgresStore) ListThreadsByUser(ctx context.Context, userID int64, pag
 
 	var total int
 	if err := s.pool.QueryRow(ctx,
-		`SELECT COUNT(*) FROM threads WHERE user_id = $1`, userID,
+		`SELECT COUNT(*) FROM threads t WHERE t.user_id = $1 AND `+threadVisible, userID,
 	).Scan(&total); err != nil {
 		return nil, 0, err
 	}
 
-	q := threadSelect + ` WHERE t.user_id = $1 ORDER BY t.created_at DESC LIMIT $2 OFFSET $3`
+	q := threadSelect + ` WHERE t.user_id = $1 AND ` + threadVisible + ` ORDER BY t.created_at DESC LIMIT $2 OFFSET $3`
 	rows, err := s.pool.Query(ctx, q, userID, pageSize, (page-1)*pageSize)
 	if err != nil {
 		return nil, 0, err
@@ -208,18 +226,19 @@ func (s *PostgresStore) ListCommentsByUser(ctx context.Context, userID int64, pa
 
 	var total int
 	if err := s.pool.QueryRow(ctx,
-		`SELECT COUNT(*) FROM comments WHERE user_id = $1`, userID,
+		`SELECT COUNT(*) FROM comments c JOIN threads t ON t.id = c.thread_id
+		 WHERE c.user_id = $1 AND `+commentVisible+` AND `+threadVisible, userID,
 	).Scan(&total); err != nil {
 		return nil, 0, err
 	}
 
-	const q = `
+	q := `
 		SELECT c.id, c.thread_id, c.user_id, u.display_name, c.parent_comment_id, c.body, c.score, c.created_at,
 		       t.title
 		FROM comments c
 		JOIN users u ON u.id = c.user_id
 		JOIN threads t ON t.id = c.thread_id
-		WHERE c.user_id = $1
+		WHERE c.user_id = $1 AND ` + commentVisible + ` AND ` + threadVisible + `
 		ORDER BY c.created_at DESC
 		LIMIT $2 OFFSET $3`
 	rows, err := s.pool.Query(ctx, q, userID, pageSize, (page-1)*pageSize)
@@ -245,14 +264,21 @@ func (s *PostgresStore) Stats(ctx context.Context) (models.Stats, error) {
 	var st models.Stats
 	err := s.pool.QueryRow(ctx, `
 		SELECT (SELECT COUNT(*) FROM users),
-		       (SELECT COUNT(*) FROM threads),
-		       (SELECT COUNT(*) FROM comments),
+		       (SELECT COUNT(*) FROM threads t WHERE `+threadVisible+`),
+		       (SELECT COUNT(*) FROM comments c WHERE `+commentVisible+`),
 		       (SELECT COUNT(*) FROM tags)`,
 	).Scan(&st.Users, &st.Threads, &st.Comments, &st.Tags)
 	return st, err
 }
 
 // --- Threads ---
+
+// Posts the AI moderation is holding back (held/rejected) are hidden from
+// every public listing; see 002_moderation.sql for the statuses.
+const (
+	threadVisible  = `t.moderation_status IN ('ok', 'checking')`
+	commentVisible = `c.moderation_status IN ('ok', 'checking')`
+)
 
 // threadSelect aggregates each thread's tags via array_agg so every
 // listing (feed, search, by-tag, by-user, upcoming events, and the
@@ -263,10 +289,10 @@ func (s *PostgresStore) Stats(ctx context.Context) (models.Stats, error) {
 const threadSelect = `
 	SELECT t.id, t.user_id, u.display_name, t.title, t.body, t.score, t.locked_at,
 	       t.created_at, COALESCE(cc.cnt, 0),
-	       COALESCE(tgs.tags, ARRAY[]::text[])
+	       COALESCE(tgs.tags, ARRAY[]::text[]), t.moderation_status
 	FROM threads t
 	JOIN users u ON u.id = t.user_id
-	LEFT JOIN (SELECT thread_id, COUNT(*) AS cnt FROM comments GROUP BY thread_id) cc
+	LEFT JOIN (SELECT thread_id, COUNT(*) AS cnt FROM comments c WHERE ` + commentVisible + ` GROUP BY thread_id) cc
 	       ON cc.thread_id = t.id
 	LEFT JOIN (
 		SELECT tt.thread_id, array_agg(tg.name ORDER BY tg.name) AS tags
@@ -277,7 +303,7 @@ const threadSelect = `
 func scanThread(row pgx.Row) (models.Thread, error) {
 	var t models.Thread
 	err := row.Scan(&t.ID, &t.UserID, &t.AuthorName, &t.Title, &t.Body, &t.Score, &t.LockedAt,
-		&t.CreatedAt, &t.CommentCnt, &t.Tags)
+		&t.CreatedAt, &t.CommentCnt, &t.Tags, &t.ModerationStatus)
 	return t, err
 }
 
@@ -313,11 +339,11 @@ func (s *PostgresStore) ListFeed(ctx context.Context, sort string, page, pageSiz
 	}
 
 	var total int
-	if err := s.pool.QueryRow(ctx, `SELECT COUNT(*) FROM threads`).Scan(&total); err != nil {
+	if err := s.pool.QueryRow(ctx, `SELECT COUNT(*) FROM threads t WHERE `+threadVisible).Scan(&total); err != nil {
 		return nil, 0, err
 	}
 
-	q := threadSelect + ` ` + threadOrderBy(sort) + ` LIMIT $1 OFFSET $2`
+	q := threadSelect + ` WHERE ` + threadVisible + ` ` + threadOrderBy(sort) + ` LIMIT $1 OFFSET $2`
 	rows, err := s.pool.Query(ctx, q, pageSize, (page-1)*pageSize)
 	if err != nil {
 		return nil, 0, err
@@ -360,7 +386,7 @@ func (s *PostgresStore) SearchThreads(ctx context.Context, q string, page, pageS
 		pageSize = 20
 	}
 
-	where := `WHERE ` + searchMatch
+	where := `WHERE ` + searchMatch + ` AND ` + threadVisible
 	args := []any{q}
 
 	var total int
@@ -507,13 +533,15 @@ func (s *PostgresStore) ownershipErr(ctx context.Context, table string, id int64
 // --- Comments ---
 
 const commentSelect = `
-	SELECT c.id, c.thread_id, c.user_id, u.display_name, c.parent_comment_id, c.body, c.score, c.created_at
+	SELECT c.id, c.thread_id, c.user_id, u.display_name, c.parent_comment_id, c.body, c.score, c.created_at,
+	       c.moderation_status
 	FROM comments c
 	JOIN users u ON u.id = c.user_id`
 
 func scanComment(row pgx.Row) (models.Comment, error) {
 	var c models.Comment
-	err := row.Scan(&c.ID, &c.ThreadID, &c.UserID, &c.AuthorName, &c.ParentCommentID, &c.Body, &c.Score, &c.CreatedAt)
+	err := row.Scan(&c.ID, &c.ThreadID, &c.UserID, &c.AuthorName, &c.ParentCommentID, &c.Body, &c.Score, &c.CreatedAt,
+		&c.ModerationStatus)
 	return c, err
 }
 
@@ -1033,6 +1061,8 @@ func (s *PostgresStore) TrendingTags(ctx context.Context, limit int) ([]models.T
 	rows, err := s.pool.Query(ctx, `
 		SELECT tg.name, COUNT(*) AS cnt
 		FROM thread_tags tt JOIN tags tg ON tg.id = tt.tag_id
+		JOIN threads t ON t.id = tt.thread_id
+		WHERE `+threadVisible+`
 		GROUP BY tg.name
 		ORDER BY cnt DESC, tg.name
 		LIMIT $1`, limit)
@@ -1062,7 +1092,9 @@ func (s *PostgresStore) ListThreadsByTag(ctx context.Context, tagName string, pa
 
 	var total int
 	if err := s.pool.QueryRow(ctx, `
-		SELECT COUNT(*) FROM thread_tags tt JOIN tags tg ON tg.id = tt.tag_id WHERE tg.name = $1`,
+		SELECT COUNT(*) FROM thread_tags tt JOIN tags tg ON tg.id = tt.tag_id
+		JOIN threads t ON t.id = tt.thread_id
+		WHERE tg.name = $1 AND `+threadVisible,
 		tagName,
 	).Scan(&total); err != nil {
 		return nil, 0, err
@@ -1071,6 +1103,7 @@ func (s *PostgresStore) ListThreadsByTag(ctx context.Context, tagName string, pa
 	q := threadSelect + `
 		JOIN thread_tags tt ON tt.thread_id = t.id
 		JOIN tags tg ON tg.id = tt.tag_id AND tg.name = $1
+		WHERE ` + threadVisible + `
 		ORDER BY t.created_at DESC LIMIT $2 OFFSET $3`
 	rows, err := s.pool.Query(ctx, q, tagName, pageSize, (page-1)*pageSize)
 	if err != nil {

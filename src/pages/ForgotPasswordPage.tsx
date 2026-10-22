@@ -3,7 +3,7 @@ import { forgotPasswordRequest, savePending } from "@/features/auth/api";
 import { useLocale } from "@/i18n/LocaleContext";
 import { getErrorStatus } from "@/shared/api/client";
 import { AuthLayout } from "@/shared/layout/AuthLayout";
-import { isUniversityEmail } from "@/shared/lib/format";
+import { isValidEmail } from "@/shared/lib/format";
 import { Button } from "@/shared/ui/Button";
 import { Input } from "@/shared/ui/Input";
 import { FormEvent, useState } from "react";
@@ -26,8 +26,8 @@ export function ForgotPasswordPage() {
     e.preventDefault();
     setEmailError(undefined);
     setFormError(undefined);
-    if (!isUniversityEmail(email)) {
-      setEmailError(t("invalidEmail"));
+    if (!isValidEmail(email)) {
+      setEmailError(t("emailInvalidFormat"));
       return;
     }
 

@@ -8,7 +8,7 @@ import {
 import { getErrorStatus } from "@/shared/api/client";
 import { useLocale } from "@/i18n/LocaleContext";
 import { AuthLayout } from "@/shared/layout/AuthLayout";
-import { isUniversityEmail } from "@/shared/lib/format";
+import { isValidEmail } from "@/shared/lib/format";
 import { Button } from "@/shared/ui/Button";
 import { Input } from "@/shared/ui/Input";
 import { PasswordField } from "@/shared/ui/PasswordField";
@@ -39,8 +39,8 @@ export function LoginPage() {
     setEmailError(undefined);
     setFormError(undefined);
 
-    if (!isUniversityEmail(email)) {
-      setEmailError(t("corporateEmail"));
+    if (!isValidEmail(email)) {
+      setEmailError(t("emailInvalidFormat"));
       return;
     }
     if (password.length < 6) {

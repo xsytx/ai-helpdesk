@@ -17,25 +17,34 @@ import (
 // ML /moderate accepts at most this many characters.
 const maxModerationChars = 10000
 
-// ModerationConfig controls how new forum posts are checked by the AI.
+/// ModerationConfig controls how forum posts are checked by the AI.
+//
+// Flow (Story 10): an instant word-filter check runs before a post is saved;
+// obvious swearing is never published. Everything else is published right
+// away (status "checking") and the full AI check runs in the background: on
+// allow the post stays, on review/block it is hidden ("held") and goes to the
+// moderators' queue. So posting never waits for the language model.
 type ModerationConfig struct {
 	// Enabled=false lets every post through unchecked (local development).
 	Enabled bool
-	// FailMode is what happens when the ML service cannot give a verdict:
-	// "review" (default) sends the post to the moderators' queue,
-	// "error" refuses the request with 503 so the user can retry later.
+	// FailMode is what happens when the background AI check gets no verdict.
+	// Both "review" (default) and "error" hide the post and queue it: by then
+	// there is no user request left to fail. Kept for config compatibility.
 	FailMode string
-	// Timeout bounds one moderation call. Keep it below the reverse proxy's
-	// read timeout (nginx default is 60s).
+	// Timeout bounds one background AI check. No user waits for it, so it can
+	// be generous (the ML service may queue requests behind others).
 	Timeout time.Duration
+	// FastTimeout bounds the instant word-filter check done before saving.
+	FastTimeout time.Duration
 }
 
-// DefaultModerationConfig is the safe default: check everything, queue on failure.
+// DefaultModerationConfig is the safe default: check everything, hide on failure.
 func DefaultModerationConfig() ModerationConfig {
-	return ModerationConfig{Enabled: true, FailMode: "review", Timeout: 45 * time.Second}
+	return ModerationConfig{Enabled: true, FailMode: "review", Timeout: 150 * time.Second, FastTimeout: 2 * time.Second}
 }
 
-// moderationNotice is the 202 body the website shows instead of the new post.
+// moderationNotice is the 202 body the website shows instead of the new post
+// (only when the instant check blocked it, so it was never published).
 type moderationNotice struct {
 	Status     string   `json:"status"`   // always "pending_moderation"
 	Decision   string   `json:"decision"` // "block" or "review"
@@ -43,7 +52,7 @@ type moderationNotice struct {
 	QueueID    int64    `json:"queue_id"`
 }
 
-// pendingPost is a new thread/comment waiting for the AI's verdict.
+// pendingPost is a new thread/comment about to be checked.
 type pendingPost struct {
 	Kind            string // "thread" or "comment"
 	Title           string
@@ -65,14 +74,15 @@ func moderationText(title, body string, tags []string) string {
 	return strings.Join(parts, "\n\n")
 }
 
-// verdictFor asks the ML service. ok=false means "no clean verdict".
+// verdictFor asks the ML service for the full verdict (word filter + LLM).
+// ok=false means "no clean verdict".
 func (h *Handlers) verdictFor(ctx context.Context, text string) (v mlclient.ModerationResult, ok bool) {
 	if utf8.RuneCountInString(text) > maxModerationChars {
 		return mlclient.ModerationResult{Decision: "review", Reason: "too_long_to_check"}, true
 	}
 	timeout := h.ModCfg.Timeout
 	if timeout <= 0 {
-		timeout = 45 * time.Second
+		timeout = 150 * time.Second
 	}
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
@@ -84,14 +94,34 @@ func (h *Handlers) verdictFor(ctx context.Context, text string) (v mlclient.Mode
 	return res, true
 }
 
+// quickVerdict runs only the word filter. ok=false means it could not run
+// (the post is then published and left to the background check).
+func (h *Handlers) quickVerdict(ctx context.Context, text string) (v mlclient.ModerationResult, ok bool) {
+	if utf8.RuneCountInString(text) > maxModerationChars {
+		return mlclient.ModerationResult{}, false
+	}
+	timeout := h.ModCfg.FastTimeout
+	if timeout <= 0 {
+		timeout = 2 * time.Second
+	}
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+	res, err := h.ML.ModerateFast(ctx, text)
+	if err != nil {
+		log.Printf("moderation: instant check unavailable, relying on the background check: %v", err)
+		return mlclient.ModerationResult{}, false
+	}
+	return res, true
+}
+
 func (h *Handlers) moderationActive() bool {
 	return h.ModCfg.Enabled && h.ML != nil && h.Mod != nil
 }
 
-// moderationGate decides whether a new post may be published right now.
-// It returns true for "allow". Otherwise it has ALREADY written the HTTP
-// response (202 + notice after saving the post to the moderators' queue,
-// or an error) and the caller must stop.
+// moderationGate runs the instant check before a new post is saved. It
+// returns true when the post may be published now (the caller then saves it
+// and calls startBackgroundCheck). On false it has ALREADY written the HTTP
+// response (202 + notice after queueing the blocked post, or an error).
 func (h *Handlers) moderationGate(w http.ResponseWriter, r *http.Request, uid int64, p pendingPost) bool {
 	if !h.moderationActive() {
 		return true
@@ -109,25 +139,15 @@ func (h *Handlers) moderationGate(w http.ResponseWriter, r *http.Request, uid in
 		}
 	}
 
-	verdict, ok := h.verdictFor(r.Context(), moderationText(p.Title, p.Body, p.Tags))
-	if !ok {
-		if h.ModCfg.FailMode == "error" {
-			writeError(w, http.StatusServiceUnavailable, "moderation is temporarily unavailable, please try again in a minute")
-			return false
-		}
-		verdict = mlclient.ModerationResult{Decision: "review", Reason: "moderation_unavailable"}
-	}
-	if verdict.Decision == "allow" && verdict.PublishAllowed {
+	verdict, ok := h.quickVerdict(r.Context(), moderationText(p.Title, p.Body, p.Tags))
+	if !ok || verdict.Decision != "block" {
 		return true
 	}
-	if verdict.Decision != "block" {
-		verdict.Decision = "review" // "review", or anything unexpected: a human looks at it
-	}
-
+	// Obvious swearing: never published. Kept for the moderators' log.
 	item, err := h.Mod.CreateModerationItem(r.Context(), store.ModerationInput{
 		Kind: p.Kind, UserID: uid, Title: p.Title, Body: p.Body, Tags: p.Tags,
 		ThreadID: p.ThreadID, ParentCommentID: p.ParentCommentID,
-		Decision: verdict.Decision, Categories: verdict.Categories, Reason: verdict.Reason,
+		Decision: "block", Categories: verdict.Categories, Reason: verdict.Reason,
 		PolicyVersion: verdict.PolicyVersion, MLRequestID: verdict.RequestID,
 	})
 	if err != nil {
@@ -135,32 +155,40 @@ func (h *Handlers) moderationGate(w http.ResponseWriter, r *http.Request, uid in
 			writeStoreErr(w, err, "could not create comment")
 			return false
 		}
-		log.Printf("moderation: could not save post to queue: %v", err)
-		// Never publish unchecked content just because the queue write failed.
+		log.Printf("moderation: could not save blocked post to queue: %v", err)
 		writeError(w, http.StatusInternalServerError, "could not submit your post for review")
 		return false
 	}
-	log.Printf("moderation: user=%d kind=%s decision=%s reason=%s queue_id=%d", uid, p.Kind, verdict.Decision, verdict.Reason, item.ID)
+	log.Printf("moderation: user=%d kind=%s decision=block (instant) reason=%s queue_id=%d", uid, p.Kind, verdict.Reason, item.ID)
 	writeJSON(w, http.StatusAccepted, moderationNotice{
-		Status: "pending_moderation", Decision: verdict.Decision,
+		Status: "pending_moderation", Decision: "block",
 		Categories: nonNilStrings(verdict.Categories), QueueID: item.ID,
 	})
 	return false
 }
 
-// moderationEditGate checks an EDIT of an already published post. Edits are
-// not queued: anything other than a clear "allow" refuses the edit, so a
-// post cannot be made abusive after it was approved.
-func (h *Handlers) moderationEditGate(w http.ResponseWriter, r *http.Request, text string) bool {
+// moderationEditGate checks an EDIT of a published post before it is saved:
+// posts under review cannot be edited (that would sidestep the moderator),
+// and obvious swearing is refused at once. The full AI check of the new text
+// then runs in the background (call startBackgroundCheck after saving).
+func (h *Handlers) moderationEditGate(w http.ResponseWriter, r *http.Request, kind string, id int64, text string) bool {
 	if !h.moderationActive() {
 		return true
 	}
-	verdict, ok := h.verdictFor(r.Context(), text)
-	if !ok {
-		writeError(w, http.StatusServiceUnavailable, "moderation is temporarily unavailable, please try again in a minute")
+	status, err := h.Mod.PostModerationStatus(r.Context(), kind, id)
+	switch {
+	case errors.Is(err, store.ErrNotFound):
+		writeStoreErr(w, err, "could not update the post")
+		return false
+	case err != nil:
+		writeError(w, http.StatusInternalServerError, "could not update the post")
+		return false
+	case status == "held" || status == "rejected":
+		writeError(w, http.StatusConflict, "this post is under review by a moderator and cannot be edited")
 		return false
 	}
-	if verdict.Decision == "allow" && verdict.PublishAllowed {
+	verdict, ok := h.quickVerdict(r.Context(), text)
+	if !ok || verdict.Decision != "block" {
 		return true
 	}
 	writeJSON(w, http.StatusUnprocessableEntity, map[string]any{
@@ -169,6 +197,101 @@ func (h *Handlers) moderationEditGate(w http.ResponseWriter, r *http.Request, te
 		"categories": nonNilStrings(verdict.Categories),
 	})
 	return false
+}
+
+// backgroundSlots bounds how many AI checks run at once (the ML service has
+// its own queue; this just keeps the backend from piling up goroutines).
+var backgroundSlots = make(chan struct{}, 4)
+
+// startBackgroundCheck marks a just-saved post as "checking" and runs the
+// full AI check without making the user wait. Returns the status to report.
+func (h *Handlers) startBackgroundCheck(p store.PostToCheck) string {
+	if !h.moderationActive() {
+		return "ok"
+	}
+	if err := h.Mod.SetPostModerationStatus(context.Background(), p.Kind, p.ID, "checking"); err != nil {
+		log.Printf("moderation: could not mark %s %d as checking: %v", p.Kind, p.ID, err)
+	}
+	go h.runBackgroundCheck(p)
+	return "checking"
+}
+
+func (h *Handlers) runBackgroundCheck(p store.PostToCheck) {
+	backgroundSlots <- struct{}{}
+	defer func() { <-backgroundSlots }()
+	ctx := context.Background()
+
+	verdict, ok := h.verdictFor(ctx, moderationText(p.Title, p.Body, p.Tags))
+	if !ok {
+		verdict = mlclient.ModerationResult{Decision: "review", Reason: "moderation_unavailable"}
+	}
+	// The post may have been deleted meanwhile.
+	if status, err := h.Mod.PostModerationStatus(ctx, p.Kind, p.ID); err != nil || status != "checking" {
+		return
+	}
+	if verdict.Decision == "allow" && verdict.PublishAllowed {
+		if err := h.Mod.SetPostModerationStatus(ctx, p.Kind, p.ID, "ok"); err != nil {
+			log.Printf("moderation: could not mark %s %d as ok: %v", p.Kind, p.ID, err)
+			return
+		}
+		if p.Kind == "comment" && p.ThreadID != nil {
+			h.notifySubscribersByEmail(ctx, *p.ThreadID, p.UserID, h.authorName(ctx, p.UserID))
+		}
+		return
+	}
+	if verdict.Decision != "block" {
+		verdict.Decision = "review" // "review", or anything unexpected: a human looks at it
+	}
+	if err := h.Mod.SetPostModerationStatus(ctx, p.Kind, p.ID, "held"); err != nil {
+		log.Printf("moderation: could not hide %s %d: %v", p.Kind, p.ID, err)
+		return
+	}
+	in := store.ModerationInput{
+		Kind: p.Kind, UserID: p.UserID, Title: p.Title, Body: p.Body, Tags: p.Tags,
+		ThreadID: p.ThreadID, ParentCommentID: p.ParentCommentID,
+		Decision: verdict.Decision, Categories: verdict.Categories, Reason: verdict.Reason,
+		PolicyVersion: verdict.PolicyVersion, MLRequestID: verdict.RequestID,
+	}
+	id := p.ID
+	if p.Kind == "thread" {
+		in.PublishedThreadID = &id
+	} else {
+		in.PublishedCommentID = &id
+	}
+	item, err := h.Mod.CreateModerationItem(ctx, in)
+	if err != nil {
+		// The post stays hidden; it can still be found in the database.
+		log.Printf("moderation: %s %d hidden but not queued: %v", p.Kind, p.ID, err)
+		return
+	}
+	log.Printf("moderation: user=%d kind=%s id=%d decision=%s reason=%s queue_id=%d (hidden after publishing)",
+		p.UserID, p.Kind, p.ID, verdict.Decision, verdict.Reason, item.ID)
+}
+
+func (h *Handlers) authorName(ctx context.Context, uid int64) string {
+	if u, err := h.Store.GetUserByID(ctx, uid); err == nil {
+		return u.DisplayName
+	}
+	return ""
+}
+
+// ResumeModerationChecks finishes AI checks that were still running when the
+// server stopped, so no post stays in "checking" forever. Call once at startup.
+func (h *Handlers) ResumeModerationChecks(ctx context.Context) {
+	if !h.moderationActive() {
+		return
+	}
+	posts, err := h.Mod.PostsToCheck(ctx, 500)
+	if err != nil {
+		log.Printf("moderation: could not list unfinished checks: %v", err)
+		return
+	}
+	if len(posts) > 0 {
+		log.Printf("moderation: resuming %d unfinished check(s)", len(posts))
+	}
+	for _, p := range posts {
+		go h.runBackgroundCheck(p)
+	}
 }
 
 func nonNilStrings(v []string) []string {
@@ -227,9 +350,29 @@ func (h *Handlers) ListModerationQueue(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "status must be pending, approved, rejected or all")
 		return
 	}
+	// Optional date range for the moderation log: from=YYYY-MM-DD (inclusive),
+	// to=YYYY-MM-DD (inclusive, whole day).
+	filter := store.ModerationFilter{Status: status}
+	for _, p := range []struct {
+		key string
+		dst **time.Time
+		add time.Duration
+	}{{"from", &filter.From, 0}, {"to", &filter.To, 24 * time.Hour}} {
+		raw := r.URL.Query().Get(p.key)
+		if raw == "" {
+			continue
+		}
+		d, err := time.Parse("2006-01-02", raw)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, p.key+" must be a date like 2026-10-22")
+			return
+		}
+		d = d.Add(p.add)
+		*p.dst = &d
+	}
 	page := queryIntDefault(r, "page", 1, 1, 100000)
 	pageSize := queryIntDefault(r, "page_size", 20, 1, 100)
-	items, total, pending, err := h.Mod.ListModerationItems(r.Context(), status, page, pageSize)
+	items, total, pending, err := h.Mod.ListModerationItems(r.Context(), filter, page, pageSize)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "could not load the moderation queue")
 		return
@@ -282,6 +425,32 @@ func (h *Handlers) ApproveModeration(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		writeStoreErr(w, err, "could not approve the post")
+		return
+	}
+
+	// Hidden after publishing (async check): just show it again.
+	if claimed.PublishedThreadID != nil || claimed.PublishedCommentID != nil {
+		kind, postID := "thread", claimed.PublishedThreadID
+		if claimed.PublishedCommentID != nil {
+			kind, postID = "comment", claimed.PublishedCommentID
+		}
+		if err := h.Mod.SetPostModerationStatus(ctx, kind, *postID, "ok"); err != nil {
+			if errors.Is(err, store.ErrNotFound) {
+				writeError(w, http.StatusConflict, "this post no longer exists - reject it")
+				return
+			}
+			log.Printf("moderation: could not unhide %s %d: %v", kind, *postID, err)
+			writeError(w, http.StatusInternalServerError, "could not publish the post")
+			return
+		}
+		if kind == "comment" && claimed.ThreadID != nil {
+			h.notifySubscribersByEmail(ctx, *claimed.ThreadID, claimed.UserID, claimed.AuthorName)
+		}
+		final, err := h.Mod.GetModerationItem(ctx, id)
+		if err != nil {
+			final = claimed
+		}
+		writeJSON(w, http.StatusOK, final)
 		return
 	}
 
@@ -361,6 +530,15 @@ func (h *Handlers) RejectModeration(w http.ResponseWriter, r *http.Request) {
 		}
 		writeStoreErr(w, err, "could not reject the post")
 		return
+	}
+	// Hidden after publishing (async check): keep it hidden for good.
+	if item.PublishedThreadID != nil {
+		err = h.Mod.SetPostModerationStatus(r.Context(), "thread", *item.PublishedThreadID, "rejected")
+	} else if item.PublishedCommentID != nil {
+		err = h.Mod.SetPostModerationStatus(r.Context(), "comment", *item.PublishedCommentID, "rejected")
+	}
+	if err != nil && !errors.Is(err, store.ErrNotFound) {
+		log.Printf("moderation: queue item %d rejected but post status not updated: %v", id, err)
 	}
 	writeJSON(w, http.StatusOK, item)
 }

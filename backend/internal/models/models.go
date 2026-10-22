@@ -46,6 +46,8 @@ type Thread struct {
 	Tags        []string     `json:"tags,omitempty"`
 	Attachments []Attachment `json:"attachments,omitempty"`
 	CreatedAt   time.Time    `json:"created_at"`
+	// ModerationStatus: ok | checking | held | rejected (see 002_moderation.sql).
+	ModerationStatus string `json:"moderation_status"`
 }
 
 type Comment struct {
@@ -58,6 +60,8 @@ type Comment struct {
 	BodyHTML        string    `json:"body_html,omitempty"` // rendered Markdown; populated on the thread-detail response only
 	Score           int       `json:"score"`
 	CreatedAt       time.Time `json:"created_at"`
+	// ModerationStatus: ok | checking | held | rejected (see 002_moderation.sql).
+	ModerationStatus string `json:"moderation_status"`
 }
 
 // Attachment is an uploaded image on a thread, served from local disk at

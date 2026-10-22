@@ -149,10 +149,25 @@ func main() {
 	// every startup. There's no API for granting admin — it's bootstrapped
 	// this way on purpose, since that's not something a request should
 	// ever be able to grant itself.
-	if emails := splitCSV(getenv("ADMIN_EMAILS", "")); len(emails) > 0 {
-		if err := pgStore.PromoteAdmins(ctx, emails); err != nil {
+	adminEmails := splitCSV(getenv("ADMIN_EMAILS", ""))
+	if len(adminEmails) > 0 {
+		if err := pgStore.PromoteAdmins(ctx, adminEmails); err != nil {
 			log.Fatalf("could not promote admins: %v", err)
 		}
+	}
+	// MODERATOR_EMAILS works the same way for the moderator role.
+	moderatorEmails := splitCSV(getenv("MODERATOR_EMAILS", ""))
+	if err := pgStore.PromoteModerators(ctx, moderatorEmails); err != nil {
+		log.Fatalf("could not promote moderators: %v", err)
+	}
+	// Staff may register from any email domain (e.g. a shared Gmail for the
+	// helpdesk team); students are still limited to ALLOWED_EMAIL_DOMAINS.
+	staffRoles := map[string]string{}
+	for _, e := range moderatorEmails {
+		staffRoles[e] = "moderator"
+	}
+	for _, e := range adminEmails {
+		staffRoles[e] = "admin"
 	}
 
 	mlURL := getenv("ML_SERVICE_URL", "http://127.0.0.1:8001")
@@ -165,6 +180,7 @@ func main() {
 	mlTimeout := time.Duration(mlTimeoutSec) * time.Second
 
 	h := handlers.New(pgStore, secret, mailer.New(), uploadDir, baseURL, allowedEmailDomains)
+	h.StaffRoles = staffRoles
 	h.ML = mlclient.New(mlURL, mlTimeout)
 
 	// AI moderation of forum posts (questions and answers). The ML service
@@ -176,9 +192,11 @@ func main() {
 	if strings.EqualFold(getenv("MODERATION_ON_ML_FAILURE", "review"), "error") {
 		h.ModCfg.FailMode = "error"
 	}
-	if n, err := strconv.Atoi(getenv("MODERATION_TIMEOUT_SECONDS", "45")); err == nil && n > 0 {
+	if n, err := strconv.Atoi(getenv("MODERATION_TIMEOUT_SECONDS", "150")); err == nil && n > 0 {
 		h.ModCfg.Timeout = time.Duration(n) * time.Second
 	}
+	// Finish AI checks interrupted by a restart (posts left in "checking").
+	go h.ResumeModerationChecks(ctx)
 
 	mux := http.NewServeMux()
 	authMw := middleware.Auth(secret)

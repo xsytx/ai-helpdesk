@@ -28,3 +28,21 @@ CREATE TABLE IF NOT EXISTS moderation_queue (
 
 CREATE INDEX IF NOT EXISTS idx_moderation_queue_status_created ON moderation_queue (status, created_at);
 CREATE INDEX IF NOT EXISTS idx_moderation_queue_user ON moderation_queue (user_id, created_at DESC);
+
+-- Asynchronous moderation (Story 10): a post that passes the instant word
+-- filter is published at once and checked by the AI in the background.
+--   ok        visible, checked (also every post from before this change)
+--   checking  visible, the AI check is still running
+--   held      hidden: the AI said review/block, waiting for a moderator
+--   rejected  hidden for good: a moderator rejected it
+-- Only ok/checking posts are shown publicly; the author still sees their own
+-- held/rejected posts (marked "under review"), and so do moderators.
+ALTER TABLE threads  ADD COLUMN IF NOT EXISTS moderation_status TEXT NOT NULL DEFAULT 'ok';
+ALTER TABLE comments ADD COLUMN IF NOT EXISTS moderation_status TEXT NOT NULL DEFAULT 'ok';
+CREATE INDEX IF NOT EXISTS idx_threads_moderation_open  ON threads  (moderation_status) WHERE moderation_status <> 'ok';
+CREATE INDEX IF NOT EXISTS idx_comments_moderation_open ON comments (moderation_status) WHERE moderation_status <> 'ok';
+-- Date filters on the moderation log.
+CREATE INDEX IF NOT EXISTS idx_moderation_queue_created ON moderation_queue (created_at);
+-- true = the post was published first and hidden by the background AI check;
+-- false = the instant word filter stopped it before publishing.
+ALTER TABLE moderation_queue ADD COLUMN IF NOT EXISTS hidden_after_publish BOOLEAN NOT NULL DEFAULT false;

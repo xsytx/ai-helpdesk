@@ -1,4 +1,5 @@
 import { AnswerList } from "@/features/forum/components/AnswerList";
+import { HiddenPostNotice } from "@/features/moderation/components/HiddenPostNotice";
 import { ReplyForm } from "@/features/forum/components/ReplyForm";
 import { useAnswers, useThread } from "@/features/forum/api";
 import { useLocale } from "@/i18n/LocaleContext";
@@ -52,6 +53,7 @@ export function ThreadDetailPage() {
             <p className="text-xs text-label">
               {thread.authorName} · {formatRelativeTime(thread.createdAt, locale)}
             </p>
+            <HiddenPostNotice status={thread.moderationStatus} authorId={thread.authorId} className="my-2" />
             <h1 className="mt-1 text-xl font-bold text-primary">{thread.title}</h1>
             <p className="mt-2 text-sm text-primary/90">{thread.body}</p>
           </div>

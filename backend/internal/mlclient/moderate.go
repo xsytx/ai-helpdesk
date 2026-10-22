@@ -21,10 +21,21 @@ type ModerationResult struct {
 	PolicyVersion  string   `json:"policy_version"`
 }
 
-// Moderate asks the ML service to classify text. Any failure to get a clean
-// verdict is an error (the caller decides what to do: it never means "allow").
+// Moderate asks the ML service to classify text (word filter + LLM). Any
+// failure to get a clean verdict is an error (the caller decides what to do:
+// it never means "allow").
 func (c *Client) Moderate(ctx context.Context, text string) (ModerationResult, error) {
-	body, err := json.Marshal(map[string]string{"text": text})
+	return c.moderate(ctx, text, "full")
+}
+
+// ModerateFast runs only the ML service's word filter: milliseconds, no LLM.
+// "allow" here only means "no obvious swearing"; the full check still has to run.
+func (c *Client) ModerateFast(ctx context.Context, text string) (ModerationResult, error) {
+	return c.moderate(ctx, text, "fast")
+}
+
+func (c *Client) moderate(ctx context.Context, text, mode string) (ModerationResult, error) {
+	body, err := json.Marshal(map[string]string{"text": text, "mode": mode})
 	if err != nil {
 		return ModerationResult{}, err
 	}

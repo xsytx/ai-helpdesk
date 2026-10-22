@@ -72,6 +72,15 @@ class ModerationService:
         return {'decision': decision, 'publish_allowed': decision == 'allow',
                 'categories': categories, 'reason': reason, 'policy_version': 'toxicity-v2'}
 
+    def quick_check(self, text):
+        """Only the word filter: instant, no LLM. 'allow' here just means "no obvious
+        swearing" — the backend publishes the post and runs the full check afterwards."""
+        if not isinstance(text, str) or not text.strip() or len(text) > 10000:
+            raise ValueError('Text must contain 1 to 10000 characters')
+        if self.has_profanity(text):
+            return self._result('block', ['profanity'], 'profanity_filter')
+        return self._result('allow', [], 'no_profanity_found')
+
     def moderate(self, text):
         if not isinstance(text, str) or not text.strip() or len(text) > 10000:
             raise ValueError('Text must contain 1 to 10000 characters')

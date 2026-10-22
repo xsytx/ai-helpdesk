@@ -3,7 +3,7 @@ import { getErrorMessage, getErrorStatus } from "@/shared/api/client";
 import { useAuth } from "@/app/AuthContext";
 import { useLocale } from "@/i18n/LocaleContext";
 import { AuthLayout } from "@/shared/layout/AuthLayout";
-import { isUniversityEmail, isValidUsername } from "@/shared/lib/format";
+import { isValidEmail, isValidUsername } from "@/shared/lib/format";
 import { checkPassword, emailName } from "@/shared/lib/password";
 import { Button } from "@/shared/ui/Button";
 import { Input } from "@/shared/ui/Input";
@@ -45,8 +45,8 @@ export function SignUpPage() {
       setUsernameError(t("usernameFormat"));
       invalid = true;
     }
-    if (!isUniversityEmail(email)) {
-      setEmailError(t("corporateEmail"));
+    if (!isValidEmail(email)) {
+      setEmailError(t("emailInvalidFormat"));
       invalid = true;
     }
     const passwordProblem = checkPassword(password, [emailName(email), username]);
@@ -68,7 +68,10 @@ export function SignUpPage() {
       navigate("/verify", { viewTransition: true });
     } catch (err) {
       const status = getErrorStatus(err);
-      if (status === 429) {
+      if (status === 400 && getErrorMessage(err)?.includes("email must")) {
+        // Only staff emails may register outside @sdu.edu.kz (backend decides).
+        setEmailError(t("invalidEmail"));
+      } else if (status === 429) {
         setFormError(t("tooManyRequests"));
       } else if (status === 409) {
         // The backend reports which field collided in its error message.

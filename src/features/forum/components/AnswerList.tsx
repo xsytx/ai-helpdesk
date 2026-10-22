@@ -3,6 +3,7 @@ import { useAuth } from "@/app/AuthContext";
 import { useLikeAnswer } from "@/features/forum/api";
 import { useLocale } from "@/i18n/LocaleContext";
 import { formatRelativeTime } from "@/shared/lib/format";
+import { HiddenPostNotice } from "@/features/moderation/components/HiddenPostNotice";
 import { slideFromPrevious } from "@/shared/lib/motion";
 import { useLayoutEffect, useRef } from "react";
 import { UserAvatar } from "@/features/profile/components/UserAvatar";
@@ -78,6 +79,7 @@ export function AnswerList({ threadId, answers }: { threadId: string; answers: A
                   </p>
                 </div>
               </div>
+              <HiddenPostNotice status={answer.moderationStatus} authorId={answer.authorId} compact className="mt-2" />
               <p className="mt-2 text-sm text-primary/90">{answer.body}</p>
             </div>
           </li>

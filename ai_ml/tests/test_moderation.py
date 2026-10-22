@@ -22,6 +22,15 @@ class ModerationTests(unittest.TestCase):
             self.assertEqual((r['decision'], r['categories'], r['publish_allowed']), ('block', ['profanity'], False), text)
         client.chat_json.assert_not_called()
 
+    def test_quick_check_never_calls_llm(self):
+        s, client = svc('{"decision":"block","categories":["harassment"]}')
+        self.assertEqual(s.quick_check('х у й')['decision'], 'block')
+        r = s.quick_check('Где библиотека?')
+        self.assertEqual((r['decision'], r['publish_allowed'], r['reason']), ('allow', True, 'no_profanity_found'))
+        client.chat_json.assert_not_called()
+        with self.assertRaises(ValueError):
+            s.quick_check('   ')
+
     def test_no_false_positives_on_normal_words(self):
         s, _ = svc(json.dumps({'decision': 'allow', 'categories': []}))
         for text in ['Страхуйте вещи', 'Что такое GPA?', 'Қайда деканат?', 'небаловаться', 'употреблять']:

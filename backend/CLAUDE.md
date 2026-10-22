@@ -21,9 +21,18 @@ go vet ./...                  # static checks
 (cd .. && docker compose up -d --build)   # whole stack (compose file is in the repo root)
 ```
 
-There are no automated tests in this repo (`*_test.go` — none exist) and
-no linter/formatter config beyond standard `gofmt`. Run `gofmt -l .` to
-check formatting.
+Tests: `internal/mlclient` and the chat handler tests run anywhere
+(`go test ./...`). The moderation tests in
+`internal/handlers/moderation_queue_test.go` need a real Postgres and are
+**skipped** unless `TEST_DATABASE_URL` is set — point it at a separate
+test database, never the dev one (the file header shows how). No
+linter/formatter config beyond standard `gofmt`.
+
+Moderation is asynchronous: a post that passes the instant word filter is
+published at once (`moderation_status = 'checking'`) and the full AI check
+runs in a background goroutine (`moderation_queue.go`). Every public read
+query must filter with `threadVisible` / `commentVisible` in
+`postgres.go`, or held posts leak.
 
 Requires Go 1.26+ and PostgreSQL. Copy `.env.example` to `.env` and edit
 `DATABASE_URL` etc. — `loadDotEnv` in `cmd/server/main.go` loads it on

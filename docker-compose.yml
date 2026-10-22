@@ -29,6 +29,7 @@ services:
       UPLOAD_DIR: "/data/uploads"
       BASE_URL: "${PUBLIC_URL:-http://localhost:3000}"
       ADMIN_EMAILS: "${ADMIN_EMAILS:-}"
+      MODERATOR_EMAILS: "${MODERATOR_EMAILS:-}"
       # Real email delivery for verification / password reset codes. Left
       # empty, codes are shown on screen instead (local testing only).
       SMTP_HOST: "${SMTP_HOST:-}"

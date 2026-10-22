@@ -1,3 +1,6 @@
+/** ok/checking = visible to everyone; held/rejected = hidden by moderation (author and moderators still see it). */
+export type ModerationStatus = "ok" | "checking" | "held" | "rejected";
+
 export interface Thread {
   id: string;
   authorId: string;
@@ -8,6 +11,7 @@ export interface Thread {
   answerCount: number;
   /** Net upvotes on the thread itself. */
   score: number;
+  moderationStatus?: ModerationStatus;
 }
 
 export interface Answer {
@@ -19,6 +23,7 @@ export interface Answer {
   createdAt: string;
   likes: number;
   likedByUserIds: string[];
+  moderationStatus?: ModerationStatus;
 }
 
 /** @deprecated Use Thread for list previews */

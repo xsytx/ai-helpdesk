@@ -140,6 +140,7 @@ func (s *chatTestStore) ResetPassword(context.Context, string, string, string, s
 	return nil
 }
 func (s *chatTestStore) ChangePassword(context.Context, int64, string, string) error { return nil }
+func (s *chatTestStore) SetStaffRole(context.Context, int64, string) error            { return nil }
 
 func TestBuildChatAskResp(t *testing.T) {
 	faq := "official"

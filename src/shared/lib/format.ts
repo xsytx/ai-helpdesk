@@ -5,8 +5,13 @@ export function getInitials(name: string): string {
   return (parts[0]!.charAt(0) + parts[parts.length - 1]!.charAt(0)).toUpperCase();
 }
 
-export function isUniversityEmail(email: string): boolean {
-  return /^[^\s@]+@sdu\.edu\.kz$/i.test(email.trim());
+/**
+ * Looks like an email address. Which domains may register (students:
+ * @sdu.edu.kz; staff listed in MODERATOR_EMAILS/ADMIN_EMAILS: any) is decided
+ * by the backend, so the website doesn't hard-code it.
+ */
+export function isValidEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 }
 
 /** 3–20 letters (any alphabet), digits, "_", "." or "-"; no spaces. */

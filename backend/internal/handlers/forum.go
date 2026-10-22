@@ -105,8 +105,8 @@ func (h *Handlers) CreateThread(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	tags := normalizeTags(req.Tags)
-	// AI moderation: only a clear "allow" is published right away; everything else
-	// is saved to the moderators' queue and answered with 202 (see moderation_queue.go).
+	// AI moderation: obvious swearing is refused at once (202 + notice); anything
+	// else is published now and checked in the background (see moderation_queue.go).
 	if !h.moderationGate(w, r, uid, pendingPost{Kind: "thread", Title: req.Title, Body: req.Body, Tags: tags}) {
 		return
 	}
@@ -117,6 +117,9 @@ func (h *Handlers) CreateThread(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "could not create thread")
 		return
 	}
+	t.ModerationStatus = h.startBackgroundCheck(store.PostToCheck{
+		Kind: "thread", ID: t.ID, UserID: uid, Title: t.Title, Body: t.Body, Tags: tags,
+	})
 	writeJSON(w, http.StatusCreated, t)
 }
 
@@ -143,7 +146,7 @@ func (h *Handlers) UpdateThread(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	tags := normalizeTags(req.Tags)
-	if !h.moderationEditGate(w, r, moderationText(req.Title, req.Body, tags)) {
+	if !h.moderationEditGate(w, r, "thread", id, moderationText(req.Title, req.Body, tags)) {
 		return
 	}
 	t, err := h.Store.UpdateThread(r.Context(), id, uid, store.ThreadInput{
@@ -153,6 +156,9 @@ func (h *Handlers) UpdateThread(w http.ResponseWriter, r *http.Request) {
 		writeStoreErr(w, err, "could not update thread")
 		return
 	}
+	t.ModerationStatus = h.startBackgroundCheck(store.PostToCheck{
+		Kind: "thread", ID: t.ID, UserID: uid, Title: t.Title, Body: t.Body, Tags: tags,
+	})
 	writeJSON(w, http.StatusOK, t)
 }
 
@@ -190,10 +196,27 @@ func (h *Handlers) GetThread(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, "thread not found")
 		return
 	}
-	comments, err := h.Store.ListComments(r.Context(), id)
+	// Posts hidden by moderation are visible only to their author and to
+	// moderators (the author sees them marked "under review").
+	viewer, loggedIn := h.userID(r)
+	staff := loggedIn && h.isModerator(r, viewer)
+	canSee := func(status string, authorID int64) bool {
+		return status == "ok" || status == "checking" || status == "" || staff || (loggedIn && authorID == viewer)
+	}
+	if !canSee(t.ModerationStatus, t.UserID) {
+		writeError(w, http.StatusNotFound, "thread not found")
+		return
+	}
+	all, err := h.Store.ListComments(r.Context(), id)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "could not list comments")
 		return
+	}
+	comments := all[:0]
+	for _, c := range all {
+		if canSee(c.ModerationStatus, c.UserID) {
+			comments = append(comments, c)
+		}
 	}
 	// Markdown is only rendered on the full detail view — list/feed views
 	// show a plain-text snippet instead, which sidesteps truncating a
@@ -254,7 +277,13 @@ func (h *Handlers) CreateComment(w http.ResponseWriter, r *http.Request) {
 		writeStoreErr(w, err, "could not create comment")
 		return
 	}
-	h.notifySubscribersByEmail(r.Context(), threadID, uid, c.AuthorName)
+	c.ModerationStatus = h.startBackgroundCheck(store.PostToCheck{
+		Kind: "comment", ID: c.ID, UserID: uid, Body: c.Body, ThreadID: &threadID, ParentCommentID: req.ParentCommentID,
+	})
+	// With moderation on, subscribers are emailed once the AI check passes.
+	if c.ModerationStatus == "ok" {
+		h.notifySubscribersByEmail(r.Context(), threadID, uid, c.AuthorName)
+	}
 	writeJSON(w, http.StatusCreated, c)
 }
 
@@ -283,7 +312,7 @@ func (h *Handlers) UpdateComment(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "body is required")
 		return
 	}
-	if !h.moderationEditGate(w, r, req.Body) {
+	if !h.moderationEditGate(w, r, "comment", id, req.Body) {
 		return
 	}
 	c, err := h.Store.UpdateComment(r.Context(), id, uid, req.Body)
@@ -291,6 +320,10 @@ func (h *Handlers) UpdateComment(w http.ResponseWriter, r *http.Request) {
 		writeStoreErr(w, err, "could not update comment")
 		return
 	}
+	threadID := c.ThreadID
+	c.ModerationStatus = h.startBackgroundCheck(store.PostToCheck{
+		Kind: "comment", ID: c.ID, UserID: uid, Body: c.Body, ThreadID: &threadID, ParentCommentID: c.ParentCommentID,
+	})
 	writeJSON(w, http.StatusOK, c)
 }
 

@@ -57,6 +57,8 @@ class ErrorResponse(BaseModel):
 class ModerationRequest(BaseModel):
     model_config = ConfigDict(extra='forbid', strict=True)
     text: str = Field(min_length=1, max_length=10000)
+    # 'fast' = word filter only (milliseconds, no LLM): used before publishing a post.
+    mode: Literal['full', 'fast'] = 'full'
 
     @field_validator('text')
     @classmethod
@@ -177,6 +179,11 @@ def create_app(service=None, journal=None, moderator=None, llm_client=None, sett
               responses={503: {'model': ModerationError}})
     def moderate(payload: ModerationRequest):
         request_id = str(uuid4())
+        if payload.mode == 'fast':
+            # No LLM, so no need to wait for a slot in the LLM queue.
+            result = ModerationResponse(request_id=request_id, **app.state.moderator.quick_check(payload.text))
+            LOGGER.info('Moderation (fast) %s: %s', request_id, result.decision)
+            return result
         if not app.state.gate.acquire(timeout=app.state.queue_timeout):
             return JSONResponse(ModerationError(request_id=request_id, error='service_busy').model_dump(), status_code=503)
         try:

@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
+	"log"
 	"math/big"
 	"net/http"
 	"net/mail"
@@ -123,7 +124,8 @@ func (h *Handlers) Register(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid email address")
 		return
 	}
-	if !h.isAllowedEmailDomain(req.Email) {
+	staffRole := h.StaffRoles[req.Email]
+	if staffRole == "" && !h.isAllowedEmailDomain(req.Email) {
 		if len(h.AllowedEmailDomains) == 1 {
 			writeError(w, http.StatusBadRequest, fmt.Sprintf("email must end with @%s", h.AllowedEmailDomains[0]))
 		} else {
@@ -158,6 +160,13 @@ func (h *Handlers) Register(w http.ResponseWriter, r *http.Request) {
 		}
 		writeError(w, http.StatusInternalServerError, "could not create account")
 		return
+	}
+	if staffRole != "" {
+		if err := h.Store.SetStaffRole(r.Context(), u.ID, staffRole); err != nil {
+			log.Printf("could not give %s the %s role: %v", u.Email, staffRole, err)
+		} else {
+			u.Role = staffRole
+		}
 	}
 	devCode := h.sendVerificationEmail(r.Context(), u.ID, u.Email)
 

@@ -4,6 +4,7 @@ import {
   useModerationQueue,
   useReviewModerationItem,
   type ModerationItem,
+  type QueueDateRange,
   type QueueStatus,
 } from "@/features/moderation/api";
 import { useCategoryLabel } from "@/features/moderation/components/ModerationNoticeCard";
@@ -15,10 +16,14 @@ import { Card } from "@/shared/ui/Card";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 
-const TABS: { status: QueueStatus; key: "moderationPending" | "moderationApproved" | "moderationRejected" }[] = [
+const TABS: {
+  status: QueueStatus;
+  key: "moderationPending" | "moderationApproved" | "moderationRejected" | "moderationAll";
+}[] = [
   { status: "pending", key: "moderationPending" },
   { status: "approved", key: "moderationApproved" },
   { status: "rejected", key: "moderationRejected" },
+  { status: "all", key: "moderationAll" },
 ];
 
 function ModerationCard({ item }: { item: ModerationItem }) {
@@ -61,6 +66,11 @@ function ModerationCard({ item }: { item: ModerationItem }) {
           {item.authorName} · {new Date(item.createdAt).toLocaleString()}
         </span>
       </div>
+
+      <p className="text-xs text-label">
+        {item.hiddenAfterPublish ? t("moderationWasPublished") : t("moderationStoppedBefore")}
+        {item.reason === "moderation_unavailable" ? ` · ${t("moderationAiUnavailable")}` : ""}
+      </p>
 
       {item.kind === "comment" && item.threadId ? (
         <p className="text-xs text-label">
@@ -132,7 +142,8 @@ export function ModerationPage() {
   const { user } = useAuth();
   const { t } = useLocale();
   const [status, setStatus] = useState<QueueStatus>("pending");
-  const queue = useModerationQueue(status);
+  const [range, setRange] = useState<QueueDateRange>({});
+  const queue = useModerationQueue(status, range);
 
   if (!isStaffRole(user?.role)) {
     return <p className="mx-auto max-w-3xl text-sm text-label">{t("moderationNoAccess")}</p>;
@@ -158,6 +169,25 @@ export function ModerationPage() {
             {tab.status === "pending" && queue.data ? ` (${queue.data.pending})` : ""}
           </button>
         ))}
+      </div>
+
+      <div className="flex flex-wrap items-end gap-3 text-sm">
+        {(["from", "to"] as const).map((key) => (
+          <label key={key} className="flex flex-col gap-1 text-xs font-medium text-label">
+            {key === "from" ? t("moderationFrom") : t("moderationTo")}
+            <input
+              type="date"
+              value={range[key] ?? ""}
+              onChange={(e) => setRange((r) => ({ ...r, [key]: e.target.value || undefined }))}
+              className="h-9 rounded-xl border border-border bg-white px-3 text-sm text-primary focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20"
+            />
+          </label>
+        ))}
+        {range.from || range.to ? (
+          <Button size="sm" variant="ghost" onClick={() => setRange({})}>
+            {t("moderationClearDates")}
+          </Button>
+        ) : null}
       </div>
 
       {queue.isLoading ? <p className="text-sm text-label">{t("loading")}</p> : null}

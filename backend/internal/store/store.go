@@ -176,6 +176,10 @@ type Store interface {
 	// password first) — unlike ResetPassword, no reset code is involved.
 	ChangePassword(ctx context.Context, userID int64, newPasswordHash, newSalt string) error
 
+	// SetStaffRole gives a user the "moderator" or "admin" role. It never
+	// lowers an admin (so ADMIN_EMAILS always wins over MODERATOR_EMAILS).
+	SetStaffRole(ctx context.Context, userID int64, role string) error
+
 	// --- AI chat history ---
 
 	CreateChatMessage(ctx context.Context, userID int64, msg models.ChatMessage) (models.ChatMessage, error)

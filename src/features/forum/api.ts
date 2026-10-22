@@ -1,4 +1,4 @@
-import type { Answer, Thread, ThreadSort } from "@/entities/forum";
+import type { Answer, ModerationStatus, Thread, ThreadSort } from "@/entities/forum";
 import { useAuth } from "@/app/AuthContext";
 import { parseModerationNotice, type ModerationNotice } from "@/features/moderation/notice";
 import { apiClient, USE_MOCK_API } from "@/shared/api/client";
@@ -22,6 +22,7 @@ interface ApiThread {
   score: number;
   comment_count: number;
   created_at: string;
+  moderation_status?: ModerationStatus;
 }
 
 interface ApiComment {
@@ -33,6 +34,7 @@ interface ApiComment {
   body: string;
   score: number;
   created_at: string;
+  moderation_status?: ModerationStatus;
 }
 
 function toThread(t: ApiThread): Thread {
@@ -45,6 +47,7 @@ function toThread(t: ApiThread): Thread {
     createdAt: t.created_at,
     answerCount: t.comment_count,
     score: t.score,
+    moderationStatus: t.moderation_status,
   };
 }
 
@@ -58,6 +61,7 @@ function toAnswer(c: ApiComment, userId: string | undefined): Answer {
     body: c.body,
     createdAt: c.created_at,
     likes: c.score,
+    moderationStatus: c.moderation_status,
     // A remembered like on an answer with no likes is stale (e.g. un-liked on
     // another device), so it doesn't count.
     likedByUserIds: userId && c.score > 0 && readLikes(userId).has(id) ? [userId] : [],

@@ -95,6 +95,26 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(self.client.post('/moderate', json={'text': 'x'}).json()['categories'], ['profanity'])
         self.assertEqual(self.client.post('/moderate', json={'text': '  '}).status_code, 422)
 
+    def test_moderate_fast_uses_word_filter_only(self):
+        self.moderator.quick_check.return_value = {'decision': 'allow', 'publish_allowed': True, 'categories': [],
+                                                   'reason': 'no_profanity_found', 'policy_version': 'toxicity-v2'}
+        r = self.client.post('/moderate', json={'text': 'Привет', 'mode': 'fast'})
+        self.assertEqual((r.status_code, r.json()['decision']), (200, 'allow'))
+        self.moderator.quick_check.assert_called_once_with('Привет')
+        self.moderator.moderate.assert_not_called()
+        self.assertEqual(self.client.post('/moderate', json={'text': 'x', 'mode': 'slow'}).status_code, 422)
+
+    def test_moderate_fast_does_not_wait_for_llm_queue(self):
+        self.moderator.quick_check.return_value = {'decision': 'allow', 'publish_allowed': True, 'categories': [],
+                                                   'reason': 'no_profanity_found', 'policy_version': 'toxicity-v2'}
+        gate = self.client.app.state.gate
+        self.assertTrue(gate.acquire(timeout=1))  # the only LLM slot is busy
+        try:
+            r = self.client.post('/moderate', json={'text': 'Привет', 'mode': 'fast'})
+            self.assertEqual(r.status_code, 200)
+        finally:
+            gate.release()
+
     def test_health(self):
         body = self.client.get('/health').json()
         self.assertEqual(body['status'], 'ok')

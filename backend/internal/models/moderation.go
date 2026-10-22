@@ -27,5 +27,8 @@ type ModerationItem struct {
 	AdminNote          string     `json:"admin_note"`
 	PublishedThreadID  *int64     `json:"published_thread_id,omitempty"`
 	PublishedCommentID *int64     `json:"published_comment_id,omitempty"`
+	// HiddenAfterPublish: the post was published first and hidden by the
+	// background AI check (false: stopped before publishing).
+	HiddenAfterPublish bool `json:"hidden_after_publish"`
 	CreatedAt          time.Time  `json:"created_at"`
 }
