@@ -31,8 +31,14 @@ including disguised spellings (spaces or symbols between letters, Latin look-ali
 Block: direct targeted abuse or bullying (harassment), hateful attacks on protected groups (hate),
 credible threats of violence (threat), unwanted sexual targeting (sexual_harassment).
 Allow: respectful disagreement, criticism of the university or services, negative feedback, educational discussion.
+Allow: short neutral messages (tests like "testing" or "тест", greetings, "ok", "lol", thanks).
+Allow: messages ABOUT the rules that use no obscene word themselves, e.g. asking others not to swear
+("do not say bad words", "не материтесь", "балағат сөз айтпаңыздар"). Mentioning swearing is not swearing.
+Allow: everyday hyperbole and idioms ("a killer exam", "убийственное задание", "I'm dying of boredom").
+Use category profanity ONLY when an actual obscene word (or a disguised spelling of one) appears in the text.
 Quoting abuse to ask for help is not abuse: allow when clear, review when ambiguous.
-If unsure about context, language or intent, use review.
+Use review only when a specific phrase could plausibly be an attack on a person or group and the context
+does not make it clear. Never use review just because a message is short, vague or off-topic.
 Return ONLY JSON {"decision":"allow|block|review","categories":[...]}.
 For allow, categories must be empty. For block, include at least one category. For review, categories may be empty."""
 
@@ -51,11 +57,39 @@ def load_patterns(path=PATTERNS_FILE):
     return patterns
 
 
+# Phonetic Latin -> Cyrillic, for words typed in Latin letters: «suka» -> «сука», «blyat» -> «блят».
+# Multi-letter combinations first. Only applied to all-Latin words, so Cyrillic text is untouched.
+TRANSLIT_MULTI = [('shch', 'щ'), ('sch', 'щ'), ('zh', 'ж'), ('kh', 'х'), ('ch', 'ч'), ('sh', 'ш'), ('ts', 'ц'),
+                  ('ya', 'я'), ('ja', 'я'), ('yu', 'ю'), ('ju', 'ю'), ('yo', 'е'), ('ye', 'е')]
+TRANSLIT_ONE = str.maketrans({'a': 'а', 'b': 'б', 'v': 'в', 'g': 'г', 'd': 'д', 'e': 'е', 'z': 'з', 'i': 'и',
+                              'j': 'й', 'k': 'к', 'l': 'л', 'm': 'м', 'n': 'н', 'o': 'о', 'p': 'п', 'r': 'р',
+                              's': 'с', 't': 'т', 'u': 'у', 'f': 'ф', 'h': 'х', 'c': 'ц', 'y': 'ы', 'x': 'х',
+                              'w': 'в', 'q': 'к'})
+LATIN_WORD = re.compile(r'\b[a-z]+\b')
+# A symbol standing in for one letter inside a word: «х*й», «f*ck», «п@здец».
+MASKED = re.compile(r'(?<=\w)[*#@$%!?]+(?=\w)')
+MASK_GUESSES = 'уиеаоыuieao'
+
+
+def _translit(text):
+    def word(m):
+        w = m.group(0)
+        for latin, cyr in TRANSLIT_MULTI:
+            w = w.replace(latin, cyr)
+        return w.translate(TRANSLIT_ONE)
+    return LATIN_WORD.sub(word, text)
+
+
 def _views(text):
     base = text.casefold().replace('ё', 'е')
     spaced = SPACED.sub(lambda m: re.sub(r'[\s.\-_*,]+', '', m.group(0)), base)
     squeezed = re.sub(r'(.)\1{2,}', r'\1', spaced)          # «хууууй» -> «хуй»
-    return {base, spaced, squeezed, spaced.translate(LOOKALIKE), squeezed.translate(LOOKALIKE)}
+    views = {base, spaced, squeezed, spaced.translate(LOOKALIKE), squeezed.translate(LOOKALIKE),
+             _translit(squeezed)}
+    if MASKED.search(squeezed):                            # try each vowel in place of the symbol
+        views |= {MASKED.sub(v, squeezed) for v in MASK_GUESSES}
+        views |= {v.translate(LOOKALIKE) for v in list(views)}
+    return views
 
 
 class ModerationService:

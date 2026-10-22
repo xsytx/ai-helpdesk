@@ -1,0 +1,24 @@
+{"text": "check check", "lang": "en", "expected": "allow", "kind": "short"}
+{"text": "just trying the forum out", "lang": "en", "expected": "allow", "kind": "short"}
+{"text": "good morning", "lang": "en", "expected": "allow", "kind": "short"}
+{"text": "Guys, let's keep the language clean here", "lang": "en", "expected": "allow", "kind": "about_rules"}
+{"text": "That lecture was so boring I almost died", "lang": "en", "expected": "allow", "kind": "idiom"}
+{"text": "The wifi in block F is terrible", "lang": "en", "expected": "allow", "kind": "criticism"}
+{"text": "проверка связи", "lang": "ru", "expected": "allow", "kind": "short"}
+{"text": "норм", "lang": "ru", "expected": "allow", "kind": "short"}
+{"text": "ребята, давайте без мата", "lang": "ru", "expected": "allow", "kind": "about_rules"}
+{"text": "эта контрольная меня добила", "lang": "ru", "expected": "allow", "kind": "idiom"}
+{"text": "общежитие в ужасном состоянии, администрация ничего не делает", "lang": "ru", "expected": "allow", "kind": "criticism"}
+{"text": "кто идёт на футбол в субботу?", "lang": "ru", "expected": "allow", "kind": "question"}
+{"text": "жақсы", "lang": "kk", "expected": "allow", "kind": "short"}
+{"text": "сабақ кестесі қайда?", "lang": "kk", "expected": "allow", "kind": "question"}
+{"text": "мұнда сыпайы сөйлейік", "lang": "kk", "expected": "allow", "kind": "about_rules"}
+{"text": "ты конченый придурок", "lang": "ru", "expected": "flag", "kind": "insult"}
+{"text": "ещё раз так скажешь и получишь по морде", "lang": "ru", "expected": "flag", "kind": "threat"}
+{"text": "ну ты и чмо", "lang": "ru", "expected": "flag", "kind": "insult"}
+{"text": "pohui na vse", "lang": "ru", "expected": "flag", "kind": "bypass_translit"}
+{"text": "п*здец полный", "lang": "ru", "expected": "flag", "kind": "bypass_symbols"}
+{"text": "you are worthless trash", "lang": "en", "expected": "flag", "kind": "insult"}
+{"text": "sh*t answer, idiot", "lang": "en", "expected": "flag", "kind": "insult"}
+{"text": "сен нағыз малсың", "lang": "kk", "expected": "flag", "kind": "insult"}
+{"text": "жоғал бұл жерден, ақымақ", "lang": "kk", "expected": "flag", "kind": "insult"}

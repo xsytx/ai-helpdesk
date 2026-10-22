@@ -23,8 +23,8 @@ type Handlers struct {
 	// AllowedEmailDomains restricts registration to these domains
 	// (lowercase, no "@") when non-empty; empty means any domain.
 	AllowedEmailDomains []string
-	// StaffRoles maps staff emails (ADMIN_EMAILS / MODERATOR_EMAILS, lowercase)
-	// to their role. Staff may register from any domain and get the role at once.
+	// StaffRoles maps staff emails (ADMIN_EMAILS, lowercase) to their role.
+	// Staff may register from any domain and get the role at once.
 	StaffRoles map[string]string
 	// ML is the Python helpdesk service client (generate-answer / moderate / health).
 	ML *mlclient.Client

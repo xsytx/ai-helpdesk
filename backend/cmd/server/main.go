@@ -155,17 +155,9 @@ func main() {
 			log.Fatalf("could not promote admins: %v", err)
 		}
 	}
-	// MODERATOR_EMAILS works the same way for the moderator role.
-	moderatorEmails := splitCSV(getenv("MODERATOR_EMAILS", ""))
-	if err := pgStore.PromoteModerators(ctx, moderatorEmails); err != nil {
-		log.Fatalf("could not promote moderators: %v", err)
-	}
-	// Staff may register from any email domain (e.g. a shared Gmail for the
+	// Admins may register from any email domain (e.g. a shared Gmail for the
 	// helpdesk team); students are still limited to ALLOWED_EMAIL_DOMAINS.
 	staffRoles := map[string]string{}
-	for _, e := range moderatorEmails {
-		staffRoles[e] = "moderator"
-	}
 	for _, e := range adminEmails {
 		staffRoles[e] = "admin"
 	}

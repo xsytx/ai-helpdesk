@@ -6,8 +6,9 @@ import { Card } from "@/shared/ui/Card";
 import { Button } from "@/shared/ui/Button";
 import { LanguageSwitcher } from "@/shared/layout/LanguageSwitcher";
 import { requestTour } from "@/features/onboarding/tour";
-import { Compass } from "lucide-react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { isStaffRole } from "@/features/moderation/api";
+import { Compass, ShieldCheck } from "lucide-react";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 
 export function SettingsPage() {
   const { user, logout } = useAuth();
@@ -46,6 +47,14 @@ export function SettingsPage() {
           <Compass className="h-4 w-4" />
           {t("replayTour")}
         </Button>
+        {isStaffRole(user.role) ? (
+          <Button asChild variant="secondary" size="sm" className="mt-2 w-full">
+            <Link viewTransition to="/admin">
+              <ShieldCheck className="h-4 w-4" />
+              {t("adminPanel")}
+            </Link>
+          </Button>
+        ) : null}
       </Card>
       <Card>
         <AvatarPicker />

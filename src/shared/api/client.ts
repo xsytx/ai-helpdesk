@@ -1,6 +1,6 @@
 import axios, { isAxiosError } from "axios";
 
-const TOKEN_KEY = "ai_helpdesk_token";
+export const TOKEN_KEY = "ai_helpdesk_token";
 
 /** Serve forum data from localStorage instead of the backend (VITE_USE_MOCK_API=true). */
 export const USE_MOCK_API = import.meta.env.VITE_USE_MOCK_API === "true";

@@ -26,7 +26,7 @@ const desktopNav = [
   { to: "/settings", key: "settings" as const, icon: Settings },
 ];
 
-const moderationNav = { to: "/moderation", key: "moderation" as const, icon: ShieldCheck };
+const adminNav = { to: "/admin", key: "adminPanel" as const, icon: ShieldCheck };
 
 export function AppShell() {
   const { user } = useAuth();
@@ -36,7 +36,7 @@ export function AppShell() {
   const isStaff = isStaffRole(user?.role);
   const pending = usePendingModerationCount().data ?? 0;
   // Moderators and admins get the moderation queue just above "Settings".
-  const nav = isStaff ? [...desktopNav.slice(0, -1), moderationNav, ...desktopNav.slice(-1)] : desktopNav;
+  const nav = isStaff ? [...desktopNav.slice(0, -1), adminNav, ...desktopNav.slice(-1)] : desktopNav;
 
   return (
     <div className="flex min-h-dvh flex-col bg-[#f4f6fb] md:flex-row">
@@ -67,7 +67,7 @@ export function AppShell() {
             >
               <Icon className="h-4 w-4 shrink-0" />
               <span className="whitespace-nowrap">{t(key)}</span>
-              {to === "/moderation" && pending > 0 ? (
+              {to === "/admin" && pending > 0 ? (
                 <span
                   className="ml-auto rounded-full bg-red-600 px-1.5 text-[11px] font-bold leading-5 text-white"
                   aria-label={`${pending}`}

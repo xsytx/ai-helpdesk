@@ -353,6 +353,13 @@ func (h *Handlers) ListModerationQueue(w http.ResponseWriter, r *http.Request) {
 	// Optional date range for the moderation log: from=YYYY-MM-DD (inclusive),
 	// to=YYYY-MM-DD (inclusive, whole day).
 	filter := store.ModerationFilter{Status: status}
+	switch sort := r.URL.Query().Get("sort"); sort {
+	case "", "new", "old":
+		filter.Sort = sort
+	default:
+		writeError(w, http.StatusBadRequest, "sort must be new or old")
+		return
+	}
 	for _, p := range []struct {
 		key string
 		dst **time.Time

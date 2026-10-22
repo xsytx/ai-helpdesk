@@ -165,16 +165,6 @@ func (s *PostgresStore) PromoteAdmins(ctx context.Context, emails []string) erro
 	return err
 }
 
-// PromoteModerators sets role='moderator' for plain users whose email is in
-// emails (MODERATOR_EMAILS). Admins are left alone.
-func (s *PostgresStore) PromoteModerators(ctx context.Context, emails []string) error {
-	if len(emails) == 0 {
-		return nil
-	}
-	_, err := s.pool.Exec(ctx, `UPDATE users SET role = 'moderator' WHERE email = ANY($1) AND role = 'user'`, emails)
-	return err
-}
-
 func (s *PostgresStore) SetStaffRole(ctx context.Context, userID int64, role string) error {
 	if role != "moderator" && role != "admin" {
 		return ErrInvalidTarget

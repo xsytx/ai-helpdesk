@@ -22,6 +22,14 @@ class ModerationTests(unittest.TestCase):
             self.assertEqual((r['decision'], r['categories'], r['publish_allowed']), ('block', ['profanity'], False), text)
         client.chat_json.assert_not_called()
 
+    def test_translit_and_masked_letters_blocked_without_llm(self):
+        s, client = svc('{}')
+        for text in ['suka gde canteen', 'blyat opyat', 'idi nahui', 'pohui', 'pizdec kakoy', 'х*й тебе', 'f*ck this', 'п*здец']:
+            self.assertEqual(s.quick_check(text)['decision'], 'block', text)
+        for text in ['sukhoi', 'nahodka', 'pizza', 'huge lecture', 'Hui Wang from China', 'blue sky', 'f*', 'testing']:
+            self.assertEqual(s.quick_check(text)['decision'], 'allow', text)
+        client.chat_json.assert_not_called()
+
     def test_quick_check_never_calls_llm(self):
         s, client = svc('{"decision":"block","categories":["harassment"]}')
         self.assertEqual(s.quick_check('х у й')['decision'], 'block')

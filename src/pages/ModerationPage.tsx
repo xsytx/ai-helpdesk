@@ -5,6 +5,7 @@ import {
   useReviewModerationItem,
   type ModerationItem,
   type QueueDateRange,
+  type QueueSort,
   type QueueStatus,
 } from "@/features/moderation/api";
 import { useCategoryLabel } from "@/features/moderation/components/ModerationNoticeCard";
@@ -143,7 +144,8 @@ export function ModerationPage() {
   const { t } = useLocale();
   const [status, setStatus] = useState<QueueStatus>("pending");
   const [range, setRange] = useState<QueueDateRange>({});
-  const queue = useModerationQueue(status, range);
+  const [sort, setSort] = useState<QueueSort>("new");
+  const queue = useModerationQueue(status, range, sort);
 
   if (!isStaffRole(user?.role)) {
     return <p className="mx-auto max-w-3xl text-sm text-label">{t("moderationNoAccess")}</p>;
@@ -151,7 +153,10 @@ export function ModerationPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-4">
-      <h1 className="text-xl font-bold text-primary">{t("moderationTitle")}</h1>
+      <div>
+        <h1 className="text-xl font-bold text-primary">{t("adminPanel")}</h1>
+        <h2 className="mt-1 text-sm font-semibold text-label">{t("moderationTitle")}</h2>
+      </div>
       <div className="flex gap-2" role="tablist">
         {TABS.map((tab) => (
           <button
@@ -183,6 +188,22 @@ export function ModerationPage() {
             />
           </label>
         ))}
+        <div className="ml-auto flex rounded-lg bg-background-2 p-0.5 text-xs font-semibold" role="group" aria-label={t("moderationSortLabel")}>
+          {(["new", "old"] as const).map((value) => (
+            <button
+              key={value}
+              type="button"
+              aria-pressed={sort === value}
+              onClick={() => setSort(value)}
+              className={cn(
+                "rounded-md px-3 py-1.5",
+                sort === value ? "bg-white text-primary shadow-sm" : "text-label hover:text-primary",
+              )}
+            >
+              {value === "new" ? t("moderationSortNew") : t("moderationSortOld")}
+            </button>
+          ))}
+        </div>
         {range.from || range.to ? (
           <Button size="sm" variant="ghost" onClick={() => setRange({})}>
             {t("moderationClearDates")}

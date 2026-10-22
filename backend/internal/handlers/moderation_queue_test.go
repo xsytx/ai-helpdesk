@@ -697,7 +697,7 @@ func TestStaffEmailMayRegisterFromAnyDomain(t *testing.T) {
 	h := New(e.pg, e.secret, mailer.New(), t.TempDir(), "http://test", []string{"sdu.edu.kz"})
 	n := time.Now().UnixNano() % 1_000_000_000
 	staff := fmt.Sprintf("helpdesk%d@gmail.com", n)
-	h.StaffRoles = map[string]string{staff: "moderator"}
+	h.StaffRoles = map[string]string{staff: "admin"}
 	srv := httptest.NewServer(http.HandlerFunc(h.Register))
 	t.Cleanup(srv.Close)
 	register := func(email, name string) (int, map[string]any) {
@@ -718,10 +718,41 @@ func TestStaffEmailMayRegisterFromAnyDomain(t *testing.T) {
 	if code != http.StatusCreated {
 		t.Fatalf("staff gmail: %d %v", code, body)
 	}
-	if role := body["user"].(map[string]any)["role"]; role != "moderator" {
-		t.Fatalf("staff should be a moderator right away, role=%v", role)
+	if role := body["user"].(map[string]any)["role"]; role != "admin" {
+		t.Fatalf("staff should be an admin right away, role=%v", role)
 	}
 	if code, _ := register(fmt.Sprintf("s%d@sdu.edu.kz", n), fmt.Sprintf("sdu%d", n)); code != http.StatusCreated {
 		t.Fatalf("an sdu.edu.kz student must still register, got %d", code)
+	}
+}
+
+func TestQueueSortNewestOrOldest(t *testing.T) {
+	e := newModEnv(t)
+	u, mod := e.user("user"), e.user("admin")
+	_, first := e.call(u, "POST", "/api/threads", map[string]any{"title": "First BADWORD post", "body": "body body body"})
+	time.Sleep(20 * time.Millisecond)
+	_, second := e.call(u, "POST", "/api/threads", map[string]any{"title": "Second BADWORD post", "body": "body body body"})
+	order := func(sort string) []int64 {
+		code, list := e.call(mod, "GET", "/api/moderation/queue?status=all&page_size=100&sort="+sort, nil)
+		if code != http.StatusOK {
+			t.Fatalf("sort=%s: %d", sort, code)
+		}
+		var ids []int64
+		for _, it := range list["items"].([]any) {
+			id := num(it.(map[string]any)["id"])
+			if id == num(first["queue_id"]) || id == num(second["queue_id"]) {
+				ids = append(ids, id)
+			}
+		}
+		return ids
+	}
+	if got := order("new"); len(got) != 2 || got[0] != num(second["queue_id"]) {
+		t.Fatalf("newest first: %v", got)
+	}
+	if got := order("old"); len(got) != 2 || got[0] != num(first["queue_id"]) {
+		t.Fatalf("oldest first: %v", got)
+	}
+	if code, _ := e.call(mod, "GET", "/api/moderation/queue?sort=sideways", nil); code != http.StatusBadRequest {
+		t.Fatalf("bad sort: %d", code)
 	}
 }

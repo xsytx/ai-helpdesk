@@ -66,18 +66,11 @@ export const router = createBrowserRouter([
             ),
           },
           {
+            // Admin panel; moderation is its first section.
             path: "admin",
-            element: (
-              <PlaceholderPage
-                title="Admin"
-                description="FAQ and location CRUD for administrators."
-              />
-            ),
-          },
-          {
-            path: "moderation",
             element: lazyPage(() => import("@/pages/ModerationPage"), "ModerationPage"),
           },
+          { path: "moderation", element: <Navigate to="/admin" replace /> },
           { path: "faq", element: lazyPage(() => import("@/pages/FaqPage"), "FaqPage") },
           {
             path: "settings",

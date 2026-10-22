@@ -177,7 +177,7 @@ type Store interface {
 	ChangePassword(ctx context.Context, userID int64, newPasswordHash, newSalt string) error
 
 	// SetStaffRole gives a user the "moderator" or "admin" role. It never
-	// lowers an admin (so ADMIN_EMAILS always wins over MODERATOR_EMAILS).
+	// lowers an admin.
 	SetStaffRole(ctx context.Context, userID int64, role string) error
 
 	// --- AI chat history ---

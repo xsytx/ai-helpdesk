@@ -42,6 +42,9 @@ type ModerationFilter struct {
 	Status string     // pending | approved | rejected | "" / all
 	From   *time.Time // created_at >= From
 	To     *time.Time // created_at <  To
+	// Sort: "new" (newest first) or "old" (oldest first). Default: the
+	// pending work queue is oldest first, history is newest first.
+	Sort string
 }
 
 // PostToCheck is a published post whose background AI check has not finished
@@ -196,7 +199,7 @@ func (s *PostgresStore) ListModerationItems(ctx context.Context, f ModerationFil
 
 	// Pending items are a work queue (oldest first); history is newest first.
 	order := "ORDER BY q.created_at DESC, q.id DESC"
-	if status == "pending" {
+	if f.Sort == "old" || (f.Sort == "" && status == "pending") {
 		order = "ORDER BY q.created_at ASC, q.id ASC"
 	}
 	limitArg, offsetArg := len(args)+1, len(args)+2

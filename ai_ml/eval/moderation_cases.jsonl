@@ -1,0 +1,60 @@
+{"text": "testing", "lang": "en", "expected": "allow", "kind": "short"}
+{"text": "test 123", "lang": "en", "expected": "allow", "kind": "short"}
+{"text": "ok", "lang": "en", "expected": "allow", "kind": "short"}
+{"text": "thanks!", "lang": "en", "expected": "allow", "kind": "short"}
+{"text": "lol", "lang": "en", "expected": "allow", "kind": "short"}
+{"text": "hello everyone", "lang": "en", "expected": "allow", "kind": "short"}
+{"text": "Where is the library?", "lang": "en", "expected": "allow", "kind": "question"}
+{"text": "How do I register for courses next semester?", "lang": "en", "expected": "allow", "kind": "question"}
+{"text": "Can someone explain recursion in simple words?", "lang": "en", "expected": "allow", "kind": "question"}
+{"text": "do not say bad words", "lang": "en", "expected": "allow", "kind": "about_rules"}
+{"text": "Please don't swear in this forum, keep it friendly", "lang": "en", "expected": "allow", "kind": "about_rules"}
+{"text": "The cafeteria food is really bad this semester", "lang": "en", "expected": "allow", "kind": "criticism"}
+{"text": "I strongly disagree with the new attendance policy, it is unfair", "lang": "en", "expected": "allow", "kind": "criticism"}
+{"text": "This exam was a killer, I barely finished", "lang": "en", "expected": "allow", "kind": "idiom"}
+{"text": "тест", "lang": "ru", "expected": "allow", "kind": "short"}
+{"text": "ок", "lang": "ru", "expected": "allow", "kind": "short"}
+{"text": "спасибо", "lang": "ru", "expected": "allow", "kind": "short"}
+{"text": "привет всем", "lang": "ru", "expected": "allow", "kind": "short"}
+{"text": "Где находится деканат?", "lang": "ru", "expected": "allow", "kind": "question"}
+{"text": "Как получить справку об обучении?", "lang": "ru", "expected": "allow", "kind": "question"}
+{"text": "Кто-нибудь знает, когда начинается сессия?", "lang": "ru", "expected": "allow", "kind": "question"}
+{"text": "Не материтесь, пожалуйста", "lang": "ru", "expected": "allow", "kind": "about_rules"}
+{"text": "Еда в столовой ужасная, надо что-то менять", "lang": "ru", "expected": "allow", "kind": "criticism"}
+{"text": "Преподаватель слишком строго оценивает, это несправедливо", "lang": "ru", "expected": "allow", "kind": "criticism"}
+{"text": "Это задание просто убийственное", "lang": "ru", "expected": "allow", "kind": "idiom"}
+{"text": "Я не согласен с новым расписанием", "lang": "ru", "expected": "allow", "kind": "criticism"}
+{"text": "тест", "lang": "kk", "expected": "allow", "kind": "short"}
+{"text": "сәлем", "lang": "kk", "expected": "allow", "kind": "short"}
+{"text": "рахмет", "lang": "kk", "expected": "allow", "kind": "short"}
+{"text": "Кітапхана қайда?", "lang": "kk", "expected": "allow", "kind": "question"}
+{"text": "Емтихан қашан басталады?", "lang": "kk", "expected": "allow", "kind": "question"}
+{"text": "Стипендия қашан түседі?", "lang": "kk", "expected": "allow", "kind": "question"}
+{"text": "Асханадағы тамақ нашар", "lang": "kk", "expected": "allow", "kind": "criticism"}
+{"text": "Балағат сөз айтпаңыздар", "lang": "kk", "expected": "allow", "kind": "about_rules"}
+{"text": "ты тупой идиот", "lang": "ru", "expected": "flag", "kind": "insult"}
+{"text": "Айдар урод и ничтожество, не общайтесь с ним", "lang": "ru", "expected": "flag", "kind": "insult"}
+{"text": "заткнись, дебил", "lang": "ru", "expected": "flag", "kind": "insult"}
+{"text": "я тебя найду после пар и побью", "lang": "ru", "expected": "flag", "kind": "threat"}
+{"text": "все приезжие тупые и должны уехать", "lang": "ru", "expected": "flag", "kind": "hate"}
+{"text": "сука где столовая", "lang": "ru", "expected": "flag", "kind": "profanity"}
+{"text": "иди нахуй", "lang": "ru", "expected": "flag", "kind": "profanity"}
+{"text": "какой пиздец с расписанием", "lang": "ru", "expected": "flag", "kind": "profanity"}
+{"text": "х у й", "lang": "ru", "expected": "flag", "kind": "bypass_spaces"}
+{"text": "х*й тебе", "lang": "ru", "expected": "flag", "kind": "bypass_symbols"}
+{"text": "xуй", "lang": "ru", "expected": "flag", "kind": "bypass_lookalike"}
+{"text": "сууууука", "lang": "ru", "expected": "flag", "kind": "bypass_repeat"}
+{"text": "suka gde canteen", "lang": "ru", "expected": "flag", "kind": "bypass_translit"}
+{"text": "blyat opyat pary perenesli", "lang": "ru", "expected": "flag", "kind": "bypass_translit"}
+{"text": "idi nahui", "lang": "ru", "expected": "flag", "kind": "bypass_translit"}
+{"text": "pizdec kakoy", "lang": "ru", "expected": "flag", "kind": "bypass_translit"}
+{"text": "you are a fucking idiot", "lang": "en", "expected": "flag", "kind": "profanity"}
+{"text": "f*ck this university", "lang": "en", "expected": "flag", "kind": "bypass_symbols"}
+{"text": "shut up you moron", "lang": "en", "expected": "flag", "kind": "insult"}
+{"text": "go kill yourself", "lang": "en", "expected": "flag", "kind": "threat"}
+{"text": "I will beat you after class", "lang": "en", "expected": "flag", "kind": "threat"}
+{"text": "сиктір кет", "lang": "kk", "expected": "flag", "kind": "profanity"}
+{"text": "иттің баласы", "lang": "kk", "expected": "flag", "kind": "profanity"}
+{"text": "сен ақымақсың", "lang": "kk", "expected": "flag", "kind": "insult"}
+{"text": "аузыңды жап, ақымақ", "lang": "kk", "expected": "flag", "kind": "insult"}
+{"text": "sen akymaksyn", "lang": "kk", "expected": "flag", "kind": "bypass_translit"}

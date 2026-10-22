@@ -14,6 +14,9 @@ export interface QueueDateRange {
   to?: string;
 }
 
+/** "new" = newest first, "old" = oldest first. */
+export type QueueSort = "new" | "old";
+
 export interface ModerationItem {
   id: number;
   kind: "thread" | "comment";
@@ -91,8 +94,8 @@ function toItem(i: ApiModerationItem): ModerationItem {
 
 export const moderationKeys = {
   all: ["moderation"] as const,
-  queue: (status: QueueStatus, range: QueueDateRange) =>
-    [...moderationKeys.all, "queue", status, range.from ?? "", range.to ?? ""] as const,
+  queue: (status: QueueStatus, range: QueueDateRange, sort: QueueSort) =>
+    [...moderationKeys.all, "queue", status, range.from ?? "", range.to ?? "", sort] as const,
   pending: ["moderation", "pending-count"] as const,
 };
 
@@ -100,14 +103,14 @@ export function isStaffRole(role: string | undefined): boolean {
   return role === "moderator" || role === "admin";
 }
 
-export function useModerationQueue(status: QueueStatus, range: QueueDateRange = {}) {
+export function useModerationQueue(status: QueueStatus, range: QueueDateRange = {}, sort: QueueSort = "new") {
   const { user } = useAuth();
   return useQuery({
-    queryKey: moderationKeys.queue(status, range),
+    queryKey: moderationKeys.queue(status, range, sort),
     enabled: isStaffRole(user?.role) && !USE_MOCK_API,
     queryFn: async () => {
       const { data } = await apiClient.get<ApiQueue>("/moderation/queue", {
-        params: { status, page_size: 50, from: range.from || undefined, to: range.to || undefined },
+        params: { status, sort, page_size: 50, from: range.from || undefined, to: range.to || undefined },
       });
       return { items: data.items.map(toItem), total: data.total, pending: data.pending };
     },
