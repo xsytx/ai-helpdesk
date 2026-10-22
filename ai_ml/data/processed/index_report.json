@@ -1,0 +1,17 @@
+{
+  "total": 1005,
+  "accepted": 941,
+  "excluded": 64,
+  "exclusion_reasons": {
+    "empty_answer": 26,
+    "ambiguous_alignment": 38
+  },
+  "accepted_languages": {
+    "en": 260,
+    "kk": 431,
+    "ru": 250
+  },
+  "approval_basis": "Author confirmed the answers in the conversation.",
+  "category_note": "Original category text, not normalized topic labels.",
+  "source_sha256": "dbc66dcbfd274a1ff3c7fd38e84acecb8f986c4f2339a4daa06aae8b07304a69"
+}
