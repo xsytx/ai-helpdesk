@@ -4,6 +4,7 @@ import { parseModerationNotice, type ModerationNotice } from "@/features/moderat
 import { apiClient, USE_MOCK_API } from "@/shared/api/client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as repo from "./forumRepository";
+import { safeStorage } from "@/shared/lib/storage";
 
 export const forumKeys = {
   all: ["forum"] as const,
@@ -74,7 +75,7 @@ const LIKES_KEY = "ai_helpdesk_liked_answers";
 
 function readLikes(userId: string): Set<string> {
   try {
-    const all = JSON.parse(localStorage.getItem(LIKES_KEY) ?? "{}") as Record<string, string[]>;
+    const all = JSON.parse(safeStorage.get(LIKES_KEY) ?? "{}") as Record<string, string[]>;
     return new Set(all[userId] ?? []);
   } catch {
     return new Set();
@@ -84,12 +85,12 @@ function readLikes(userId: string): Set<string> {
 function writeLikes(userId: string, likes: Set<string>) {
   let all: Record<string, string[]> = {};
   try {
-    all = JSON.parse(localStorage.getItem(LIKES_KEY) ?? "{}") as Record<string, string[]>;
+    all = JSON.parse(safeStorage.get(LIKES_KEY) ?? "{}") as Record<string, string[]>;
   } catch {
     // start fresh
   }
   all[userId] = [...likes];
-  localStorage.setItem(LIKES_KEY, JSON.stringify(all));
+  safeStorage.set(LIKES_KEY, JSON.stringify(all));
 }
 
 const sortAnswers = (answers: Answer[]) =>

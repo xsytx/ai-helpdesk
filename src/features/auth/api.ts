@@ -1,5 +1,6 @@
 import type { Role, User } from "@/entities/user";
 import { apiClient } from "@/shared/api/client";
+import { safeSession } from "@/shared/lib/storage";
 
 /** User as returned by the Go backend (`userPublic` in internal/handlers/auth.go). */
 export interface ApiUser {
@@ -94,11 +95,11 @@ export type PendingVerify =
   | { purpose: "reset"; email: string; devCode?: string };
 
 export function savePending(pending: PendingVerify) {
-  sessionStorage.setItem(PENDING_KEY, JSON.stringify(pending));
+  safeSession.set(PENDING_KEY, JSON.stringify(pending));
 }
 
 export function readPending(): PendingVerify | null {
-  const raw = sessionStorage.getItem(PENDING_KEY);
+  const raw = safeSession.get(PENDING_KEY);
   if (!raw) return null;
   try {
     const p = JSON.parse(raw) as Partial<PendingVerify>;
@@ -114,5 +115,5 @@ export function readPending(): PendingVerify | null {
 }
 
 export function clearPending() {
-  sessionStorage.removeItem(PENDING_KEY);
+  safeSession.remove(PENDING_KEY);
 }

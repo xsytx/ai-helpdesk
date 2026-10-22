@@ -17,7 +17,7 @@ export function Logo({ className, showText = true, to = "/" }: LogoProps) {
       className={cn("flex items-center gap-2.5 whitespace-nowrap", className)}
     >
       <img
-        src="/logo-icon.svg"
+        src="/logo-icon.webp"
         alt=""
         width={36}
         height={36}

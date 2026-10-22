@@ -2,11 +2,13 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
 } from "react";
 import { translations, type Locale, type TranslationKey } from "./translations";
+import { safeStorage } from "@/shared/lib/storage";
 
 const STORAGE_KEY = "ai_helpdesk_locale";
 
@@ -30,7 +32,7 @@ interface LocaleContextValue {
 const LocaleContext = createContext<LocaleContextValue | null>(null);
 
 function readStoredLocale(): Locale {
-  const stored = localStorage.getItem(STORAGE_KEY);
+  const stored = safeStorage.get(STORAGE_KEY);
   if (stored === "en" || stored === "kz" || stored === "ru") return stored;
   return "en";
 }
@@ -38,9 +40,14 @@ function readStoredLocale(): Locale {
 export function LocaleProvider({ children }: { children: ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>(() => readStoredLocale());
 
+  // <html lang> tells screen readers and spellcheck which language is shown.
+  useEffect(() => {
+    document.documentElement.lang = INTL_LOCALE[locale];
+  }, [locale]);
+
   const setLocale = useCallback((next: Locale) => {
     setLocaleState(next);
-    localStorage.setItem(STORAGE_KEY, next);
+    safeStorage.set(STORAGE_KEY, next);
   }, []);
 
   const t = useCallback(

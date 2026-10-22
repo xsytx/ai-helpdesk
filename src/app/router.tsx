@@ -1,5 +1,6 @@
 import { HomePage } from "@/pages/HomePage";
 import { LoginPage } from "@/pages/LoginPage";
+import { ErrorPage, NotFoundPage } from "@/pages/ErrorPages";
 import { PlaceholderPage } from "@/pages/PlaceholderPage";
 import { AppShell } from "@/shared/layout/AppShell";
 import { PageLoading } from "@/shared/ui/PageLoading";
@@ -23,62 +24,64 @@ function lazyPage<K extends string>(load: () => Promise<Record<K, ComponentType>
 }
 
 export const router = createBrowserRouter([
-  { path: "/login", element: <LoginPage /> },
-  { path: "/signup", element: lazyPage(() => import("@/pages/SignUpPage"), "SignUpPage") },
   {
-    path: "/forgot-password",
-    element: lazyPage(() => import("@/pages/ForgotPasswordPage"), "ForgotPasswordPage"),
-  },
-  { path: "/verify", element: lazyPage(() => import("@/pages/VerifyCodePage"), "VerifyCodePage") },
-  {
-    path: "/reset-password",
-    element: lazyPage(() => import("@/pages/ResetPasswordPage"), "ResetPasswordPage"),
-  },
-  {
-    element: <ProtectedRoute />,
+    // A crash anywhere shows a friendly error page instead of a blank screen.
+    errorElement: <ErrorPage />,
     children: [
+      { path: "/login", element: <LoginPage /> },
+      { path: "/signup", element: lazyPage(() => import("@/pages/SignUpPage"), "SignUpPage") },
       {
-        element: <AppShell />,
+        path: "/forgot-password",
+        element: lazyPage(() => import("@/pages/ForgotPasswordPage"), "ForgotPasswordPage"),
+      },
+      { path: "/verify", element: lazyPage(() => import("@/pages/VerifyCodePage"), "VerifyCodePage") },
+      {
+        path: "/reset-password",
+        element: lazyPage(() => import("@/pages/ResetPasswordPage"), "ResetPasswordPage"),
+      },
+      {
+        element: <ProtectedRoute />,
         children: [
-          { index: true, element: <HomePage /> },
-          { path: "chat", element: lazyPage(() => import("@/pages/ChatPage"), "ChatPage") },
-          { path: "forum", element: lazyPage(() => import("@/pages/ForumPage"), "ForumPage") },
           {
-            path: "forum/:threadId",
-            element: lazyPage(() => import("@/pages/ThreadDetailPage"), "ThreadDetailPage"),
-          },
-          {
-            path: "navigation",
-            element: (
-              <PlaceholderPage
-                title="Campus maps"
-                description="Search rooms by name with text and photo results."
-              />
-            ),
-          },
-          {
-            path: "courses",
-            element: (
-              <PlaceholderPage
-                title="Courses"
-                description="Course descriptions by semester and student reviews."
-              />
-            ),
-          },
-          {
-            // Admin panel; moderation is its first section.
-            path: "admin",
-            element: lazyPage(() => import("@/pages/ModerationPage"), "ModerationPage"),
-          },
-          { path: "moderation", element: <Navigate to="/admin" replace /> },
-          { path: "faq", element: lazyPage(() => import("@/pages/FaqPage"), "FaqPage") },
-          {
-            path: "settings",
-            element: lazyPage(() => import("@/pages/SettingsPage"), "SettingsPage"),
+            element: <AppShell />,
+            children: [
+              {
+                // Inside the app a crash replaces only the page; the sidebar stays.
+                errorElement: <ErrorPage />,
+                children: [
+                  { index: true, element: <HomePage /> },
+                  { path: "chat", element: lazyPage(() => import("@/pages/ChatPage"), "ChatPage") },
+                  { path: "forum", element: lazyPage(() => import("@/pages/ForumPage"), "ForumPage") },
+                  {
+                    path: "forum/:threadId",
+                    element: lazyPage(() => import("@/pages/ThreadDetailPage"), "ThreadDetailPage"),
+                  },
+                  {
+                    path: "navigation",
+                    element: <PlaceholderPage titleKey="navigation" descriptionKey="navigationSoon" />,
+                  },
+                  {
+                    path: "courses",
+                    element: <PlaceholderPage titleKey="courses" descriptionKey="coursesSoon" />,
+                  },
+                  {
+                    // Admin panel; moderation is its first section.
+                    path: "admin",
+                    element: lazyPage(() => import("@/pages/ModerationPage"), "ModerationPage"),
+                  },
+                  { path: "moderation", element: <Navigate to="/admin" replace /> },
+                  { path: "faq", element: lazyPage(() => import("@/pages/FaqPage"), "FaqPage") },
+                  {
+                    path: "settings",
+                    element: lazyPage(() => import("@/pages/SettingsPage"), "SettingsPage"),
+                  },
+                  { path: "*", element: <NotFoundPage /> },
+                ],
+              },
+            ],
           },
         ],
       },
     ],
   },
-  { path: "*", element: <Navigate to="/" replace /> },
 ]);

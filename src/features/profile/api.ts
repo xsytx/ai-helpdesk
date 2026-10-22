@@ -1,6 +1,7 @@
 import { useAuth } from "@/app/AuthContext";
 import { apiClient, getErrorStatus } from "@/shared/api/client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { safeStorage } from "@/shared/lib/storage";
 
 // The backend has no avatar field yet, so avatars live in localStorage only.
 // Once it does (PATCH /api/me with { avatar_id }), flip this to false.
@@ -15,7 +16,7 @@ export const profileKeys = {
 };
 
 function readAvatarMap(): Record<string, string> {
-  const raw = localStorage.getItem(AVATAR_KEY);
+  const raw = safeStorage.get(AVATAR_KEY);
   if (!raw) return {};
   try {
     return JSON.parse(raw) as Record<string, string>;

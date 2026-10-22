@@ -1,4 +1,5 @@
 import axios, { isAxiosError } from "axios";
+import { safeStorage } from "@/shared/lib/storage";
 
 export const TOKEN_KEY = "ai_helpdesk_token";
 
@@ -13,7 +14,7 @@ export const apiClient = axios.create({
 });
 
 apiClient.interceptors.request.use((config) => {
-  const token = localStorage.getItem(TOKEN_KEY);
+  const token = safeStorage.get(TOKEN_KEY);
   if (token && !config.headers.Authorization) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -21,12 +22,12 @@ apiClient.interceptors.request.use((config) => {
 });
 
 export function setAuthToken(token: string | null) {
-  if (token) localStorage.setItem(TOKEN_KEY, token);
-  else localStorage.removeItem(TOKEN_KEY);
+  if (token) safeStorage.set(TOKEN_KEY, token);
+  else safeStorage.remove(TOKEN_KEY);
 }
 
 export function getAuthToken(): string | null {
-  return localStorage.getItem(TOKEN_KEY);
+  return safeStorage.get(TOKEN_KEY);
 }
 
 /** HTTP status of a failed request, or undefined for network/non-HTTP errors. */

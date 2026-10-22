@@ -15,7 +15,7 @@ import { cn } from "@/shared/lib/cn";
 import { getErrorStatus } from "@/shared/api/client";
 import { Card } from "@/shared/ui/Card";
 import { ArrowUp, Loader2 } from "lucide-react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 function showsKnowledgeBase(msg: UiChatMessage): boolean {
@@ -74,6 +74,7 @@ export function ChatPage() {
   const { t } = useLocale();
   const { user } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<UiChatMessageWithRetry[]>([]);
   const [loading, setLoading] = useState(false);
@@ -177,9 +178,12 @@ export function ChatPage() {
     if (initial) {
       initialHandled.current = true;
       void sendUserMessage(initial);
-      window.history.replaceState({}, document.title);
+      // Clear the question so a reload or "back" doesn't send it again. Through
+      // the router: window.history.replaceState({}) would also wipe the
+      // router's own entry data and confuse back/forward navigation.
+      navigate(".", { replace: true, state: null });
     }
-  }, [location.state, sendUserMessage, historyLoading]);
+  }, [location.state, sendUserMessage, historyLoading, navigate]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });

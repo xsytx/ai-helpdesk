@@ -5,7 +5,9 @@ import type { ReactNode } from "react";
 
 const queryClient = new QueryClient({
   defaultOptions: {
-    queries: { retry: 1, refetchOnWindowFocus: false },
+    // Data counts as fresh for 20 s, so moving between pages doesn't refetch
+    // everything; pages that must stay current poll on their own interval.
+    queries: { retry: 1, refetchOnWindowFocus: false, staleTime: 20_000 },
   },
 });
 

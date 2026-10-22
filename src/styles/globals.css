@@ -11,7 +11,7 @@
   --color-label: #4b5563;
   --color-border: #d1d5db;
   --color-error: #900b09;
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Inter Variable", "Inter", ui-sans-serif, system-ui, sans-serif;
 
   /* Odometer digits (RollingNumber). */
   --animate-roll-in-up: roll-in-up 280ms cubic-bezier(0.2, 0.8, 0.2, 1) both;

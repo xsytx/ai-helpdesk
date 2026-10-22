@@ -19,6 +19,9 @@ export default defineConfig({
         // own files lets browsers reuse the cached copy after each deploy.
         manualChunks(id) {
           if (!id.includes("node_modules")) return undefined;
+          // Loaded on demand (the onboarding tour): leave it out of the shared
+          // vendor chunk so it isn't downloaded on every visit.
+          if (id.includes("driver.js")) return undefined;
           if (/[\\/]node_modules[\\/](react|react-dom|scheduler)[\\/]/.test(id)) return "react";
           if (id.includes("react-router")) return "router";
           return "vendor";

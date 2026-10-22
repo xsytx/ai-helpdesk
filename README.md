@@ -130,6 +130,15 @@ ADMIN_EMAILS=240103115@sdu.edu.kz,another@sdu.edu.kz
 
 Then run `docker compose up -d`, and log out and back in.
 
+Admin emails may be from any domain (e.g. a team Gmail); students still need
+an `@sdu.edu.kz` address. Admins get the **Admin panel** in the sidebar (on
+phones: Settings → Admin panel): the moderation queue of posts the AI held
+back, with publish/reject, status tabs, date filters and newest/oldest order.
+
+To be logged in as a student and an admin at the same time, use two
+addresses (`http://localhost:3000` and `http://127.0.0.1:3000`) or an
+incognito window: tabs of one address share one login.
+
 ## Looking at the database
 
 ```bash

@@ -12,6 +12,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { safeStorage } from "@/shared/lib/storage";
 
 const USER_KEY = "ai_helpdesk_user";
 
@@ -25,7 +26,7 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 function readStoredUser(): User | null {
-  const raw = localStorage.getItem(USER_KEY);
+  const raw = safeStorage.get(USER_KEY);
   if (!raw) return null;
   try {
     return JSON.parse(raw) as User;
@@ -44,14 +45,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // account: drop it whenever the account changes.
   const login = useCallback((nextUser: User, token: string) => {
     setAuthToken(token);
-    localStorage.setItem(USER_KEY, JSON.stringify(nextUser));
+    safeStorage.set(USER_KEY, JSON.stringify(nextUser));
     queryClient.clear();
     setUser(nextUser);
   }, [queryClient]);
 
   const logout = useCallback(() => {
     setAuthToken(null);
-    localStorage.removeItem(USER_KEY);
+    safeStorage.remove(USER_KEY);
     queryClient.clear();
     setUser(null);
   }, [queryClient]);
@@ -74,7 +75,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .then((me) => {
         if (getAuthToken() !== token) return;
         const next = toUser(me);
-        localStorage.setItem(USER_KEY, JSON.stringify(next));
+        safeStorage.set(USER_KEY, JSON.stringify(next));
         if (next.id !== userRef.current?.id) queryClient.clear();
         setUser(next);
       })

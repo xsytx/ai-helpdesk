@@ -26,14 +26,4 @@ export interface Answer {
   moderationStatus?: ModerationStatus;
 }
 
-/** @deprecated Use Thread for list previews */
-export interface ForumPost {
-  id: string;
-  authorName: string;
-  content: string;
-  createdAt: string;
-  votes: number;
-  replies: number;
-}
-
 export type ThreadSort = "top" | "newest";
