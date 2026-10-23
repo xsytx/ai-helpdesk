@@ -8,7 +8,7 @@ Sign-in is restricted to `@sdu.edu.kz` university email addresses.
 |---|---|
 | Accounts (sign up, 6-digit email verification, login, forgot/change password) | Working |
 | Forum (questions, answers, likes, best answer on top) | Working |
-| FAQ | Working (content managed in the database) |
+| FAQ | Working: in English, Kazakh and Russian, by category; admins edit it in the Admin panel and choose which questions are instant-answer buttons in the chat |
 | Settings (avatar, password, language) | Working (avatar is saved in the browser only) |
 | AI chat assistant | Working: answers from the SDU knowledge base + a local Ollama model; separate chats you can rename, pin and delete (unpinned ones are deleted after 30 days without messages) |
 | Forum moderation | Working: new posts are checked by the AI; doubtful ones wait for a moderator |
@@ -133,7 +133,9 @@ Then run `docker compose up -d`, and log out and back in.
 Admin emails may be from any domain (e.g. a team Gmail); students still need
 an `@sdu.edu.kz` address. Admins get the **Admin panel** in the sidebar (on
 phones: Settings → Admin panel): the moderation queue of posts the AI held
-back, with publish/reject, status tabs, date filters and newest/oldest order.
+back, with publish/reject, status tabs, date filters and newest/oldest order,
+and the **FAQ** editor (questions and answers in all three languages, category,
+order, and which questions are instant-answer buttons in the chat).
 
 To be logged in as a student and an admin at the same time, use two
 addresses (`http://localhost:3000` and `http://127.0.0.1:3000`) or an

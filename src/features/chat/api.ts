@@ -1,23 +1,6 @@
-import { apiClient, getErrorStatus, USE_MOCK_API } from "@/shared/api/client";
-import { FAQ_ENTRIES, type FaqEntry } from "@/entities/faq";
-import type { TranslationKey } from "@/i18n/translations";
+import { apiClient, getErrorStatus } from "@/shared/api/client";
+import type { Locale, TranslationKey } from "@/i18n/translations";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-
-interface ApiFaq {
-  id: number;
-  question: string;
-  answer: string;
-}
-
-async function fetchFaqs(): Promise<FaqEntry[]> {
-  if (USE_MOCK_API) return FAQ_ENTRIES;
-  const { data } = await apiClient.get<ApiFaq[]>("/faq");
-  return data.map((f) => ({ id: String(f.id), question: f.question, answer: f.answer }));
-}
-
-export function useFaqs() {
-  return useQuery({ queryKey: ["faq"], queryFn: fetchFaqs, staleTime: 5 * 60_000 });
-}
 
 export interface ChatHistoryMessage {
   id: number;
@@ -169,6 +152,24 @@ export async function askChat(question: string, conversationId?: string, signal?
     "/chat/ask",
     { question, ...(conversationId ? { conversation_id: Number(conversationId) } : {}) },
     { timeout: CHAT_TIMEOUT_MS, signal },
+  );
+  return data;
+}
+
+/**
+ * An FAQ button in the chat: the server saves the question and the FAQ answer
+ * (in the site language) at once, without the model.
+ */
+export async function askFaq(
+  faqId: string,
+  locale: Locale,
+  conversationId?: string,
+  signal?: AbortSignal,
+): Promise<ChatAskResponse> {
+  const { data } = await apiClient.post<ChatAskResponse>(
+    "/chat/faq",
+    { faq_id: Number(faqId), lang: locale, ...(conversationId ? { conversation_id: Number(conversationId) } : {}) },
+    { signal },
   );
   return data;
 }

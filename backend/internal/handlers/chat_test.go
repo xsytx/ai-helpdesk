@@ -114,12 +114,16 @@ func (s *chatTestStore) ResolveReport(context.Context, int64) error { return nil
 func (s *chatTestStore) ListFAQs(context.Context) ([]models.FAQ, error) {
 	return nil, nil
 }
-func (s *chatTestStore) CreateFAQ(context.Context, string, string, int) (models.FAQ, error) {
-	return models.FAQ{}, nil
-}
-func (s *chatTestStore) UpdateFAQ(context.Context, int64, string, string, int) (models.FAQ, error) {
+func (s *chatTestStore) GetFAQ(context.Context, int64) (models.FAQ, error) {
 	return models.FAQ{}, store.ErrNotFound
 }
+func (s *chatTestStore) CreateFAQ(context.Context, store.FAQInput) (models.FAQ, error) {
+	return models.FAQ{}, nil
+}
+func (s *chatTestStore) UpdateFAQ(context.Context, int64, store.FAQInput) (models.FAQ, error) {
+	return models.FAQ{}, store.ErrNotFound
+}
+func (s *chatTestStore) ReorderFAQs(context.Context, []int64) error { return nil }
 func (s *chatTestStore) DeleteFAQ(context.Context, int64) error { return nil }
 func (s *chatTestStore) ListFeed(context.Context, string, int, int) ([]models.Thread, int, error) {
 	return nil, 0, nil

@@ -106,10 +106,17 @@ type Store interface {
 	// --- FAQ (public read, moderator/admin write — enforced at the
 	// handler layer, same as the other moderation actions) ---
 
+	// ListFAQs: in the admins' order (sort_order, then id).
 	ListFAQs(ctx context.Context) ([]models.FAQ, error)
-	CreateFAQ(ctx context.Context, question, answer string, sortOrder int) (models.FAQ, error)
-	UpdateFAQ(ctx context.Context, id int64, question, answer string, sortOrder int) (models.FAQ, error)
+	GetFAQ(ctx context.Context, id int64) (models.FAQ, error)
+	// CreateFAQ adds the entry at the end of the list. ErrConflict if the
+	// English question already exists.
+	CreateFAQ(ctx context.Context, in FAQInput) (models.FAQ, error)
+	UpdateFAQ(ctx context.Context, id int64, in FAQInput) (models.FAQ, error)
 	DeleteFAQ(ctx context.Context, id int64) error
+	// ReorderFAQs puts the given entries first, in this order; others follow
+	// in their previous order. ErrNotFound if an id doesn't exist.
+	ReorderFAQs(ctx context.Context, ids []int64) error
 
 	// --- Feed ---
 

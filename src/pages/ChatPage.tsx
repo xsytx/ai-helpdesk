@@ -1,6 +1,8 @@
 import { useAuth } from "@/app/AuthContext";
+import { faqText, type FaqEntry } from "@/entities/faq";
 import {
   askChat,
+  askFaq,
   askResponseToUiMessage,
   chatErrorMessage,
   chatKeys,
@@ -14,6 +16,7 @@ import {
 } from "@/features/chat/api";
 import { ConversationList } from "@/features/chat/components/ConversationList";
 import { FaqQuickReplies } from "@/features/chat/components/FaqQuickReplies";
+import { useFaqs } from "@/features/faq/api";
 import { UserAvatar } from "@/features/profile/components/UserAvatar";
 import { useLocale } from "@/i18n/LocaleContext";
 import { cn } from "@/shared/lib/cn";
@@ -21,7 +24,7 @@ import { getErrorStatus } from "@/shared/api/client";
 import { Button } from "@/shared/ui/Button";
 import { Card } from "@/shared/ui/Card";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowUp, History, Loader2, Plus, X } from "lucide-react";
+import { ArrowUp, ChevronDown, History, Loader2, Plus, X, Zap } from "lucide-react";
 import { createPortal } from "react-dom";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -52,6 +55,18 @@ function AssistantContent({
             {t("chatRetry")}
           </button>
         ) : null}
+      </div>
+    );
+  }
+
+  if (msg.basis === "faq") {
+    return (
+      <div className="space-y-1">
+        <p className="flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-label">
+          <Zap className="h-3 w-3 text-accent" aria-hidden />
+          {t("chatFaqInstant")}
+        </p>
+        <p className="whitespace-pre-wrap">{msg.text}</p>
       </div>
     );
   }
@@ -139,7 +154,7 @@ function ChatListSheet({ activeId, onClose }: { activeId?: string; onClose: () =
 }
 
 export function ChatPage() {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const { user } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
@@ -158,6 +173,8 @@ export function ChatPage() {
   const pendingRef = useRef<string | null>(null);
   const [slow, setSlow] = useState(false);
   const [listOpen, setListOpen] = useState(false);
+  const [faqOpen, setFaqOpen] = useState(false);
+  const hasFaqButtons = (useFaqs().data ?? []).some((f) => f.pinned);
   const closeList = useCallback(() => setListOpen(false), []);
   const [assistantStatus, setAssistantStatus] = useState<"ok" | "degraded" | "unknown">("unknown");
   const endRef = useRef<HTMLDivElement>(null);
@@ -196,8 +213,9 @@ export function ChatPage() {
   }, []);
 
   // retryBubbleId: re-sending a question whose bubble is already on screen.
+  // faqId: an FAQ button, answered from the FAQ at once instead of by the model.
   const sendUserMessage = useCallback(
-    async (text: string, target: Target, retryBubbleId?: string) => {
+    async (text: string, target: Target, retryBubbleId?: string, faqId?: string) => {
       const trimmed = text.trim();
       if (!trimmed || pendingRef.current) return;
 
@@ -210,7 +228,9 @@ export function ChatPage() {
       setPendingKey(target.key);
 
       try {
-        const res = await askChat(trimmed, target.conversationId, ac.signal);
+        const res = faqId
+          ? await askFaq(faqId, locale, target.conversationId, ac.signal)
+          : await askChat(trimmed, target.conversationId, ac.signal);
         setAssistantStatus("ok");
         const conv = toConversation(res.conversation);
         const answered: UiChatMessage[] = [
@@ -249,7 +269,7 @@ export function ChatPage() {
             retryQuestion: trimmed,
             onRetry: () => {
               setDraft(target.key, (l) => l.filter((x) => x.id !== errId));
-              void sendUserMessage(trimmed, target, bubbleId);
+              void sendUserMessage(trimmed, target, bubbleId, faqId);
             },
           },
         ]);
@@ -261,7 +281,7 @@ export function ChatPage() {
         }
       }
     },
-    [navigate, queryClient, setDraft, t, translate],
+    [locale, navigate, queryClient, setDraft, t, translate],
   );
 
   // A question asked on the home page arrives here and starts a new chat.
@@ -297,6 +317,10 @@ export function ChatPage() {
   }, [key, messages.length, loading]);
 
   const send = () => void sendUserMessage(input, { key, conversationId });
+  const sendFaq = (entry: FaqEntry) => {
+    setFaqOpen(false);
+    void sendUserMessage(faqText(entry, locale).question, { key, conversationId }, undefined, entry.id);
+  };
   const inputDisabled = pendingKey !== null || notFound || historyLoading;
 
   return (
@@ -344,10 +368,7 @@ export function ChatPage() {
             ) : messages.length === 0 ? (
               <div>
                 <p className="text-sm text-label">{t("askPlaceholder")}</p>
-                <FaqQuickReplies
-                  onSelect={(q) => void sendUserMessage(q, { key, conversationId })}
-                  disabled={pendingKey !== null}
-                />
+                <FaqQuickReplies onSelect={sendFaq} disabled={pendingKey !== null} />
               </div>
             ) : (
               messages.map((msg) =>
@@ -380,6 +401,26 @@ export function ChatPage() {
             <div ref={endRef} />
           </div>
           <div className="relative mt-3 border-t border-border/50 pt-3">
+            {/* In a chat that already has messages, the FAQ buttons fold out above the input. */}
+            {hasFaqButtons && messages.length > 0 && !notFound ? (
+              <div className="mb-2">
+                <button
+                  type="button"
+                  aria-expanded={faqOpen}
+                  onClick={() => setFaqOpen((o) => !o)}
+                  className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-label hover:bg-background-2 hover:text-primary"
+                >
+                  <Zap className="h-3.5 w-3.5 text-accent" aria-hidden />
+                  {t("chatQuickQuestions")}
+                  <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", faqOpen && "rotate-180")} aria-hidden />
+                </button>
+                {faqOpen ? (
+                  <div className="max-h-48 overflow-y-auto">
+                    <FaqQuickReplies hideTitle onSelect={sendFaq} disabled={pendingKey !== null} />
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
             {busyElsewhere ? (
               <p className="mb-2 flex items-center gap-2 text-xs text-label" aria-live="polite">
                 <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />

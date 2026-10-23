@@ -93,6 +93,14 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   panel on wide screens, a sheet on phones). Unpinned chats idle for
   `CHAT_RETENTION_DAYS` (30) are deleted hourly. The model still gets only the
   current question, not the earlier messages of the chat.
+- **FAQ (Story 12, `004_faq.sql`).** Each entry has KZ/RU/EN texts
+  (`question`/`answer` = English, `_kz`/`_ru` next to them), a category and
+  `pinned` = shown as a chat button. Buttons call `POST /api/chat/faq`: the
+  answer comes from the table at once (no LLM, works with Ollama off) and is
+  saved in the conversation with `basis: "faq"`; a typed question equal to an
+  FAQ question is answered the same way. Admins edit, order and pin entries
+  in `/admin?section=faq` (`FaqEditor`); the editor requires all three
+  languages.
 - **Auto-refresh.** React Query polling: feed 15 s, thread 10 s (1.5 s while
   a post is `checking`), admin queue 5 s, admin badge 10 s; paused in
   background tabs; never refetches over a like that is still saving.
@@ -109,7 +117,7 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
 - **Every public SQL read must hide held posts**: use `threadVisible` /
   `commentVisible` in `backend/internal/store/postgres.go`.
 - **Schema changes** are idempotent SQL applied on every start
-  (`001_init.sql` + `003_chat.sql` in `Migrate`, `002_moderation.sql` in
+  (`001_init.sql` + `003_chat.sql` + `004_faq.sql` in `Migrate`, `002_moderation.sql` in
   `MigrateModeration`): `CREATE ... IF NOT EXISTS` /
   `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`.
 - **Store interface**: adding a method to `store.Store` also needs a stub on
@@ -144,13 +152,14 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
 
 Done: accounts, forum (likes, best answer, auto-refresh), FAQ, settings,
 onboarding tour, AI chat with separate conversations (Story 11: list,
-`/chat/:id`, rename/pin/delete, 30-day auto-delete), async AI moderation +
-admin panel (filters, sort, log), staff emails, error/404 pages, performance
-pass (small logo, bundled font, on-demand tour code).
+`/chat/:id`, rename/pin/delete, 30-day auto-delete), FAQ in three languages
+with categories and instant-answer buttons in the chat (Story 12, admin
+editor with order/pin), async AI moderation + admin panel (filters, sort,
+log), staff emails, error/404 pages, performance pass (small logo, bundled
+font, on-demand tour code).
 
-Planned (Sprint 4 order): **Story 12 — FAQ buttons in chat** (instant FAQ answers without the LLM,
-admin pin/order, categories, translations), then notifications bell,
-👍/👎 on answers, forum search/tags/edit/delete, admin FAQ editor, maps and
+Planned next: bug fixes and polish, then notifications bell,
+👍/👎 on answers, forum search/tags/edit/delete, maps and
 courses. Optional: stop admins approving their own flagged posts; send the
 last few messages of a chat to the model so follow-up questions ("and how
 much is it?") are understood (needs an `ai_ml` `/generate-answer` change).

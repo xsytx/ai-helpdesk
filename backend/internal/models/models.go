@@ -129,14 +129,38 @@ type Report struct {
 }
 
 // FAQ is one question/answer entry, managed by moderators/admins and
-// shown on the public FAQ page in SortOrder (then ID) order.
+// shown on the public FAQ page in SortOrder (then ID) order. Question and
+// Answer are the English text; the _kz/_ru fields hold the translations.
 type FAQ struct {
-	ID        int64     `json:"id"`
-	Question  string    `json:"question"`
-	Answer    string    `json:"answer"`
-	SortOrder int       `json:"sort_order"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID         int64     `json:"id"`
+	Question   string    `json:"question"`
+	QuestionKZ string    `json:"question_kz"`
+	QuestionRU string    `json:"question_ru"`
+	Answer     string    `json:"answer"`
+	AnswerKZ   string    `json:"answer_kz"`
+	AnswerRU   string    `json:"answer_ru"`
+	Category   string    `json:"category"` // general, account, study, campus, forum
+	Pinned     bool      `json:"pinned"`   // shown as an instant-answer button in the chat
+	SortOrder  int       `json:"sort_order"`
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
+}
+
+// Text returns the question and answer in lang ("kz", "ru", anything else =
+// English), falling back to English where a translation is missing.
+func (f FAQ) Text(lang string) (question, answer string) {
+	question, answer = f.Question, f.Answer
+	switch lang {
+	case "kz", "kk":
+		if f.QuestionKZ != "" && f.AnswerKZ != "" {
+			question, answer = f.QuestionKZ, f.AnswerKZ
+		}
+	case "ru":
+		if f.QuestionRU != "" && f.AnswerRU != "" {
+			question, answer = f.QuestionRU, f.AnswerRU
+		}
+	}
+	return question, answer
 }
 
 type Vote struct {

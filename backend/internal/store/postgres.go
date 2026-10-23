@@ -53,7 +53,10 @@ func (s *PostgresStore) Migrate(ctx context.Context) error {
 	if _, err := s.pool.Exec(ctx, schemaSQL); err != nil {
 		return err
 	}
-	_, err := s.pool.Exec(ctx, chatSQL)
+	if _, err := s.pool.Exec(ctx, chatSQL); err != nil {
+		return err
+	}
+	_, err := s.pool.Exec(ctx, faqSQL)
 	return err
 }
 
@@ -971,71 +974,6 @@ func (s *PostgresStore) ListReports(ctx context.Context, status string, page, pa
 func (s *PostgresStore) ResolveReport(ctx context.Context, id int64) error {
 	const q = `UPDATE reports SET status = 'resolved', resolved_at = now() WHERE id = $1`
 	tag, err := s.pool.Exec(ctx, q, id)
-	if err != nil {
-		return err
-	}
-	if tag.RowsAffected() == 0 {
-		return ErrNotFound
-	}
-	return nil
-}
-
-// --- FAQ ---
-
-func scanFAQ(row pgx.Row) (models.FAQ, error) {
-	var f models.FAQ
-	err := row.Scan(&f.ID, &f.Question, &f.Answer, &f.SortOrder, &f.CreatedAt, &f.UpdatedAt)
-	return f, err
-}
-
-func (s *PostgresStore) ListFAQs(ctx context.Context) ([]models.FAQ, error) {
-	const q = `SELECT id, question, answer, sort_order, created_at, updated_at FROM faqs ORDER BY sort_order, id`
-	rows, err := s.pool.Query(ctx, q)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	out := make([]models.FAQ, 0)
-	for rows.Next() {
-		f, err := scanFAQ(rows)
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, f)
-	}
-	return out, rows.Err()
-}
-
-func (s *PostgresStore) CreateFAQ(ctx context.Context, question, answer string, sortOrder int) (models.FAQ, error) {
-	const q = `
-		INSERT INTO faqs (question, answer, sort_order)
-		VALUES ($1, $2, $3)
-		RETURNING id, question, answer, sort_order, created_at, updated_at`
-	f, err := scanFAQ(s.pool.QueryRow(ctx, q, question, answer, sortOrder))
-	if isPgErrorCode(err, pgUniqueViolation) {
-		return models.FAQ{}, ErrConflict
-	}
-	return f, err
-}
-
-func (s *PostgresStore) UpdateFAQ(ctx context.Context, id int64, question, answer string, sortOrder int) (models.FAQ, error) {
-	const q = `
-		UPDATE faqs SET question = $1, answer = $2, sort_order = $3, updated_at = now()
-		WHERE id = $4
-		RETURNING id, question, answer, sort_order, created_at, updated_at`
-	f, err := scanFAQ(s.pool.QueryRow(ctx, q, question, answer, sortOrder, id))
-	if isPgErrorCode(err, pgUniqueViolation) {
-		return models.FAQ{}, ErrConflict
-	}
-	if errors.Is(err, pgx.ErrNoRows) {
-		return models.FAQ{}, ErrNotFound
-	}
-	return f, err
-}
-
-func (s *PostgresStore) DeleteFAQ(ctx context.Context, id int64) error {
-	tag, err := s.pool.Exec(ctx, `DELETE FROM faqs WHERE id = $1`, id)
 	if err != nil {
 		return err
 	}

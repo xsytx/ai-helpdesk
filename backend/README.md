@@ -207,7 +207,8 @@ inbox at that point.
 | POST   | `/api/notifications/{id}/read` / `/read-all` | ✓ | Mark read |
 | POST   | `/api/threads/{id}/report` / `/api/comments/{id}/report` | ✓ | `{reason}` |
 | GET    | `/api/faq`                        | –    | List FAQ entries                  |
-| POST / PATCH / DELETE | `/api/faq[/{id}]`     | moderator | `{question, answer, sort_order}` |
+| POST / PATCH / DELETE | `/api/faq[/{id}]`     | moderator | `{question, question_kz, question_ru, answer, answer_kz, answer_ru, category, pinned}`; every text required in all three languages; category is `general`, `account`, `study`, `campus` or `forum`; new entries go to the end |
+| POST   | `/api/faq/reorder`                | moderator | `{ids: [3, 1, 2]}` puts those first, others keep their order |
 | POST   | `/api/threads/{id}/lock`          | moderator | `{locked: bool}`             |
 | POST   | `/api/users/{id}/ban`             | moderator | `{banned: bool}`             |
 | GET    | `/api/reports`                    | moderator | `?status=open\|resolved`     |
@@ -333,9 +334,13 @@ Authenticated routes (Bearer JWT):
 | GET | `/api/chat/conversations/{id}/messages` | One conversation and all its messages, oldest first |
 | PATCH | `/api/chat/conversations/{id}` | Rename and/or pin: `{title?, pinned?}` (title 1–100 characters) |
 | DELETE | `/api/chat/conversations/{id}` | Delete a conversation and its messages |
+| POST | `/api/chat/faq` | An FAQ button: `{faq_id, lang, conversation_id?}` saves the question and the FAQ answer in `lang` (`kz`/`ru`/`en`) at once, without the model (`basis: "faq"`) |
 | GET | `/api/chat/status` | Proxies ML `GET /health` → `ok` / `degraded` |
 
-Another user's conversation id answers `404`, like a missing one.
+Another user's conversation id answers `404`, like a missing one. A question
+in `/api/chat/ask` typed exactly like an FAQ question (any of its three
+languages, ignoring case, spaces and the closing `?`) is also answered from
+the FAQ without the model.
 
 Environment (see `.env.example`):
 

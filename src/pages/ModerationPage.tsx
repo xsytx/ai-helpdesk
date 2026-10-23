@@ -2,6 +2,7 @@ import { useAuth } from "@/app/AuthContext";
 import {
   isStaffRole,
   useModerationQueue,
+  usePendingModerationCount,
   useReviewModerationItem,
   type ModerationItem,
   type QueueDateRange,
@@ -9,13 +10,14 @@ import {
   type QueueStatus,
 } from "@/features/moderation/api";
 import { useCategoryLabel } from "@/features/moderation/components/ModerationNoticeCard";
+import { FaqEditor } from "@/features/faq/components/FaqEditor";
 import { useLocale } from "@/i18n/LocaleContext";
 import { cn } from "@/shared/lib/cn";
 import { getErrorMessage } from "@/shared/api/client";
 import { Button } from "@/shared/ui/Button";
 import { Card } from "@/shared/ui/Card";
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 
 const TABS: {
   status: QueueStatus;
@@ -139,13 +141,18 @@ function ModerationCard({ item }: { item: ModerationItem }) {
   );
 }
 
+const SECTIONS = [
+  { id: "moderation", key: "adminSectionModeration" },
+  { id: "faq", key: "adminSectionFaq" },
+] as const;
+
+/** The admin panel: the moderation queue and the FAQ editor (?section=faq). */
 export function ModerationPage() {
   const { user } = useAuth();
   const { t } = useLocale();
-  const [status, setStatus] = useState<QueueStatus>("pending");
-  const [range, setRange] = useState<QueueDateRange>({});
-  const [sort, setSort] = useState<QueueSort>("new");
-  const queue = useModerationQueue(status, range, sort);
+  const [params, setParams] = useSearchParams();
+  const section = params.get("section") === "faq" ? "faq" : "moderation";
+  const pending = usePendingModerationCount().data ?? 0;
 
   if (!isStaffRole(user?.role)) {
     return <p className="mx-auto max-w-3xl text-sm text-label">{t("moderationNoAccess")}</p>;
@@ -153,11 +160,42 @@ export function ModerationPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-4">
-      <div>
-        <h1 className="text-xl font-bold text-primary">{t("adminPanel")}</h1>
-        <h2 className="mt-1 text-sm font-semibold text-label">{t("moderationTitle")}</h2>
-      </div>
-      <div className="flex gap-2" role="tablist">
+      <h1 className="text-xl font-bold text-primary">{t("adminPanel")}</h1>
+      <nav className="flex gap-1 border-b border-border/60" aria-label={t("adminPanel")}>
+        {SECTIONS.map((s) => (
+          <button
+            key={s.id}
+            type="button"
+            aria-current={section === s.id ? "page" : undefined}
+            onClick={() => setParams(s.id === "moderation" ? {} : { section: s.id }, { replace: true })}
+            className={cn(
+              "-mb-px inline-flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm font-semibold transition-colors",
+              section === s.id ? "border-primary text-primary" : "border-transparent text-label hover:text-primary",
+            )}
+          >
+            {t(s.key)}
+            {s.id === "moderation" && pending > 0 ? (
+              <span className="rounded-full bg-red-600 px-1.5 text-[11px] font-bold leading-5 text-white">{pending}</span>
+            ) : null}
+          </button>
+        ))}
+      </nav>
+      {section === "faq" ? <FaqEditor /> : <ModerationSection />}
+    </div>
+  );
+}
+
+function ModerationSection() {
+  const { t } = useLocale();
+  const [status, setStatus] = useState<QueueStatus>("pending");
+  const [range, setRange] = useState<QueueDateRange>({});
+  const [sort, setSort] = useState<QueueSort>("new");
+  const queue = useModerationQueue(status, range, sort);
+
+  return (
+    <div className="space-y-4">
+      <h2 className="text-sm font-semibold text-label">{t("moderationTitle")}</h2>
+      <div className="flex flex-wrap gap-2" role="tablist">
         {TABS.map((tab) => (
           <button
             key={tab.status}

@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"strings"
@@ -86,6 +87,14 @@ func (h *Handlers) ChatAsk(w http.ResponseWriter, r *http.Request) {
 		conv = &c
 	}
 
+	// A question typed exactly like an FAQ question gets the FAQ answer at once.
+	if faqs, err := h.Store.ListFAQs(r.Context()); err == nil {
+		if f, lang, ok := matchFAQ(faqs, question); ok {
+			h.answerFromFAQ(w, r, uid, conv, f, lang, question)
+			return
+		}
+	}
+
 	if h.ML == nil {
 		writeError(w, http.StatusServiceUnavailable, "the assistant is temporarily unavailable")
 		return
@@ -109,57 +118,143 @@ func (h *Handlers) ChatAsk(w http.ResponseWriter, r *http.Request) {
 	log.Printf("chat ask ok (user=%d, request_id=%s, duration=%s, basis=%s, status=%s)",
 		uid, mlResp.RequestID, elapsed, mlResp.Basis, mlResp.Status)
 
+	assistant := models.ChatMessage{Role: "assistant", Text: mlResp.Answer, Basis: &mlResp.Basis, Language: &mlResp.Language}
+	if mlResp.ForumAnswer != nil && *mlResp.ForumAnswer != "" {
+		assistant.ForumAnswer = mlResp.ForumAnswer
+	}
+	if mlResp.AIExplanation != "" {
+		assistant.AIExplanation = &mlResp.AIExplanation
+	}
 	// Save with a context that survives a closed browser tab: the model already spent
 	// the time to answer, the answer should still land in the student's history.
-	saveCtx := context.WithoutCancel(r.Context())
-	// A new conversation is only created once there is an answer, so failed
-	// questions don't leave empty chats in the list.
-	if conv == nil {
-		c, err := h.Store.CreateChatConversation(saveCtx, uid, chatTitleFromQuestion(question))
-		if err != nil {
-			log.Printf("chat create conversation (user=%d): %v", uid, err)
-			writeError(w, http.StatusInternalServerError, "could not save the conversation")
-			return
-		}
-		conv = &c
-	}
-	if _, err := h.Store.CreateChatMessage(saveCtx, uid, models.ChatMessage{
-		ConversationID: conv.ID, Role: "user", Text: question,
-	}); err != nil {
-		log.Printf("chat history save user message: %v", err)
-	}
-
-	assistantText := mlResp.Answer
-	var forumPtr *string
-	if mlResp.ForumAnswer != nil && *mlResp.ForumAnswer != "" {
-		forumPtr = mlResp.ForumAnswer
-	}
-	var aiExplPtr *string
-	if mlResp.AIExplanation != "" {
-		aiExplPtr = &mlResp.AIExplanation
-	}
-	basis := mlResp.Basis
-	basisPtr := &basis
-	lang := mlResp.Language
-	langPtr := &lang
-	saved, err := h.Store.CreateChatMessage(saveCtx, uid, models.ChatMessage{
-		ConversationID: conv.ID,
-		Role:           "assistant",
-		Text:           assistantText,
-		ForumAnswer:    forumPtr,
-		AIExplanation:  aiExplPtr,
-		Basis:          basisPtr,
-		Language:       langPtr,
-	})
+	conv, err = h.saveChatTurn(context.WithoutCancel(r.Context()), uid, conv, question, assistant)
 	if err != nil {
-		log.Printf("chat history save assistant message: %v", err)
-	} else {
-		conv.UpdatedAt = saved.CreatedAt
+		writeError(w, http.StatusInternalServerError, "could not save the conversation")
+		return
 	}
 
 	resp := buildChatAskResp(mlResp)
 	resp.Conversation = conv
 	writeJSON(w, http.StatusOK, resp)
+}
+
+// saveChatTurn stores a question and its answer in conv, creating the
+// conversation first when conv is nil (titled with the question). A new
+// conversation is only created once there is an answer, so failed questions
+// don't leave empty chats in the list.
+func (h *Handlers) saveChatTurn(ctx context.Context, uid int64, conv *models.ChatConversation, question string, assistant models.ChatMessage) (*models.ChatConversation, error) {
+	if conv == nil {
+		c, err := h.Store.CreateChatConversation(ctx, uid, chatTitleFromQuestion(question))
+		if err != nil {
+			log.Printf("chat create conversation (user=%d): %v", uid, err)
+			return nil, err
+		}
+		conv = &c
+	}
+	if _, err := h.Store.CreateChatMessage(ctx, uid, models.ChatMessage{
+		ConversationID: conv.ID, Role: "user", Text: question,
+	}); err != nil {
+		log.Printf("chat history save user message: %v", err)
+	}
+	assistant.ConversationID = conv.ID
+	if saved, err := h.Store.CreateChatMessage(ctx, uid, assistant); err != nil {
+		log.Printf("chat history save assistant message: %v", err)
+	} else {
+		conv.UpdatedAt = saved.CreatedAt
+	}
+	return conv, nil
+}
+
+// --- Instant FAQ answers (Story 12) ---
+
+// normalizeQuestion makes typed questions comparable with FAQ questions:
+// lower case, single spaces, no closing punctuation.
+func normalizeQuestion(q string) string {
+	q = strings.ToLower(strings.Join(strings.Fields(q), " "))
+	return strings.TrimRight(q, " ?!.…")
+}
+
+// matchFAQ finds an FAQ entry whose question (in any language) is exactly
+// the typed one, and returns the language it matched in.
+func matchFAQ(faqs []models.FAQ, question string) (models.FAQ, string, bool) {
+	want := normalizeQuestion(question)
+	if want == "" {
+		return models.FAQ{}, "", false
+	}
+	for _, f := range faqs {
+		for lang, q := range map[string]string{"en": f.Question, "kz": f.QuestionKZ, "ru": f.QuestionRU} {
+			if q != "" && normalizeQuestion(q) == want {
+				return f, lang, true
+			}
+		}
+	}
+	return models.FAQ{}, "", false
+}
+
+// answerFromFAQ saves and returns the FAQ answer as the assistant's reply,
+// without asking the model: instant, and it works while the AI is down.
+func (h *Handlers) answerFromFAQ(w http.ResponseWriter, r *http.Request, uid int64, conv *models.ChatConversation, f models.FAQ, lang, question string) {
+	_, answer := f.Text(lang)
+	basis := "faq"
+	conv, err := h.saveChatTurn(context.WithoutCancel(r.Context()), uid, conv, question, models.ChatMessage{
+		Role: "assistant", Text: answer, Basis: &basis, Language: &lang,
+	})
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "could not save the conversation")
+		return
+	}
+	writeJSON(w, http.StatusOK, chatAskResp{
+		RequestID:    fmt.Sprintf("faq-%d", f.ID),
+		Status:       "answered",
+		Answer:       answer,
+		Language:     lang,
+		Basis:        basis,
+		Source:       &chatSourcePublic{Question: question, Category: f.Category},
+		Conversation: conv,
+	})
+}
+
+type chatFAQReq struct {
+	FAQID          int64  `json:"faq_id"`
+	ConversationID *int64 `json:"conversation_id,omitempty"`
+	// Lang is the site language ("kz", "ru", "en"): the question and answer
+	// are saved in it.
+	Lang string `json:"lang"`
+}
+
+// ChatFAQ answers an FAQ button in the chat at once from the FAQ table.
+func (h *Handlers) ChatFAQ(w http.ResponseWriter, r *http.Request) {
+	uid, ok := h.userID(r)
+	if !ok {
+		writeError(w, http.StatusUnauthorized, "not authenticated")
+		return
+	}
+	var req chatFAQReq
+	if err := decodeJSON(r, &req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid JSON body")
+		return
+	}
+	switch req.Lang {
+	case "kz", "ru", "en":
+	default:
+		req.Lang = "en"
+	}
+	f, err := h.Store.GetFAQ(r.Context(), req.FAQID)
+	if err != nil {
+		writeStoreErr(w, err, "could not load the FAQ entry")
+		return
+	}
+	var conv *models.ChatConversation
+	if req.ConversationID != nil {
+		c, err := h.Store.GetChatConversation(r.Context(), uid, *req.ConversationID)
+		if err != nil {
+			writeStoreErr(w, err, "could not load the conversation")
+			return
+		}
+		conv = &c
+	}
+	question, _ := f.Text(req.Lang)
+	h.answerFromFAQ(w, r, uid, conv, f, req.Lang, question)
 }
 
 func buildChatAskResp(mlResp mlclient.GenerateResult) chatAskResp {

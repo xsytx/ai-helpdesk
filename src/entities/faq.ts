@@ -1,10 +1,37 @@
+import type { Locale } from "@/i18n/translations";
+
+/** Same list as the backend (faqs.category). */
+export const FAQ_CATEGORIES = ["general", "account", "study", "campus", "forum"] as const;
+export type FaqCategory = (typeof FAQ_CATEGORIES)[number];
+
+export type LocalizedText = Record<Locale, string>;
+
 export interface FaqEntry {
+  id: string;
+  question: LocalizedText;
+  answer: LocalizedText;
+  category: FaqCategory;
+  /** Shown as an instant-answer button in the AI chat. */
+  pinned: boolean;
+}
+
+/** The entry's text in the site language; English where a translation is missing. */
+export function faqText(entry: FaqEntry, locale: Locale): { question: string; answer: string } {
+  const question = entry.question[locale];
+  const answer = entry.answer[locale];
+  return question && answer ? { question, answer } : { question: entry.question.en, answer: entry.answer.en };
+}
+
+interface MockFaq {
   id: string;
   question: string;
   answer: string;
 }
 
-export const FAQ_ENTRIES: FaqEntry[] = [
+const sameInAll = (text: string): LocalizedText => ({ en: text, kz: text, ru: text });
+
+/** Demo data for VITE_USE_MOCK_API (English only). */
+export const FAQ_ENTRIES: FaqEntry[] = ([
   {
     id: "dean-office",
     question: "Where is the Dean's office?",
@@ -35,4 +62,10 @@ export const FAQ_ENTRIES: FaqEntry[] = [
     answer:
       "Library, Block C, 3rd floor. Open 8:00–22:00 on weekdays, 10:00–18:00 on weekends.",
   },
-];
+] satisfies MockFaq[]).map((f) => ({
+  id: f.id,
+  question: sameInAll(f.question),
+  answer: sameInAll(f.answer),
+  category: "general",
+  pinned: true,
+}));
