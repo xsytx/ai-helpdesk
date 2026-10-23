@@ -128,3 +128,18 @@ class ApiTests(unittest.TestCase):
         self.service.answer.assert_called_once_with('How much?', 'auto', history=history)
         bad = {'question': 'Q?', 'history': [{'role': 'system', 'text': 'x'}]}
         self.assertEqual(self.client.post('/generate-answer', json=bad).status_code, 422)
+
+    def test_stream_endpoint_sends_ndjson_events(self):
+        self.service.answer_stream.return_value = iter([('delta', 'Hel'), ('delta', 'lo'), ('done', dict(ANSWER))])
+        r = self.client.post('/generate-answer/stream', json={'question': 'Q?', 'history': [{'role': 'user', 'text': 'Hi'}]})
+        self.assertEqual(r.status_code, 200)
+        lines = [json.loads(x) for x in r.text.splitlines() if x.strip()]
+        self.assertEqual([x['type'] for x in lines], ['delta', 'delta', 'done'])
+        self.assertEqual(lines[-1]['forum_answer'], 'Original')
+        self.service.answer_stream.assert_called_once_with('Q?', 'auto', history=[{'role': 'user', 'text': 'Hi'}])
+        self.assertEqual(self.rows()[-1][1:], ('answered', 200))
+
+    def test_stream_errors_become_an_error_event(self):
+        self.service.answer_stream.side_effect = RuntimeError('boom')
+        r = self.client.post('/generate-answer/stream', json={'question': 'Q?'})
+        self.assertEqual([json.loads(x)['type'] for x in r.text.splitlines() if x.strip()], ['error'])

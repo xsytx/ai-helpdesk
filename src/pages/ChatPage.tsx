@@ -1,7 +1,7 @@
 import { useAuth } from "@/app/AuthContext";
 import { faqText, type FaqEntry } from "@/entities/faq";
 import {
-  askChat,
+  askChatStream,
   askFaq,
   askResponseToUiMessage,
   chatErrorMessage,
@@ -11,10 +11,12 @@ import {
   upsertConversation,
   useChatMessages,
   type ConversationList as ConversationListData,
+  type ChatConversation,
   type ConversationMessages,
   type UiChatMessage,
 } from "@/features/chat/api";
 import { AnswerActions } from "@/features/chat/components/AnswerActions";
+import { StreamingBubble } from "@/features/chat/components/StreamingBubble";
 import { ConversationList } from "@/features/chat/components/ConversationList";
 import { CreateThreadDialog } from "@/features/forum/components/CreateThreadDialog";
 import { FaqQuickReplies } from "@/features/chat/components/FaqQuickReplies";
@@ -26,7 +28,7 @@ import { getErrorStatus } from "@/shared/api/client";
 import { Button } from "@/shared/ui/Button";
 import { Card } from "@/shared/ui/Card";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowUp, ChevronDown, History, Loader2, Plus, X, Zap } from "lucide-react";
+import { ArrowUp, ChevronDown, History, Loader2, Plus, Square, X, Zap } from "lucide-react";
 import { createPortal } from "react-dom";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -57,6 +59,15 @@ function AssistantContent({
             {t("chatRetry")}
           </button>
         ) : null}
+      </div>
+    );
+  }
+
+  if (msg.basis === "stopped") {
+    return (
+      <div className="space-y-1">
+        <p className="whitespace-pre-wrap">{msg.text}</p>
+        <p className="text-xs italic text-label">{t("chatStoppedNote")}</p>
       </div>
     );
   }
@@ -174,6 +185,10 @@ export function ChatPage() {
   const [pendingKey, setPendingKey] = useState<string | null>(null);
   const pendingRef = useRef<string | null>(null);
   const [slow, setSlow] = useState(false);
+  // Instant answers (FAQ) that just arrived: they fade in once.
+  const [freshIds, setFreshIds] = useState<ReadonlySet<string>>(() => new Set());
+  // The answer the model is writing right now (shown as it arrives).
+  const [streaming, setStreaming] = useState<{ key: string; text: string } | null>(null);
   const [listOpen, setListOpen] = useState(false);
   const [faqOpen, setFaqOpen] = useState(false);
   const hasFaqButtons = (useFaqs().data ?? []).some((f) => f.pinned);
@@ -221,10 +236,15 @@ export function ChatPage() {
   // retryBubbleId: re-sending a question whose bubble is already on screen.
   // faqId: an FAQ button, answered from the FAQ at once instead of by the model.
   const sendUserMessage = useCallback(
-    async (text: string, target: Target, retryBubbleId?: string, faqId?: string) => {
+    async (text: string, initialTarget: Target, retryBubbleId?: string, faqId?: string) => {
       const trimmed = text.trim();
       if (!trimmed || pendingRef.current) return;
 
+      // The target can change while answering: a new chat gets its id with the first text.
+      const target = { ...initialTarget };
+      // True once the server saved the question (it sends the conversation with the first text).
+      let started = false;
+      let partial = "";
       const ac = new AbortController();
       abortRef.current = ac;
       const bubbleId = retryBubbleId ?? crypto.randomUUID();
@@ -233,18 +253,52 @@ export function ChatPage() {
       pendingRef.current = target.key;
       setPendingKey(target.key);
 
+      // A new chat now exists on the server: continue under its id (drafts, cache,
+      // address), so stopping or reloading keeps it.
+      const adoptConversation = (conv: ChatConversation) => {
+        queryClient.setQueryData<ConversationListData>(chatKeys.conversations, (old) => upsertConversation(old, conv));
+        if (target.key !== NEW_CHAT) return;
+        const from = target.key;
+        target.key = conv.id;
+        target.conversationId = conv.id;
+        setDrafts((d) => ({ ...d, [conv.id]: d[from] ?? [], [from]: [] }));
+        setStreaming((st) => (st && st.key === from ? { ...st, key: conv.id } : st));
+        queryClient.setQueryData<ConversationMessages>(chatKeys.messages(conv.id), (old) => old ?? { conversation: conv, messages: [] });
+        pendingRef.current = conv.id;
+        setPendingKey(conv.id);
+        if (keyRef.current === from) navigate(`/chat/${conv.id}`, { replace: true });
+      };
+
       try {
         const res = faqId
           ? await askFaq(faqId, locale, target.conversationId, ac.signal)
-          : await askChat(trimmed, target.conversationId, ac.signal);
+          : await askChatStream(
+              trimmed,
+              target.conversationId,
+              {
+                onConversation: (conv) => {
+                  started = true;
+                  adoptConversation(conv);
+                },
+                onDelta: (piece) => {
+                  partial += piece;
+                  setStreaming({ key: target.key, text: partial });
+                },
+                onReset: () => {
+                  partial = "";
+                  setStreaming({ key: target.key, text: "" });
+                },
+              },
+              ac.signal,
+            );
         setAssistantStatus("ok");
         const conv = toConversation(res.conversation);
-        const answered: UiChatMessage[] = [
-          { id: bubbleId, role: "user", text: trimmed },
-          askResponseToUiMessage(res),
-        ];
+        adoptConversation(conv);
+        const answer = askResponseToUiMessage(res);
+        if (faqId) setFreshIds((ids) => new Set(ids).add(answer.id));
+        const answered: UiChatMessage[] = [{ id: bubbleId, role: "user", text: trimmed }, answer];
         const messagesKey = chatKeys.messages(conv.id);
-        if (target.key === NEW_CHAT || queryClient.getQueryData(messagesKey)) {
+        if (queryClient.getQueryData(messagesKey)) {
           queryClient.setQueryData<ConversationMessages>(messagesKey, (old) => ({
             conversation: conv,
             messages: [...(old?.messages ?? []), ...answered],
@@ -252,17 +306,47 @@ export function ChatPage() {
         } else {
           void queryClient.invalidateQueries({ queryKey: messagesKey });
         }
-        queryClient.setQueryData<ConversationListData>(chatKeys.conversations, (old) => upsertConversation(old, conv));
         if (!queryClient.getQueryData(chatKeys.conversations)) {
           void queryClient.invalidateQueries({ queryKey: chatKeys.conversations });
         }
         setDraft(target.key, (list) => list.filter((m) => m.id !== bubbleId));
-        // A new chat now has an address; go there unless the student opened another chat meanwhile.
-        if (target.key === NEW_CHAT && keyRef.current === NEW_CHAT) {
-          navigate(`/chat/${conv.id}`, { replace: true });
-        }
       } catch (err) {
-        if (ac.signal.aborted) return;
+        // Once started, the server keeps the question (and the text so far, as a
+        // stopped answer): show its copy instead of the local bubble.
+        const showSaved = async () => {
+          await queryClient.invalidateQueries({ queryKey: chatKeys.messages(target.conversationId!) });
+          setDraft(target.key, (list) => list.filter((m) => m.id !== bubbleId));
+        };
+        if (ac.signal.aborted) {
+          if (started && target.conversationId) {
+            // Show the question and the text so far at once (the server saves the
+            // same a moment later), then load the saved copy (it can be rated).
+            const stoppedText = partial.trim();
+            queryClient.setQueryData<ConversationMessages>(chatKeys.messages(target.conversationId), (old) =>
+              old
+                ? {
+                    ...old,
+                    messages: [
+                      ...old.messages,
+                      { id: bubbleId, role: "user", text: trimmed },
+                      ...(stoppedText
+                        ? [{ id: `${bubbleId}-stopped`, role: "assistant" as const, text: stoppedText, basis: "stopped" }]
+                        : []),
+                    ],
+                  }
+                : old,
+            );
+            setDraft(target.key, (list) => list.filter((m) => m.id !== bubbleId));
+            const convId = target.conversationId;
+            window.setTimeout(() => void queryClient.invalidateQueries({ queryKey: chatKeys.messages(convId) }), 1500);
+          } else {
+            // Stopped before anything was saved: give the question back to edit.
+            setDraft(target.key, (list) => list.filter((m) => m.id !== bubbleId));
+            if (target.key === keyRef.current) setInput(trimmed);
+          }
+          return;
+        }
+        if (started) await showSaved();
         const errMsg = getErrorStatus(err) === 404 ? t("chatNotFound") : chatErrorMessage(err, translate);
         const errId = crypto.randomUUID();
         setDraft(target.key, (list) => [
@@ -275,20 +359,23 @@ export function ChatPage() {
             retryQuestion: trimmed,
             onRetry: () => {
               setDraft(target.key, (l) => l.filter((x) => x.id !== errId));
-              void sendUserMessage(trimmed, target, bubbleId, faqId);
+              // The saved question is already on screen; otherwise re-use the local bubble.
+              void sendUserMessage(trimmed, target, started ? undefined : bubbleId, faqId);
             },
           },
         ]);
         if (getErrorStatus(err) === 503) setAssistantStatus("degraded");
       } finally {
-        if (!ac.signal.aborted) {
-          pendingRef.current = null;
-          setPendingKey(null);
-        }
+        setStreaming(null);
+        if (abortRef.current === ac) abortRef.current = null;
+        pendingRef.current = null;
+        setPendingKey(null);
       }
     },
     [locale, navigate, queryClient, setDraft, t, translate],
   );
+
+  const stopAnswer = () => abortRef.current?.abort();
 
   // A question asked on the home page arrives here and starts a new chat.
   useEffect(() => {
@@ -337,6 +424,15 @@ export function ChatPage() {
     endRef.current?.scrollIntoView({ behavior: switched ? "auto" : "smooth" });
   }, [key, messages.length, loading]);
 
+  // While an answer is being typed out, stay at the bottom without animation
+  // (a new smooth scroll for every letter would shake), and only if the
+  // student hasn't scrolled up to read something.
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const followAnswer = useCallback(() => {
+    const el = scrollRef.current;
+    if (el && el.scrollHeight - el.scrollTop - el.clientHeight < 120) el.scrollTop = el.scrollHeight;
+  }, []);
+
   const send = () => void sendUserMessage(input, { key, conversationId });
   const sendFaq = (entry: FaqEntry) => {
     setFaqOpen(false);
@@ -371,7 +467,7 @@ export function ChatPage() {
           </p>
         ) : null}
         <Card className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          <div className="flex-1 space-y-3 overflow-y-auto p-1">
+          <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto p-1">
             {notFound ? (
               <div className="space-y-3">
                 <p className="text-sm text-label">{t("chatNotFound")}</p>
@@ -401,7 +497,18 @@ export function ChatPage() {
                     <UserAvatar name={user?.name ?? ""} className="h-7 w-7 text-[10px]" />
                   </div>
                 ) : (
-                  <div key={msg.id} className="mr-auto max-w-[90%]">
+                  <div
+                    key={msg.id}
+                    className={cn("mr-auto max-w-[90%]", freshIds.has(msg.id) && "motion-safe:animate-answer-in")}
+                    onAnimationEnd={(e) => {
+                      if (e.target !== e.currentTarget || !freshIds.has(msg.id)) return;
+                      setFreshIds((ids) => {
+                        const next = new Set(ids);
+                        next.delete(msg.id);
+                        return next;
+                      });
+                    }}
+                  >
                     <div
                       className={cn(
                         "rounded-2xl rounded-bl-md px-4 py-2.5 text-sm text-primary",
@@ -424,7 +531,9 @@ export function ChatPage() {
                 ),
               )
             )}
-            {loading ? (
+            {loading && streaming?.key === key && streaming.text ? (
+              <StreamingBubble text={streaming.text} onGrow={followAnswer} />
+            ) : loading ? (
               <p className="flex items-center gap-2 text-sm text-label" aria-live="polite">
                 <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
                 {slow ? t("chatSlowHint") : t("chatTyping")}
@@ -474,15 +583,27 @@ export function ChatPage() {
                 }
               }}
             />
-            <button
-              type="button"
-              disabled={inputDisabled || !input.trim()}
-              onClick={send}
-              className="absolute bottom-5 right-2 flex h-8 w-8 items-center justify-center rounded-full bg-primary text-white hover:bg-primary-light disabled:cursor-not-allowed disabled:opacity-50"
-              aria-label={t("send")}
-            >
-              <ArrowUp className="h-4 w-4" />
-            </button>
+            {loading ? (
+              <button
+                type="button"
+                onClick={stopAnswer}
+                className="absolute bottom-5 right-2 flex h-8 w-8 items-center justify-center rounded-full bg-primary text-white hover:bg-primary-light"
+                aria-label={t("chatStop")}
+                title={t("chatStop")}
+              >
+                <Square className="h-3.5 w-3.5 fill-current" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                disabled={inputDisabled || !input.trim()}
+                onClick={send}
+                className="absolute bottom-5 right-2 flex h-8 w-8 items-center justify-center rounded-full bg-primary text-white hover:bg-primary-light disabled:cursor-not-allowed disabled:opacity-50"
+                aria-label={t("send")}
+              >
+                <ArrowUp className="h-4 w-4" />
+              </button>
+            )}
           </div>
         </Card>
       </div>

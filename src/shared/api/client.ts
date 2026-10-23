@@ -30,9 +30,34 @@ export function getAuthToken(): string | null {
   return safeStorage.get(TOKEN_KEY);
 }
 
+/** A failed fetch() request (streaming calls don't go through axios). */
+export class HttpStatusError extends Error {
+  constructor(readonly status: number, message = `HTTP ${status}`) {
+    super(message);
+  }
+}
+
 /** HTTP status of a failed request, or undefined for network/non-HTTP errors. */
 export function getErrorStatus(err: unknown): number | undefined {
+  if (err instanceof HttpStatusError) return err.status;
   return isAxiosError(err) ? err.response?.status : undefined;
+}
+
+/**
+ * POST with the login token via fetch(), for responses read while they
+ * arrive (axios can't stream in the browser). Throws HttpStatusError on a
+ * non-2xx answer.
+ */
+export async function postStream(path: string, body: unknown, signal?: AbortSignal): Promise<Response> {
+  const token = getAuthToken();
+  const res = await fetch(`${apiClient.defaults.baseURL}${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    body: JSON.stringify(body),
+    signal,
+  });
+  if (!res.ok) throw new HttpStatusError(res.status);
+  return res;
 }
 
 /** The backend's `{ error: "..." }` message, if any. */

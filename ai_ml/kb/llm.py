@@ -93,6 +93,10 @@ class _BaseClient:
     def _chat_once(self, messages, schema, max_tokens):
         raise NotImplementedError
 
+    def chat_json_stream(self, messages, schema=None, max_tokens=None):
+        """Текст ответа по кусочкам (генератор). Без потоковой поддержки — один кусок целиком."""
+        yield self.chat_json(messages, schema, max_tokens)
+
     def ping(self):
         raise NotImplementedError
 
@@ -109,9 +113,9 @@ class OllamaClient(_BaseClient):
         self.num_ctx, self.num_predict, self.keep_alive, self.temperature = num_ctx, num_predict, keep_alive, temperature
         self._supports_think = True
 
-    def _chat_once(self, messages, schema, max_tokens):
+    def _payload(self, messages, schema, max_tokens, stream):
         payload = {
-            'model': self.model, 'messages': messages, 'stream': False,
+            'model': self.model, 'messages': messages, 'stream': stream,
             'keep_alive': self.keep_alive,
             'options': {'temperature': self.temperature, 'num_ctx': self.num_ctx,
                         'num_predict': max_tokens or self.num_predict},
@@ -119,6 +123,48 @@ class OllamaClient(_BaseClient):
         payload['format'] = schema if schema else 'json'
         if self._supports_think:
             payload['think'] = False
+        return payload
+
+    def chat_json_stream(self, messages, schema=None, max_tokens=None):
+        """Токены ответа по мере генерации (stream=true в Ollama). Если генератор закрыть раньше
+        (студент нажал «стоп»), соединение с Ollama закрывается и модель перестаёт генерировать."""
+        payload = self._payload(messages, schema, max_tokens, stream=True)
+        try:
+            with self.http.stream('POST', '/api/chat', json=payload) as response:
+                if response.status_code >= 400:
+                    body = response.read().decode('utf-8', 'replace')
+                    if response.status_code == 400 and 'think' in body.lower() and self._supports_think:
+                        self._supports_think = False
+                        yield from self.chat_json_stream(messages, schema, max_tokens)
+                        return
+                    self._check(response)
+                got_text = False
+                for line in response.iter_lines():
+                    if not line.strip():
+                        continue
+                    try:
+                        chunk = json.loads(line)
+                    except ValueError as exc:
+                        raise LLMError('Ollama returned an unexpected response.', code='llm_bad_response') from exc
+                    if chunk.get('error'):
+                        raise LLMError(f'Ollama error: {chunk["error"]}', code='llm_overloaded')
+                    piece = (chunk.get('message') or {}).get('content') or ''
+                    if piece:
+                        got_text = True
+                        yield piece
+                    if chunk.get('done'):
+                        break
+                if not got_text:
+                    raise LLMError('Ollama returned an empty answer.', code='llm_bad_response')
+        except httpx.ConnectError as exc:
+            raise LLMError(f'LLM server is not reachable at {self.base_url}. Is Ollama running?') from exc
+        except httpx.TimeoutException as exc:
+            raise LLMError(f'LLM did not answer within {self.timeout:.0f}s.', code='llm_timeout') from exc
+        except httpx.HTTPError as exc:
+            raise LLMError(f'LLM request failed: {type(exc).__name__}.') from exc
+
+    def _chat_once(self, messages, schema, max_tokens):
+        payload = self._payload(messages, schema, max_tokens, stream=False)
         response = self._post('/api/chat', payload)
         if response.status_code == 400 and 'think' in response.text.lower() and self._supports_think:
             # Старая версия Ollama / модель без режима thinking: повторяем без параметра.

@@ -1,4 +1,6 @@
 """HTTP-интерфейс для Go-backend: POST /generate-answer, POST /moderate, GET /health."""
+import asyncio
+import json
 import logging
 import os
 import threading
@@ -7,8 +9,8 @@ from time import perf_counter
 from typing import Literal
 from uuid import uuid4
 
-from fastapi import FastAPI
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from .audit import RequestJournal
@@ -186,6 +188,91 @@ def create_app(service=None, journal=None, moderator=None, llm_client=None, sett
             LOGGER.error('Request journal update failed: %s', request_id)
             return JSONResponse(failure('logging_unavailable'), status_code=503)
         return JSONResponse(result, status_code=status)
+
+    @app.post('/generate-answer/stream')
+    async def generate_stream(payload: AnswerRequest, request: Request):
+        """Тот же ответ, что /generate-answer, но по мере генерации: NDJSON-строки
+        {"type":"delta","text":…}, {"type":"reset"}, в конце {"type":"done", …поля AnswerResponse}
+        или {"type":"error","error":код}.
+
+        Генерация идёт в отдельном потоке; если клиент ушёл (студент нажал «стоп»), поток
+        закрывает соединение с моделью сразу, не дожидаясь конца ответа, — GPU освобождается."""
+        request_id = str(uuid4())
+        started = perf_counter()
+        try:
+            app.state.journal.start(request_id, payload.question, payload.language)
+        except Exception:
+            LOGGER.error('Request journal unavailable: %s', request_id)
+            return JSONResponse({'request_id': request_id, 'status': 'error', 'error': 'logging_unavailable'},
+                                status_code=503)
+        history = [h.model_dump() for h in payload.history]
+        loop = asyncio.get_running_loop()
+        queue: asyncio.Queue = asyncio.Queue()
+        cancelled = threading.Event()
+
+        def emit(event):
+            loop.call_soon_threadsafe(queue.put_nowait, json.dumps(event, ensure_ascii=False) + '\n')
+
+        def work():
+            result, status = {'request_id': request_id, 'status': 'error', 'error': 'stopped'}, 499
+            stream, have_slot = None, False
+            try:
+                # The LLM slot is taken here and always given back (finally).
+                if not app.state.gate.acquire(timeout=app.state.queue_timeout):
+                    result, status = {'request_id': request_id, 'status': 'error', 'error': 'service_busy'}, 503
+                    emit({'type': 'error', 'error': 'service_busy'})
+                    return
+                have_slot = True
+                stream = app.state.service.answer_stream(payload.question, payload.language, history=history)
+                for kind, value in stream:
+                    if cancelled.is_set():
+                        break
+                    if kind == 'delta':
+                        emit({'type': 'delta', 'text': value})
+                    elif kind == 'reset':
+                        emit({'type': 'reset'})
+                    else:
+                        result, status = AnswerResponse(request_id=request_id, **value).model_dump(), 200
+                        emit({'type': 'done', **result})
+            except LLMError as exc:
+                result, status = {'request_id': request_id, 'status': 'error', 'error': exc.code}, 503
+                emit({'type': 'error', 'error': exc.code})
+            except Exception:
+                LOGGER.exception('Answer stream failed: %s', request_id)
+                result, status = {'request_id': request_id, 'status': 'error', 'error': 'pipeline_unavailable'}, 503
+                emit({'type': 'error', 'error': 'pipeline_unavailable'})
+            finally:
+                close = getattr(stream, 'close', None)
+                if close is not None:
+                    close()  # closes the connection to the model: it stops generating
+                if have_slot:
+                    app.state.gate.release()
+                try:
+                    app.state.journal.finish(request_id, result, status, round((perf_counter() - started) * 1000))
+                except Exception:
+                    LOGGER.error('Request journal update failed: %s', request_id)
+                loop.call_soon_threadsafe(queue.put_nowait, None)
+
+        threading.Thread(target=work, name=f'answer-{request_id[:8]}', daemon=True).start()
+
+        async def events():
+            try:
+                while True:
+                    try:
+                        line = await asyncio.wait_for(queue.get(), timeout=0.3)
+                    except asyncio.TimeoutError:
+                        line = ''
+                    if await request.is_disconnected():
+                        LOGGER.info('Answer stream stopped by the client: %s', request_id)
+                        return
+                    if line is None:
+                        return
+                    if line:
+                        yield line
+            finally:
+                cancelled.set()
+
+        return StreamingResponse(events(), media_type='application/x-ndjson')
 
     @app.post('/moderate', response_model=ModerationResponse,
               responses={503: {'model': ModerationError}})

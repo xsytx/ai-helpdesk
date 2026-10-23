@@ -1,4 +1,4 @@
-import { apiClient, getErrorStatus } from "@/shared/api/client";
+import { apiClient, getErrorStatus, HttpStatusError, postStream } from "@/shared/api/client";
 import type { Locale, TranslationKey } from "@/i18n/translations";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -162,6 +162,62 @@ export async function askChat(question: string, conversationId?: string, signal?
   return data;
 }
 
+type StreamEvent =
+  | { type: "conversation"; conversation: ApiConversation }
+  | { type: "delta"; text: string }
+  | { type: "reset" }
+  | ({ type: "done" } & ChatAskResponse)
+  | { type: "error"; status?: number; error?: string };
+
+export interface AskStreamHandlers {
+  /** The chat the answer goes to (sent once, with the first text; a new chat exists from then on). */
+  onConversation: (conversation: ChatConversation) => void;
+  /** The next piece of the answer. */
+  onDelta: (text: string) => void;
+  /** Throw away the text shown so far: the model starts again. */
+  onReset: () => void;
+}
+
+/**
+ * Asks the assistant and receives the answer while the model writes it
+ * (POST /chat/ask/stream, one JSON object per line). Resolves with the same
+ * response as askChat; aborting the signal stops the answer (the server
+ * keeps what was written so far).
+ */
+export async function askChatStream(
+  question: string,
+  conversationId: string | undefined,
+  handlers: AskStreamHandlers,
+  signal?: AbortSignal,
+): Promise<ChatAskResponse> {
+  const res = await postStream(
+    "/chat/ask/stream",
+    { question, ...(conversationId ? { conversation_id: Number(conversationId) } : {}) },
+    signal,
+  );
+  if (!res.body) throw new HttpStatusError(502);
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffered = "";
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (value) buffered += decoder.decode(value, { stream: true });
+    let newline: number;
+    while ((newline = buffered.indexOf("\n")) >= 0) {
+      const line = buffered.slice(0, newline).trim();
+      buffered = buffered.slice(newline + 1);
+      if (!line) continue;
+      const event = JSON.parse(line) as StreamEvent;
+      if (event.type === "conversation") handlers.onConversation(toConversation(event.conversation));
+      else if (event.type === "delta") handlers.onDelta(event.text);
+      else if (event.type === "reset") handlers.onReset();
+      else if (event.type === "done") return event;
+      else if (event.type === "error") throw new HttpStatusError(event.status ?? 502);
+    }
+    if (done) throw new HttpStatusError(502, "the answer stream ended early");
+  }
+}
+
 /**
  * An FAQ button in the chat: the server saves the question and the FAQ answer
  * (in the site language) at once, without the model.
@@ -226,7 +282,9 @@ export interface UiChatMessage {
 
 export function askResponseToUiMessage(res: ChatAskResponse): UiChatMessage {
   return {
-    id: res.request_id,
+    // The saved message id, like in the history (request ids repeat: every
+    // answer from one FAQ entry is "faq-<id>").
+    id: res.message_id ? String(res.message_id) : `${res.request_id}-${crypto.randomUUID()}`,
     role: "assistant",
     text: res.answer,
     forumAnswer: res.forum_answer ?? undefined,

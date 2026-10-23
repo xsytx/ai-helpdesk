@@ -261,6 +261,8 @@ func main() {
 	mux.Handle("PATCH /api/chat/conversations/{id}", authMw(writeLimiter(http.HandlerFunc(h.UpdateChatConversation))))
 	mux.Handle("DELETE /api/chat/conversations/{id}", authMw(writeLimiter(http.HandlerFunc(h.DeleteChatConversation))))
 	mux.Handle("POST /api/chat/ask", authMw(chatLimiter.Wrap(http.HandlerFunc(h.ChatAsk))))
+	// The same, streamed: the answer appears while the model writes it.
+	mux.Handle("POST /api/chat/ask/stream", authMw(chatLimiter.Wrap(http.HandlerFunc(h.ChatAskStream))))
 	// FAQ buttons answer from the database at once, without the model.
 	mux.Handle("POST /api/chat/faq", authMw(writeLimiter(http.HandlerFunc(h.ChatFAQ))))
 	mux.Handle("PUT /api/chat/messages/{id}/rating", authMw(writeLimiter(http.HandlerFunc(h.RateChatMessage))))

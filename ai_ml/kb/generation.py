@@ -8,6 +8,7 @@
   3. если LLM недоступна — отдаём ответ базы напрямую (если он очень похож), иначе честное сообщение.
 """
 import logging
+import re
 import time
 
 from .lang import LANGUAGE_NAMES, LANGUAGES, detect_language, looks_like
@@ -100,6 +101,52 @@ def parse_output(raw, n_candidates, language):
     return match, answer
 
 
+class AnswerTextStream:
+    """Достаёт значение поля "answer" из JSON, который модель пишет по кусочкам
+    ({"match": 1, "answer": "…), и отдаёт только новый, уже раскодированный текст."""
+    _ESCAPES = {'"': '"', '\\': '\\', '/': '/', 'b': '\b', 'f': '\f', 'n': '\n', 'r': '\r', 't': '\t'}
+
+    def __init__(self):
+        self.raw, self.pos, self.done = '', None, False
+
+    def feed(self, piece):
+        self.raw += piece
+        if self.done:
+            return ''
+        if self.pos is None:
+            m = re.search(r'"answer"\s*:\s*"', self.raw)
+            if not m:
+                return ''
+            self.pos = m.end()
+        out, i, raw = [], self.pos, self.raw
+        while i < len(raw):
+            ch = raw[i]
+            if ch == '"':
+                self.done = True
+                i += 1
+                break
+            if ch == '\\':
+                if i + 1 >= len(raw):
+                    break  # escape not complete yet
+                nxt = raw[i + 1]
+                if nxt == 'u':
+                    if i + 6 > len(raw):
+                        break
+                    try:
+                        out.append(chr(int(raw[i + 2:i + 6], 16)))
+                    except ValueError:
+                        pass
+                    i += 6
+                    continue
+                out.append(self._ESCAPES.get(nxt, nxt))
+                i += 2
+                continue
+            out.append(ch)
+            i += 1
+        self.pos = i
+        return ''.join(out)
+
+
 class AnswerService:
     def __init__(self, retriever, client, university_context='', source_only_min=0.90):
         self.retriever, self.client = retriever, client
@@ -124,7 +171,8 @@ class AnswerService:
         scores = [x for x in (found['top_score'], with_context['top_score']) if x is not None]
         return {'candidates': merged[:limit], 'top_score': max(scores) if scores else None}
 
-    def answer(self, question, language='auto', history=None):
+    def _prepare(self, question, language, history):
+        """Общая подготовка: язык, кандидаты из базы, промпт. Возвращает словарь «задания»."""
         if not isinstance(question, str) or not question.strip() or len(question) > 2000:
             raise ValueError('Provide a question of 1 to 2000 characters.')
         question = question.strip()
@@ -142,39 +190,32 @@ class AnswerService:
             LOGGER.exception('Retrieval failed; answering without the knowledge base')
             found, reason = {'candidates': [], 'top_score': None}, 'retrieval_unavailable'
         candidates, top_score = found['candidates'], found['top_score']
-        retrieval_ms = round((time.perf_counter() - started) * 1000)
 
         base = {'status': 'fallback', 'answer': CANNOT_ANSWER[language], 'forum_answer': None,
                 'ai_explanation': CANNOT_ANSWER[language], 'language': language, 'basis': 'none',
                 'reason': reason, 'source': None, 'source_type': None, 'retrieval_score': top_score}
-
         user_message = build_user_message(question, language, candidates, self.context, history)
-        schema = build_schema(len(candidates))
         messages = [{'role': 'system', 'content': SYSTEM + ('\n/no_think' if 'qwen3' in getattr(self.client, 'model', '') else '')},
                     {'role': 'user', 'content': user_message}]
-        parsed = None
-        llm_started = time.perf_counter()
-        try:
-            for attempt in range(2):
-                raw = self.client.chat_json(messages, schema)
-                try:
-                    parsed = parse_output(raw, len(candidates), language)
-                    break
-                except ValueError as exc:
-                    LOGGER.warning('Invalid model output (attempt %d): %s', attempt + 1, exc)
-                    messages = messages + [{'role': 'user', 'content':
-                        f'Your previous reply was invalid ({exc}). Reply with valid JSON only; '
-                        f'"answer" must be written in {LANGUAGE_NAMES[language]}.'}]
-        except LLMError as exc:
-            LOGGER.error('LLM error: %s (%s)', exc, exc.code)
-            return self._degrade(base, candidates, language, exc.code)
-        llm_ms = round((time.perf_counter() - llm_started) * 1000)
-        LOGGER.info('answer: lang=%s history=%d candidates=%s top=%.3f match=%s retrieval=%dms llm=%dms',
-                    language, len(history), [c['id'] for c in candidates], top_score or 0,
-                    parsed[0] if parsed else 'invalid', retrieval_ms, llm_ms)
-        if parsed is None:
-            return self._degrade(base, candidates, language, 'invalid_model_output')
+        return {'language': language, 'history': history, 'candidates': candidates, 'top_score': top_score,
+                'reason': reason, 'base': base, 'messages': messages, 'schema': build_schema(len(candidates)),
+                'retrieval_ms': round((time.perf_counter() - started) * 1000)}
 
+    @staticmethod
+    def _correction(job, exc):
+        return job['messages'] + [{'role': 'user', 'content':
+            f'Your previous reply was invalid ({exc}). Reply with valid JSON only; '
+            f'"answer" must be written in {LANGUAGE_NAMES[job["language"]]}.'}]
+
+    def _result(self, job, parsed, llm_ms):
+        """Итог по разобранному ответу модели (или деградация, если ответа нет)."""
+        candidates = job['candidates']
+        LOGGER.info('answer: lang=%s history=%d candidates=%s top=%.3f match=%s retrieval=%dms llm=%dms',
+                    job['language'], len(job['history']), [c['id'] for c in candidates], job['top_score'] or 0,
+                    parsed[0] if parsed else 'invalid', job['retrieval_ms'], llm_ms)
+        if parsed is None:
+            return self._degrade(job['base'], candidates, job['language'], 'invalid_model_output')
+        base, reason = job['base'], job['reason']
         match, text = parsed
         if match:
             record = candidates[match - 1]
@@ -183,6 +224,67 @@ class AnswerService:
                         source={k: record.get(k) for k in ('id', 'question', 'category', 'language', 'source_row')},
                         source_type='faq', retrieval_score=record['score'])
         return dict(base, status='answered', answer=text, ai_explanation=text, basis='general', reason=reason)
+
+    def answer(self, question, language='auto', history=None):
+        job = self._prepare(question, language, history)
+        candidates, messages = job['candidates'], job['messages']
+        parsed = None
+        llm_started = time.perf_counter()
+        try:
+            for attempt in range(2):
+                raw = self.client.chat_json(messages, job['schema'])
+                try:
+                    parsed = parse_output(raw, len(candidates), job['language'])
+                    break
+                except ValueError as exc:
+                    LOGGER.warning('Invalid model output (attempt %d): %s', attempt + 1, exc)
+                    messages = self._correction(job, exc)
+        except LLMError as exc:
+            LOGGER.error('LLM error: %s (%s)', exc, exc.code)
+            return self._degrade(job['base'], candidates, job['language'], exc.code)
+        return self._result(job, parsed, round((time.perf_counter() - llm_started) * 1000))
+
+    def answer_stream(self, question, language='auto', history=None):
+        """Как answer(), но события по мере генерации:
+          ('delta', текст)  — следующий кусок ответа;
+          ('reset', None)   — показанный текст не годится (неверный формат/язык), начать заново;
+          ('done', result)  — итог, тот же словарь, что у answer().
+        Закрытие генератора (студент нажал «стоп») закрывает и поток от модели."""
+        job = self._prepare(question, language, history)
+        candidates = job['candidates']
+        llm_started = time.perf_counter()
+        shown = False
+        raw, text_stream = '', AnswerTextStream()
+        try:
+            for piece in self.client.chat_json_stream(job['messages'], job['schema']):
+                raw += piece
+                delta = text_stream.feed(piece)
+                if delta:
+                    shown = True
+                    yield 'delta', delta
+            try:
+                parsed = parse_output(raw, len(candidates), job['language'])
+            except ValueError as exc:
+                LOGGER.warning('Invalid streamed model output: %s', exc)
+                if shown:
+                    yield 'reset', None
+                parsed = None
+                retry = self.client.chat_json(self._correction(job, exc), job['schema'])
+                try:
+                    parsed = parse_output(retry, len(candidates), job['language'])
+                    yield 'delta', parsed[1]
+                except ValueError as exc2:
+                    LOGGER.warning('Invalid model output (retry): %s', exc2)
+        except LLMError as exc:
+            LOGGER.error('LLM error: %s (%s)', exc, exc.code)
+            if shown:
+                yield 'reset', None
+            yield 'done', self._degrade(job['base'], candidates, job['language'], exc.code)
+            return
+        result = self._result(job, parsed, round((time.perf_counter() - llm_started) * 1000))
+        if parsed is None and shown:
+            yield 'reset', None
+        yield 'done', result
 
     def _degrade(self, base, candidates, language, code):
         """LLM не помогла: очень похожий ответ базы лучше, чем ничего."""

@@ -11,7 +11,7 @@ Sign-in is restricted to `@sdu.edu.kz` university email addresses.
 | Notifications (bell in the header when someone answers your question) | Working |
 | FAQ | Working: in English, Kazakh and Russian, by category; admins edit it in the Admin panel and choose which questions are instant-answer buttons in the chat |
 | Settings (avatar, password, language) | Working (avatar is saved in the browser only) |
-| AI chat assistant | Working: answers from the SDU knowledge base + a local Ollama model; understands follow-up questions; 👍/👎 on answers; separate chats you can rename, pin and delete (unpinned ones are deleted after 30 days without messages) |
+| AI chat assistant | Working: answers from the SDU knowledge base + a local Ollama model, shown word by word as they are written (with a stop button); understands follow-up questions; 👍/👎 on answers; separate chats you can rename, pin and delete (unpinned ones are deleted after 30 days without messages) |
 | Forum moderation | Working: new posts are checked by the AI; doubtful ones wait for a moderator |
 | Campus maps, courses | Placeholder pages |
 
@@ -35,8 +35,8 @@ and it must be **open and running**. For the AI assistant you also need
 pulled once (see [AI assistant](#ai-assistant)).
 
 ```bash
-git clone https://github.com/xsytx/ai-helpdesk-frontend.git
-cd ai-helpdesk-frontend
+git clone https://github.com/xsytx/ai-helpdesk.git
+cd ai-helpdesk
 cp .env.example .env          # Windows PowerShell: copy .env.example .env
 docker compose up -d --build
 ```

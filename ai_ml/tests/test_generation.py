@@ -153,3 +153,45 @@ class GenerationTests(unittest.TestCase):
         s, _ = make(reply=js(0, 'GPA is the grade point average.'))
         s.answer('What is GPA?', 'en')
         self.assertEqual(s.retriever.retrieve.call_count, 1)
+
+
+class StreamTests(unittest.TestCase):
+    def test_answer_text_is_extracted_piece_by_piece(self):
+        from kb.generation import AnswerTextStream
+        raw = json.dumps({'match': 1, 'answer': 'Line "one"\nСтоимость — 50\u00a0000 ₸'}, ensure_ascii=True)
+        s, out = AnswerTextStream(), []
+        for i in range(0, len(raw), 3):  # pieces cut anywhere, also inside escapes
+            out.append(s.feed(raw[i:i + 3]))
+        self.assertEqual(''.join(out), 'Line "one"\nСтоимость — 50\u00a0000 ₸')
+        self.assertEqual(s.feed('more'), '')
+
+    def test_stream_yields_deltas_then_done(self):
+        s, c = make()
+        raw = js(2, 'It is in Block C.')
+        c.chat_json_stream.return_value = iter([raw[:15], raw[15:30], raw[30:]])
+        events = list(s.answer_stream('Where is the library?', 'en'))
+        deltas = ''.join(v for k, v in events if k == 'delta')
+        self.assertEqual(deltas, 'It is in Block C.')
+        kind, result = events[-1]
+        self.assertEqual((kind, result['basis'], result['source']['id']), ('done', 'retrieved', 'b'))
+        self.assertNotIn('reset', [k for k, _ in events])
+
+    def test_stream_invalid_reply_resets_and_retries(self):
+        s, c = make()
+        c.chat_json_stream.return_value = iter([js(9, 'Candidate nine does not exist.')])  # match out of range
+        c.chat_json.return_value = js(0, 'GPA is the grade point average.')
+        events = list(s.answer_stream('What is GPA?', 'en'))
+        kinds = [k for k, _ in events]
+        self.assertEqual(kinds[-3:], ['reset', 'delta', 'done'])
+        self.assertEqual(events[-1][1]['answer'], 'GPA is the grade point average.')
+
+    def test_stream_llm_error_after_text_resets_and_degrades(self):
+        s, c = make(candidates=[])
+
+        def broken(*_a, **_k):
+            yield '{"match": 0, "answer": "Half'
+            raise LLMError('gone', 'llm_timeout')
+        c.chat_json_stream.side_effect = broken
+        events = list(s.answer_stream('What is GPA?', 'en'))
+        self.assertEqual([k for k, _ in events], ['delta', 'reset', 'done'])
+        self.assertEqual(events[-1][1]['status'], 'fallback')

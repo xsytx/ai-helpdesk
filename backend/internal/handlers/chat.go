@@ -82,43 +82,71 @@ func chatTitleFromQuestion(q string) string {
 	return strings.TrimSpace(string(runes[:chatTitleRunes-1])) + "…"
 }
 
-func (h *Handlers) ChatAsk(w http.ResponseWriter, r *http.Request) {
-	uid, ok := h.userID(r)
+// readChatAsk checks a question request (shared by ChatAsk and
+// ChatAskStream) and loads its conversation; on a problem it has already
+// written the error and ok is false.
+func (h *Handlers) readChatAsk(w http.ResponseWriter, r *http.Request) (uid int64, question string, conv *models.ChatConversation, ok bool) {
+	uid, ok = h.userID(r)
 	if !ok {
 		writeError(w, http.StatusUnauthorized, "not authenticated")
-		return
+		return 0, "", nil, false
 	}
 	var req chatAskReq
 	if err := decodeJSON(r, &req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid JSON body")
-		return
+		return 0, "", nil, false
 	}
-	question := strings.TrimSpace(req.Question)
+	question = strings.TrimSpace(req.Question)
 	if question == "" {
 		writeError(w, http.StatusBadRequest, "question must not be empty")
-		return
+		return 0, "", nil, false
 	}
 	if utf8.RuneCountInString(question) > 2000 {
 		writeError(w, http.StatusBadRequest, "question is too long")
-		return
+		return 0, "", nil, false
 	}
-
-	var conv *models.ChatConversation
 	if req.ConversationID != nil {
 		c, err := h.Store.GetChatConversation(r.Context(), uid, *req.ConversationID)
 		if err != nil {
 			writeStoreErr(w, err, "could not load the conversation")
-			return
+			return 0, "", nil, false
 		}
 		conv = &c
 	}
+	return uid, question, conv, true
+}
+
+// faqFor returns the FAQ entry a question is typed exactly like, if any.
+func (h *Handlers) faqFor(r *http.Request, question string) (models.FAQ, string, bool) {
+	faqs, err := h.Store.ListFAQs(r.Context())
+	if err != nil {
+		return models.FAQ{}, "", false
+	}
+	return matchFAQ(faqs, question)
+}
+
+// writeMLError answers a failed model call with the right status.
+func writeMLError(w http.ResponseWriter, err error) {
+	switch {
+	case errors.Is(err, mlclient.ErrBadRequest):
+		writeError(w, http.StatusBadRequest, "could not process your question")
+	case errors.Is(err, mlclient.ErrUnavailable):
+		writeError(w, http.StatusServiceUnavailable, "the assistant is temporarily unavailable")
+	default:
+		writeError(w, http.StatusBadGateway, "the assistant could not answer right now")
+	}
+}
+
+func (h *Handlers) ChatAsk(w http.ResponseWriter, r *http.Request) {
+	uid, question, conv, ok := h.readChatAsk(w, r)
+	if !ok {
+		return
+	}
 
 	// A question typed exactly like an FAQ question gets the FAQ answer at once.
-	if faqs, err := h.Store.ListFAQs(r.Context()); err == nil {
-		if f, lang, ok := matchFAQ(faqs, question); ok {
-			h.answerFromFAQ(w, r, uid, conv, f, lang, question)
-			return
-		}
+	if f, lang, ok := h.faqFor(r, question); ok {
+		h.answerFromFAQ(w, r, uid, conv, f, lang, question)
+		return
 	}
 
 	if h.ML == nil {
@@ -131,14 +159,7 @@ func (h *Handlers) ChatAsk(w http.ResponseWriter, r *http.Request) {
 	elapsed := time.Since(started)
 	if err != nil {
 		log.Printf("chat ask ml error (user=%d, duration=%s): %v", uid, elapsed, err)
-		switch {
-		case errors.Is(err, mlclient.ErrBadRequest):
-			writeError(w, http.StatusBadRequest, "could not process your question")
-		case errors.Is(err, mlclient.ErrUnavailable):
-			writeError(w, http.StatusServiceUnavailable, "the assistant is temporarily unavailable")
-		default:
-			writeError(w, http.StatusBadGateway, "the assistant could not answer right now")
-		}
+		writeMLError(w, err)
 		return
 	}
 	log.Printf("chat ask ok (user=%d, request_id=%s, duration=%s, basis=%s, status=%s)",

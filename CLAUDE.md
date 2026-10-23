@@ -92,6 +92,17 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   to `/chat/:id`. Rename/pin/delete in the list (`ConversationList`; a side
   panel on wide screens, a sheet on phones). Unpinned chats idle for
   `CHAT_RETENTION_DAYS` (30) are deleted hourly.
+- **Streaming answers + stop.** The website uses `POST /api/chat/ask/stream`
+  (`ChatAskStream`, NDJSON lines: `conversation` → `delta`… / `reset` →
+  `done`; `error` only after text was sent; earlier problems are plain HTTP
+  errors). The backend proxies `ai_ml` `POST /generate-answer/stream`, which
+  streams Ollama tokens (`stream: true`) and extracts the JSON `"answer"`
+  string as it grows (`AnswerTextStream`); an invalid reply sends `reset` and
+  is retried. A new chat is created with the first text. Stop = the browser
+  aborts the fetch → Go cancels the ML request → `ai_ml` closes the Ollama
+  connection (generation stops) and the backend saves the text so far with
+  basis `stopped`. nginx buffering is off via `X-Accel-Buffering: no`.
+  `/api/chat/ask` (non-streamed) still exists.
 - **Follow-up questions.** `ChatAsk` sends the chat's last 6 messages as
   `history` to `/generate-answer`. `ai_ml` (`kb/generation.py`) searches the
   knowledge base with the question alone and with the previous question
@@ -208,8 +219,9 @@ questions in the AI chat, 👍/👎, "ask on the forum" from an answer, admin
 "AI chat" insights → FAQ, "maybe already asked", solved answers,
 unanswered filter, reports.
 
-Planned next: streaming AI answers + a stop button (the slow wait is the
-biggest annoyance), maps and courses; ideas: search suggestions, Ctrl+K
+Also done: streaming answers with a stop button.
+
+Planned next: maps and courses; ideas: search suggestions, Ctrl+K
 search everywhere, avatar stored on the server,
 PWA, admin stats page. Optional: stop admins approving their own flagged
 posts. The 4B model is weak in Kazakh (a Kazakh follow-up understood the
