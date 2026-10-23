@@ -48,6 +48,9 @@ type Thread struct {
 	CreatedAt   time.Time    `json:"created_at"`
 	// ModerationStatus: ok | checking | held | rejected (see 002_moderation.sql).
 	ModerationStatus string `json:"moderation_status"`
+	// SearchMatch is set on search results only: where the words were found
+	// ("title", "body", "answer", "tag") or "similar" (a near match, e.g. a typo).
+	SearchMatch string `json:"search_match,omitempty"`
 }
 
 type Comment struct {

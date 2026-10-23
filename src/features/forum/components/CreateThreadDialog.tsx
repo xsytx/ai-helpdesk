@@ -11,7 +11,16 @@ import { FormEvent, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 
-export function CreateThreadDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+/** initialTitle: prefilled title, e.g. the search that found nothing. */
+export function CreateThreadDialog({
+  open,
+  onClose,
+  initialTitle = "",
+}: {
+  open: boolean;
+  onClose: () => void;
+  initialTitle?: string;
+}) {
   const { user } = useAuth();
   const { t } = useLocale();
   const navigate = useNavigate();
@@ -41,6 +50,12 @@ export function CreateThreadDialog({ open, onClose }: { open: boolean; onClose: 
       window.removeEventListener("keydown", onKey);
     };
   }, [open, onClose]);
+
+  // Prefill once when the dialog opens (not on every re-render of the page,
+  // which would overwrite what the student is typing).
+  useEffect(() => {
+    if (open && initialTitle) setTitle(initialTitle);
+  }, [open, initialTitle]);
 
   if (!open) return null;
 

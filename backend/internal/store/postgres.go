@@ -56,7 +56,10 @@ func (s *PostgresStore) Migrate(ctx context.Context) error {
 	if _, err := s.pool.Exec(ctx, chatSQL); err != nil {
 		return err
 	}
-	_, err := s.pool.Exec(ctx, faqSQL)
+	if _, err := s.pool.Exec(ctx, faqSQL); err != nil {
+		return err
+	}
+	_, err := s.pool.Exec(ctx, searchSQL)
 	return err
 }
 
@@ -346,65 +349,6 @@ func (s *PostgresStore) ListFeed(ctx context.Context, sort string, page, pageSiz
 
 	q := threadSelect + ` WHERE ` + threadVisible + ` ` + threadOrderBy(sort) + ` LIMIT $1 OFFSET $2`
 	rows, err := s.pool.Query(ctx, q, pageSize, (page-1)*pageSize)
-	if err != nil {
-		return nil, 0, err
-	}
-	defer rows.Close()
-
-	out := make([]models.Thread, 0)
-	for rows.Next() {
-		t, err := scanThread(rows)
-		if err != nil {
-			return nil, 0, err
-		}
-		out = append(out, t)
-	}
-	return out, total, rows.Err()
-}
-
-// searchVector is thread title+body as a weighted tsvector — a match in
-// the title ('A' weight) outranks the same match in the body ('B'). Kept
-// as its own const so the query and the idx_threads_search_weighted
-// index expression stay in exact sync (Postgres only uses an expression
-// index when the query's expression matches it, not just its meaning).
-const searchVector = `(setweight(to_tsvector('simple', t.title), 'A') || setweight(to_tsvector('simple', t.body), 'B'))`
-
-// searchMatch is the shared match condition used by both the count and
-// the data query in SearchThreads, so they never drift out of sync. It's
-// full-text search OR a trigram word-similarity match against the title
-// (<%: does $1 resemble some substring of the title?) — the latter
-// catches partial words and small typos ("hous", "houseing") inside a
-// longer title that full-text search's whole-token matching alone would
-// miss; plain similarity() would compare against the whole title string
-// and rarely clear the threshold for a short query.
-const searchMatch = `(` + searchVector + ` @@ websearch_to_tsquery('simple', $1) OR $1 <% t.title)`
-
-func (s *PostgresStore) SearchThreads(ctx context.Context, q string, page, pageSize int) ([]models.Thread, int, error) {
-	if page < 1 {
-		page = 1
-	}
-	if pageSize < 1 {
-		pageSize = 20
-	}
-
-	where := `WHERE ` + searchMatch + ` AND ` + threadVisible
-	args := []any{q}
-
-	var total int
-	countQ := `SELECT COUNT(*) FROM threads t ` + where
-	if err := s.pool.QueryRow(ctx, countQ, args...).Scan(&total); err != nil {
-		return nil, 0, err
-	}
-
-	limitArg := len(args) + 1
-	offsetArg := len(args) + 2
-	dataQ := fmt.Sprintf(
-		threadSelect+` %s ORDER BY GREATEST(ts_rank(`+searchVector+`, websearch_to_tsquery('simple', $1)), word_similarity($1, t.title)) DESC, t.created_at DESC LIMIT $%d OFFSET $%d`,
-		where, limitArg, offsetArg,
-	)
-	args = append(args, pageSize, (page-1)*pageSize)
-
-	rows, err := s.pool.Query(ctx, dataQ, args...)
 	if err != nil {
 		return nil, 0, err
 	}

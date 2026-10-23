@@ -27,6 +27,7 @@ interface ApiThread {
   tags?: string[];
   created_at: string;
   moderation_status?: ModerationStatus;
+  search_match?: Thread["searchMatch"];
 }
 
 interface ApiComment {
@@ -53,6 +54,7 @@ function toThread(t: ApiThread): Thread {
     score: t.score,
     tags: t.tags ?? [],
     moderationStatus: t.moderation_status,
+    searchMatch: t.search_match,
   };
 }
 

@@ -178,6 +178,7 @@ export function ChatPage() {
   const closeList = useCallback(() => setListOpen(false), []);
   const [assistantStatus, setAssistantStatus] = useState<"ok" | "degraded" | "unknown">("unknown");
   const endRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const initialHandled = useRef(false);
   const abortRef = useRef<AbortController | null>(null);
 
@@ -297,6 +298,21 @@ export function ChatPage() {
       navigate(".", { replace: true, state: null });
     }
   }, [location.state, sendUserMessage, conversationId, navigate]);
+
+  // Text handed over without sending (e.g. a forum search that found
+  // nothing): put it in the input so the student can add to it, then send.
+  useEffect(() => {
+    const draft = (location.state as { draftQuery?: string } | null)?.draftQuery;
+    if (!draft) return;
+    setInput(draft);
+    navigate(".", { replace: true, state: null });
+    window.requestAnimationFrame(() => {
+      const el = inputRef.current;
+      if (!el) return;
+      el.focus();
+      el.setSelectionRange(el.value.length, el.value.length);
+    });
+  }, [location.state, navigate]);
 
   const notFound = Boolean(conversationId) && saved.isError && getErrorStatus(saved.error) === 404;
   const historyLoading = Boolean(conversationId) && saved.isPending;
@@ -428,6 +444,7 @@ export function ChatPage() {
               </p>
             ) : null}
             <textarea
+              ref={inputRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder={t("askPlaceholder")}

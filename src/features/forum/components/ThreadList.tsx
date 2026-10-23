@@ -2,7 +2,8 @@ import type { Thread } from "@/entities/forum";
 import { useLocale } from "@/i18n/LocaleContext";
 import { ThreadCard } from "./ThreadCard";
 
-export function ThreadList({ threads }: { threads: Thread[] }) {
+/** highlightWords: search words to mark in titles and texts (search results only). */
+export function ThreadList({ threads, highlightWords }: { threads: Thread[]; highlightWords?: string[] }) {
   const { t } = useLocale();
   if (threads.length === 0) {
     return (
@@ -12,7 +13,7 @@ export function ThreadList({ threads }: { threads: Thread[] }) {
   return (
     <ul className="divide-y divide-border/40">
       {threads.map((thread) => (
-        <ThreadCard key={thread.id} thread={thread} />
+        <ThreadCard key={thread.id} thread={thread} highlightWords={highlightWords} />
       ))}
     </ul>
   );

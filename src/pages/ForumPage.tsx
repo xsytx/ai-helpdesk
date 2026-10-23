@@ -1,5 +1,7 @@
 import { CreateThreadDialog } from "@/features/forum/components/CreateThreadDialog";
+import { FaqSearchMatches, SearchHelp } from "@/features/forum/components/SearchExtras";
 import { TagChip } from "@/features/forum/components/TagInput";
+import { searchWords } from "@/shared/lib/highlight";
 import { ThreadList } from "@/features/forum/components/ThreadList";
 import { ThreadSortToggle } from "@/features/forum/components/ThreadSortToggle";
 import { useThreads, useTrendingTags } from "@/features/forum/api";
@@ -25,6 +27,7 @@ export function ForumPage() {
   const [input, setInput] = useState(q);
   const { data: threads = [], isLoading, isError, isPlaceholderData } = useThreads(sort, { q, tag: q ? undefined : tag });
   const trending = useTrendingTags().data ?? [];
+  const words = searchWords(q);
 
   // Follow address changes (a tag link, back/forward) in the search box.
   useEffect(() => setInput(q), [q]);
@@ -114,6 +117,8 @@ export function ForumPage() {
           </div>
         ) : null}
 
+        {q ? <FaqSearchMatches words={words} /> : null}
+
         {isLoading ? (
           <p className="py-6 text-center text-sm text-label">{t("loading")}</p>
         ) : isError ? (
@@ -130,11 +135,12 @@ export function ForumPage() {
           </div>
         ) : (
           <div className={isPlaceholderData ? "opacity-70 transition-opacity" : undefined}>
-            <ThreadList threads={threads} />
+            <ThreadList threads={threads} highlightWords={words} />
           </div>
         )}
+        {q && !isLoading ? <SearchHelp q={q} onAskForum={() => setCreateOpen(true)} /> : null}
       </Card>
-      <CreateThreadDialog open={createOpen} onClose={() => setCreateOpen(false)} />
+      <CreateThreadDialog open={createOpen} onClose={() => setCreateOpen(false)} initialTitle={q} />
     </div>
   );
 }

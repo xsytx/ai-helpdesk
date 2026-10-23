@@ -139,3 +139,60 @@ func TestSearchTagsAndOwnPostEditing(t *testing.T) {
 		t.Fatalf("deleted thread: %d, want 404", code)
 	}
 }
+
+func TestSearchFindsPartialWordsTyposAnswersAndTags(t *testing.T) {
+	e := newForumEnv(t)
+	u, other := e.user("user"), e.user("user")
+	// A made-up word per run, so other test data never matches.
+	n := time.Now().UnixNano() % 1_000_000
+	word := fmt.Sprintf("canteenx%dq", n)
+	post := func(title, body string, tags ...string) int64 {
+		code, th := e.call(u, http.MethodPost, "/api/threads", map[string]any{"title": title, "body": body, "tags": tags})
+		if code != http.StatusCreated {
+			t.Fatalf("create: %d %v", code, th)
+		}
+		id := num(th["id"])
+		e.waitStatus("thread", id, "ok")
+		return id
+	}
+	inTitle := post("Where is the "+word+"?", "Looking for lunch")
+	inBody := post("Lunch question", "Is the "+word+" open on Sunday?")
+	inAnswer := post("Food on campus", "Where can I eat?")
+	_, c := e.call(other, http.MethodPost, fmt.Sprintf("/api/threads/%d/comments", inAnswer), map[string]any{"body": "Try the " + word + " in block A"})
+	e.waitStatus("comment", num(c["id"]), "ok")
+	inTag := post("Opening hours", "When does it open?", word)
+
+	search := func(q string) ([]int64, []string) {
+		_, out := e.call(u, http.MethodGet, "/api/search?q="+url.QueryEscape(q), nil)
+		var ids []int64
+		var how []string
+		for _, th := range out["threads"].([]any) {
+			m := th.(map[string]any)
+			id := num(m["id"])
+			if id == inTitle || id == inBody || id == inAnswer || id == inTag {
+				ids = append(ids, id)
+				how = append(how, fmt.Sprint(m["search_match"]))
+			}
+		}
+		return ids, how
+	}
+
+	// Half a word finds all four, title match first, then body, then answer/tag.
+	ids, how := search(word[:len(word)-3])
+	if len(ids) != 4 || ids[0] != inTitle || ids[1] != inBody {
+		t.Fatalf("prefix search: ids %v (title=%d body=%d answer=%d tag=%d), matched %v", ids, inTitle, inBody, inAnswer, inTag, how)
+	}
+	if fmt.Sprint(how) != "[title body answer tag]" && fmt.Sprint(how) != "[title body tag answer]" {
+		t.Fatalf("matched_by %v", how)
+	}
+	// A typo (first letter wrong) still finds the title and the body.
+	typo := "k" + word[1:]
+	ids, how = search(typo)
+	if len(ids) < 2 || ids[0] != inTitle || how[0] != "similar" {
+		t.Fatalf("typo search %q: %v %v", typo, ids, how)
+	}
+	// One-letter "words" alone don't match everything.
+	if ids, _ := search("a"); len(ids) != 0 {
+		t.Fatalf("one letter matched %v", ids)
+	}
+}

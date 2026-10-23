@@ -14,6 +14,8 @@ export interface Thread {
   /** Lowercase labels, e.g. "dorm" (shown as #dorm). */
   tags?: string[];
   moderationStatus?: ModerationStatus;
+  /** Search results only: where the words were found ("similar" = a near match, e.g. a typo). */
+  searchMatch?: "title" | "body" | "answer" | "tag" | "similar";
 }
 
 export interface Answer {

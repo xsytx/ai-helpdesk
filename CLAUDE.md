@@ -109,6 +109,14 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   delete any post. Edits are moderated again: `409` = held post, `422` =
   edit breaks the rules. Editing a question sends its tags too (the backend
   replaces them).
+- **Search** (`backend/internal/store/search.go`, indexes in `005_search.sql`):
+  every typed word is a prefix ("cante" → canteen) over title, text, visible
+  answers and tags, plus a trigram near-match on title and text for typos and
+  word forms ("kanteen", "столовую"). Results carry `search_match`
+  (title/body/answer/tag/similar), ranked in that order. The website marks
+  matching words (`shared/lib/highlight.tsx`), shows matching FAQ entries
+  above the results, and offers "ask the AI / ask on the forum" with the
+  search text.
 - **Notifications.** The header bell (`NotificationBell`) polls
   `/api/notifications/unread-count` every 30 s and lists
   `/api/notifications` when opened; a click marks it read and opens the
@@ -130,7 +138,7 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
 - **Every public SQL read must hide held posts**: use `threadVisible` /
   `commentVisible` in `backend/internal/store/postgres.go`.
 - **Schema changes** are idempotent SQL applied on every start
-  (`001_init.sql` + `003_chat.sql` + `004_faq.sql` in `Migrate`, `002_moderation.sql` in
+  (`001_init.sql` + `003_chat.sql` + `004_faq.sql` + `005_search.sql` in `Migrate`, `002_moderation.sql` in
   `MigrateModeration`): `CREATE ... IF NOT EXISTS` /
   `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`.
 - **Store interface**: adding a method to `store.Store` also needs a stub on
