@@ -274,6 +274,11 @@ func (s *PostgresStore) Stats(ctx context.Context) (models.Stats, error) {
 const (
 	threadVisible  = `t.moderation_status IN ('ok', 'checking')`
 	commentVisible = `c.moderation_status IN ('ok', 'checking')`
+	// A notification about a post the moderation hid (an answer posted, then
+	// held by the AI) is not shown: it would point at something the reader
+	// can't see. It reappears if a moderator publishes the post.
+	notificationVisible = `EXISTS (SELECT 1 FROM threads t WHERE t.id = n.thread_id AND ` + threadVisible + `)
+		AND NOT EXISTS (SELECT 1 FROM comments c WHERE c.id = n.comment_id AND NOT (` + commentVisible + `))`
 )
 
 // threadSelect aggregates each thread's tags via array_agg so every
@@ -772,7 +777,7 @@ func (s *PostgresStore) ListNotifications(ctx context.Context, userID int64, pag
 
 	var total, unread int
 	if err := s.pool.QueryRow(ctx,
-		`SELECT COUNT(*), COUNT(*) FILTER (WHERE read_at IS NULL) FROM notifications WHERE user_id = $1`,
+		`SELECT COUNT(*), COUNT(*) FILTER (WHERE n.read_at IS NULL) FROM notifications n WHERE n.user_id = $1 AND `+notificationVisible,
 		userID,
 	).Scan(&total, &unread); err != nil {
 		return nil, 0, 0, err
@@ -784,7 +789,7 @@ func (s *PostgresStore) ListNotifications(ctx context.Context, userID int64, pag
 		FROM notifications n
 		JOIN threads t ON t.id = n.thread_id
 		JOIN users u ON u.id = n.actor_id
-		WHERE n.user_id = $1
+		WHERE n.user_id = $1 AND ` + notificationVisible + `
 		ORDER BY n.created_at DESC
 		LIMIT $2 OFFSET $3`
 	rows, err := s.pool.Query(ctx, q, userID, pageSize, (page-1)*pageSize)
@@ -810,7 +815,7 @@ func (s *PostgresStore) ListNotifications(ctx context.Context, userID int64, pag
 func (s *PostgresStore) UnreadNotificationCount(ctx context.Context, userID int64) (int, error) {
 	var n int
 	err := s.pool.QueryRow(ctx,
-		`SELECT COUNT(*) FROM notifications WHERE user_id = $1 AND read_at IS NULL`, userID,
+		`SELECT COUNT(*) FROM notifications n WHERE n.user_id = $1 AND n.read_at IS NULL AND `+notificationVisible, userID,
 	).Scan(&n)
 	return n, err
 }

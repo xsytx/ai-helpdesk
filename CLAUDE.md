@@ -101,6 +101,19 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   FAQ question is answered the same way. Admins edit, order and pin entries
   in `/admin?section=faq` (`FaqEditor`); the editor requires all three
   languages.
+- **Forum extras.** Search box and tag filter on `/forum` live in the URL
+  (`?q=` → `/api/search`, `?tag=` → `/api/tags/{name}/threads`; popular tags
+  from `/api/tags/trending`); tags are added in the new-question dialog
+  (`TagInput`, max 8). Authors edit/delete their own question or answer from
+  the "⋯" menu (`PostMenu`, `features/forum/postActions.ts`); admins may
+  delete any post. Edits are moderated again: `409` = held post, `422` =
+  edit breaks the rules. Editing a question sends its tags too (the backend
+  replaces them).
+- **Notifications.** The header bell (`NotificationBell`) polls
+  `/api/notifications/unread-count` every 30 s and lists
+  `/api/notifications` when opened; a click marks it read and opens the
+  question. Notifications about posts the moderation hid are not shown
+  (`notificationVisible` in `postgres.go`) until a moderator publishes them.
 - **Auto-refresh.** React Query polling: feed 15 s, thread 10 s (1.5 s while
   a post is `checking`), admin queue 5 s, admin badge 10 s; paused in
   background tabs; never refetches over a like that is still saving.
@@ -158,8 +171,11 @@ editor with order/pin), async AI moderation + admin panel (filters, sort,
 log), staff emails, error/404 pages, performance pass (small logo, bundled
 font, on-demand tour code).
 
-Planned next: bug fixes and polish, then notifications bell,
-👍/👎 on answers, forum search/tags/edit/delete, maps and
-courses. Optional: stop admins approving their own flagged posts; send the
-last few messages of a chat to the model so follow-up questions ("and how
-much is it?") are understood (needs an `ai_ml` `/generate-answer` change).
+Also done: forum search and tags, edit/delete own posts, notifications bell.
+
+Planned next: a "smarter assistant" sprint (follow-up questions with chat
+context, 👍/👎 on AI answers, "ask on the forum" when the AI can't answer,
+"make it an FAQ" for admins from frequent/👎 questions), then maps and
+courses. Follow-up context needs an `ai_ml` `/generate-answer` change (send
+the last few messages). Optional: stop admins approving their own flagged
+posts.

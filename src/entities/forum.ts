@@ -11,6 +11,8 @@ export interface Thread {
   answerCount: number;
   /** Net upvotes on the thread itself. */
   score: number;
+  /** Lowercase labels, e.g. "dorm" (shown as #dorm). */
+  tags?: string[];
   moderationStatus?: ModerationStatus;
 }
 

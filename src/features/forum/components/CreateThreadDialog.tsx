@@ -6,6 +6,7 @@ import { useLocale } from "@/i18n/LocaleContext";
 import { Button } from "@/shared/ui/Button";
 import { Input } from "@/shared/ui/Input";
 import { X } from "lucide-react";
+import { TagInput } from "./TagInput";
 import { FormEvent, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
@@ -17,6 +18,7 @@ export function CreateThreadDialog({ open, onClose }: { open: boolean; onClose: 
   const createThread = useCreateThread();
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
+  const [tags, setTags] = useState<string[]>([]);
   const [error, setError] = useState<string>();
   const [notice, setNotice] = useState<ModerationNotice>();
 
@@ -24,6 +26,7 @@ export function CreateThreadDialog({ open, onClose }: { open: boolean; onClose: 
     if (!open) {
       setTitle("");
       setBody("");
+      setTags([]);
       setError(undefined);
       setNotice(undefined);
       return;
@@ -59,6 +62,7 @@ export function CreateThreadDialog({ open, onClose }: { open: boolean; onClose: 
         authorName: user.name,
         title,
         body,
+        tags,
       });
       if (result.kind === "pending") {
         // Not published yet: tell the author instead of opening a thread that does not exist.
@@ -131,6 +135,7 @@ export function CreateThreadDialog({ open, onClose }: { open: boolean; onClose: 
               className="w-full resize-y rounded-xl border border-border bg-white px-3.5 py-2.5 text-sm text-primary placeholder:text-grey focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20"
             />
           </div>
+          <TagInput id="thread-tags" tags={tags} onChange={setTags} />
           {error ? (
             <p className="text-sm text-error" role="alert">
               {error}

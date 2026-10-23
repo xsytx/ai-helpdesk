@@ -8,7 +8,9 @@ import { safeStorage } from "@/shared/lib/storage";
 
 export const forumKeys = {
   all: ["forum"] as const,
-  threads: (sort: ThreadSort) => [...forumKeys.all, "threads", sort] as const,
+  threads: (sort: ThreadSort, filter: ThreadFilter = {}) =>
+    [...forumKeys.all, "threads", sort, filter.q ?? "", filter.tag ?? ""] as const,
+  trendingTags: () => [...forumKeys.all, "trending-tags"] as const,
   thread: (id: string) => [...forumKeys.all, "thread", id] as const,
 };
 
@@ -22,6 +24,7 @@ interface ApiThread {
   body: string;
   score: number;
   comment_count: number;
+  tags?: string[];
   created_at: string;
   moderation_status?: ModerationStatus;
 }
@@ -48,6 +51,7 @@ function toThread(t: ApiThread): Thread {
     createdAt: t.created_at,
     answerCount: t.comment_count,
     score: t.score,
+    tags: t.tags ?? [],
     moderationStatus: t.moderation_status,
   };
 }
@@ -98,8 +102,35 @@ const sortAnswers = (answers: Answer[]) =>
 
 // --- Fetchers ---
 
-async function fetchThreads(sort: ThreadSort): Promise<Thread[]> {
-  if (USE_MOCK_API) return repo.listThreads(sort);
+/** What the forum list shows: everything, a search (q) or one tag. */
+export interface ThreadFilter {
+  q?: string;
+  tag?: string;
+}
+
+async function fetchThreads(sort: ThreadSort, filter: ThreadFilter): Promise<Thread[]> {
+  if (USE_MOCK_API) {
+    const q = filter.q?.toLowerCase();
+    return repo
+      .listThreads(sort)
+      .filter((t) => !q || `${t.title} ${t.body}`.toLowerCase().includes(q))
+      .filter((t) => !filter.tag || t.tags?.includes(filter.tag));
+  }
+  // A search is ordered by relevance and a tag list by date (the backend
+  // decides both), so the sort toggle only applies to the full feed.
+  if (filter.q) {
+    const { data } = await apiClient.get<{ threads: ApiThread[] }>("/search", {
+      params: { q: filter.q, page_size: 50 },
+    });
+    return data.threads.map(toThread);
+  }
+  if (filter.tag) {
+    const { data } = await apiClient.get<{ threads: ApiThread[] }>(
+      `/tags/${encodeURIComponent(filter.tag)}/threads`,
+      { params: { page_size: 50 } },
+    );
+    return data.threads.map(toThread);
+  }
   const { data } = await apiClient.get<{ threads: ApiThread[] }>("/feed", {
     params: { sort: sort === "newest" ? "new" : "top", page_size: 50 },
   });
@@ -137,12 +168,32 @@ const CHECKING_REFRESH_MS = 1_500;
 
 const likeMutationKey = (threadId: string) => [...forumKeys.all, "like", threadId] as const;
 
-export function useThreads(sort: ThreadSort) {
+export function useThreads(sort: ThreadSort, filter: ThreadFilter = {}) {
   return useQuery({
-    queryKey: forumKeys.threads(sort),
-    queryFn: () => fetchThreads(sort),
+    queryKey: forumKeys.threads(sort, filter),
+    queryFn: () => fetchThreads(sort, filter),
     refetchInterval: FEED_REFRESH_MS,
     refetchOnWindowFocus: true,
+    // While a new search loads, the previous results stay on screen.
+    placeholderData: (previous) => previous,
+  });
+}
+
+export interface TrendingTag {
+  name: string;
+  count: number;
+}
+
+/** The most used tags on visible questions. */
+export function useTrendingTags() {
+  return useQuery({
+    queryKey: forumKeys.trendingTags(),
+    enabled: !USE_MOCK_API,
+    queryFn: async () => {
+      const { data } = await apiClient.get<TrendingTag[]>("/tags/trending", { params: { limit: 12 } });
+      return data;
+    },
+    staleTime: 60_000,
   });
 }
 
@@ -205,12 +256,14 @@ export function useCreateThread() {
       authorName: string;
       title: string;
       body: string;
+      tags?: string[];
     }): Promise<CreateThreadResult> => {
       if (USE_MOCK_API) return { kind: "published", thread: repo.createThread(input) };
       // The backend takes the author from the login token, not the request body.
       const { data } = await apiClient.post<ApiThread>("/threads", {
         title: input.title,
         body: input.body,
+        tags: input.tags ?? [],
       });
       const notice = parseModerationNotice(data);
       if (notice) return { kind: "pending", notice };

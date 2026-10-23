@@ -2,6 +2,7 @@ import { useAuth } from "@/app/AuthContext";
 import { useLocale } from "@/i18n/LocaleContext";
 import { UserAvatar } from "@/features/profile/components/UserAvatar";
 import { isStaffRole, usePendingModerationCount } from "@/features/moderation/api";
+import { NotificationBell } from "@/features/notifications/components/NotificationBell";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { Logo } from "./Logo";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
@@ -88,6 +89,7 @@ export function AppShell() {
           <div className="hidden flex-1 md:block" />
           <div className="flex items-center gap-2">
             <LanguageSwitcher />
+            <NotificationBell />
             <UserAvatar name={displayName} />
           </div>
         </header>
