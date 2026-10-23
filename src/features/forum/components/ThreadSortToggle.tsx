@@ -5,9 +5,12 @@ import type { ReactNode } from "react";
 export function ThreadSortToggle({
   sort,
   onSortChange,
+  withUnanswered = false,
 }: {
   sort: ThreadSort;
   onSortChange: (sort: ThreadSort) => void;
+  /** Also offer "Unanswered" (the forum page; not the short list on the home page). */
+  withUnanswered?: boolean;
 }) {
   const { t } = useLocale();
   return (
@@ -18,6 +21,11 @@ export function ThreadSortToggle({
       <SortButton active={sort === "newest"} onClick={() => onSortChange("newest")}>
         {t("newest")}
       </SortButton>
+      {withUnanswered ? (
+        <SortButton active={sort === "unanswered"} onClick={() => onSortChange("unanswered")}>
+          {t("unanswered")}
+        </SortButton>
+      ) : null}
     </div>
   );
 }

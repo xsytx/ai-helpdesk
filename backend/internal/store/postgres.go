@@ -62,7 +62,10 @@ func (s *PostgresStore) Migrate(ctx context.Context) error {
 	if _, err := s.pool.Exec(ctx, searchSQL); err != nil {
 		return err
 	}
-	_, err := s.pool.Exec(ctx, chatFeedbackSQL)
+	if _, err := s.pool.Exec(ctx, chatFeedbackSQL); err != nil {
+		return err
+	}
+	_, err := s.pool.Exec(ctx, forumExtrasSQL)
 	return err
 }
 
@@ -296,7 +299,9 @@ const (
 const threadSelect = `
 	SELECT t.id, t.user_id, u.display_name, t.title, t.body, t.score, t.locked_at,
 	       t.created_at, COALESCE(cc.cnt, 0),
-	       COALESCE(tgs.tags, ARRAY[]::text[]), t.moderation_status
+	       COALESCE(tgs.tags, ARRAY[]::text[]), t.moderation_status,
+	       -- the accepted answer, only while that answer is visible
+	       (SELECT c.id FROM comments c WHERE c.id = t.accepted_comment_id AND ` + commentVisible + `) AS accepted_answer_id
 	FROM threads t
 	JOIN users u ON u.id = t.user_id
 	LEFT JOIN (SELECT thread_id, COUNT(*) AS cnt FROM comments c WHERE ` + commentVisible + ` GROUP BY thread_id) cc
@@ -310,7 +315,7 @@ const threadSelect = `
 func scanThread(row pgx.Row) (models.Thread, error) {
 	var t models.Thread
 	err := row.Scan(&t.ID, &t.UserID, &t.AuthorName, &t.Title, &t.Body, &t.Score, &t.LockedAt,
-		&t.CreatedAt, &t.CommentCnt, &t.Tags, &t.ModerationStatus)
+		&t.CreatedAt, &t.CommentCnt, &t.Tags, &t.ModerationStatus, &t.AcceptedCommentID)
 	return t, err
 }
 
@@ -345,12 +350,17 @@ func (s *PostgresStore) ListFeed(ctx context.Context, sort string, page, pageSiz
 		pageSize = 20
 	}
 
+	where := threadVisible
+	// "unanswered": questions nobody has answered yet (visible answers only), newest first.
+	if sort == "unanswered" {
+		where += ` AND NOT EXISTS (SELECT 1 FROM comments c WHERE c.thread_id = t.id AND ` + commentVisible + `)`
+	}
 	var total int
-	if err := s.pool.QueryRow(ctx, `SELECT COUNT(*) FROM threads t WHERE `+threadVisible).Scan(&total); err != nil {
+	if err := s.pool.QueryRow(ctx, `SELECT COUNT(*) FROM threads t WHERE `+where).Scan(&total); err != nil {
 		return nil, 0, err
 	}
 
-	q := threadSelect + ` WHERE ` + threadVisible + ` ` + threadOrderBy(sort) + ` LIMIT $1 OFFSET $2`
+	q := threadSelect + ` WHERE ` + where + ` ` + threadOrderBy(sort) + ` LIMIT $1 OFFSET $2`
 	rows, err := s.pool.Query(ctx, q, pageSize, (page-1)*pageSize)
 	if err != nil {
 		return nil, 0, err
@@ -839,9 +849,13 @@ func (s *PostgresStore) CreateReport(ctx context.Context, reporterID int64, targ
 		return models.Report{}, ErrNotFound
 	}
 
+	// Reporting the same post again while the first report is still open
+	// only updates its reason (see idx_reports_open_once).
 	const q = `
 		INSERT INTO reports (reporter_id, target_type, target_id, reason)
 		VALUES ($1, $2, $3, $4)
+		ON CONFLICT (reporter_id, target_type, target_id) WHERE status = 'open'
+		DO UPDATE SET reason = EXCLUDED.reason
 		RETURNING id`
 	var id int64
 	if err := s.pool.QueryRow(ctx, q, reporterID, targetType, targetID, reason).Scan(&id); err != nil {

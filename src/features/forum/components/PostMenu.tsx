@@ -5,30 +5,37 @@ import type { TranslationKey } from "@/i18n/translations";
 import { cn } from "@/shared/lib/cn";
 import { Button } from "@/shared/ui/Button";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { Flag, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import type { PostActionError } from "../postActions";
 
-/** Who may do what with a post: the author edits and deletes, admins delete anything. */
+/**
+ * Who may do what with a post: the author edits and deletes, admins delete
+ * anything, any other signed-in student may report it.
+ */
 export function usePostPermissions(authorId: string) {
   const { user } = useAuth();
   const own = Boolean(user) && user!.id === authorId;
-  return { canEdit: own, canDelete: own || isStaffRole(user?.role) };
+  return { canEdit: own, canDelete: own || isStaffRole(user?.role), canReport: Boolean(user) && !own };
 }
 
 /** "⋯" menu on a question or answer. Renders nothing if the user may do neither. */
 export function PostMenu({
   canEdit,
   canDelete,
+  canReport = false,
   onEdit,
   onDelete,
+  onReport,
 }: {
   canEdit: boolean;
   canDelete: boolean;
+  canReport?: boolean;
   onEdit: () => void;
   onDelete: () => void;
+  onReport?: () => void;
 }) {
   const { t } = useLocale();
-  if (!canEdit && !canDelete) return null;
+  if (!canEdit && !canDelete && !canReport) return null;
   const item =
     "flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium outline-none data-[highlighted]:bg-background-2";
 
@@ -49,6 +56,12 @@ export function PostMenu({
             <DropdownMenu.Item className={cn(item, "text-primary")} onSelect={onEdit}>
               <Pencil className="h-4 w-4" />
               {t("postEdit")}
+            </DropdownMenu.Item>
+          ) : null}
+          {canReport && onReport ? (
+            <DropdownMenu.Item className={cn(item, "text-primary")} onSelect={onReport}>
+              <Flag className="h-4 w-4" />
+              {t("reportPost")}
             </DropdownMenu.Item>
           ) : null}
           {canDelete ? (

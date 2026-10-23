@@ -123,8 +123,9 @@ function syncThreadStats(data: ForumData, threadId: string) {
 export function listThreads(sort: ThreadSort): Thread[] {
   const data = readData();
   const threads = [...data.threads];
-  if (sort === "newest") {
+  if (sort === "newest" || sort === "unanswered") {
     threads.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    if (sort === "unanswered") return threads.filter((t) => t.answerCount === 0);
   } else {
     threads.sort((a, b) => b.score - a.score || b.createdAt.localeCompare(a.createdAt));
   }

@@ -43,7 +43,13 @@ export function ForumPage() {
   }, [input, q, tag, setParams]);
 
   const filtered = Boolean(q || tag);
-  const emptyText = q ? t("forumSearchEmpty").replace("{q}", q) : tag ? t("forumTagEmpty") : t("noThreadsYet");
+  const emptyText = q
+    ? t("forumSearchEmpty").replace("{q}", q)
+    : tag
+      ? t("forumTagEmpty")
+      : sort === "unanswered"
+        ? t("forumAllAnswered")
+        : t("noThreadsYet");
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -51,7 +57,7 @@ export function ForumPage() {
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-xl font-bold text-primary">{t("discussionForum")}</h1>
           <div className="flex flex-wrap items-center gap-2">
-            {!q && !tag ? <ThreadSortToggle sort={sort} onSortChange={setSort} /> : null}
+            {!q && !tag ? <ThreadSortToggle sort={sort} onSortChange={setSort} withUnanswered /> : null}
             <Button size="sm" onClick={() => setCreateOpen(true)}>
               <Plus className="h-4 w-4" />
               {t("newQuestion")}
@@ -126,7 +132,7 @@ export function ForumPage() {
         ) : threads.length === 0 ? (
           <div className="py-4 text-center">
             <p className="text-sm text-label">{emptyText}</p>
-            {!filtered ? (
+            {!filtered && sort !== "unanswered" ? (
               <Button className="mt-4" onClick={() => setCreateOpen(true)}>
                 <Plus className="h-4 w-4" />
                 {t("newQuestion")}

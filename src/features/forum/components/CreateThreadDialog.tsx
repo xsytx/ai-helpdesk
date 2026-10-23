@@ -6,6 +6,7 @@ import { useLocale } from "@/i18n/LocaleContext";
 import { Button } from "@/shared/ui/Button";
 import { Input } from "@/shared/ui/Input";
 import { X } from "lucide-react";
+import { SimilarQuestions } from "./SimilarQuestions";
 import { TagInput } from "./TagInput";
 import { FormEvent, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
@@ -136,6 +137,7 @@ export function CreateThreadDialog({
             placeholder={t("threadTitlePlaceholder")}
             maxLength={120}
           />
+          <SimilarQuestions title={title} onOpen={onClose} />
           <div className="space-y-1.5">
             <label htmlFor="thread-body" className="text-sm font-medium text-label">
               {t("threadDetails")}

@@ -3,6 +3,7 @@ package handlers
 import (
 	"net/http"
 	"strings"
+	"unicode/utf8"
 
 	"campus-forum/internal/store"
 )
@@ -146,7 +147,12 @@ func (h *Handlers) reportTarget(w http.ResponseWriter, r *http.Request, targetTy
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	rep, err := h.Store.CreateReport(r.Context(), uid, targetType, id, strings.TrimSpace(req.Reason))
+	reason := strings.TrimSpace(req.Reason)
+	if utf8.RuneCountInString(reason) > 500 {
+		writeError(w, http.StatusBadRequest, "reason is too long")
+		return
+	}
+	rep, err := h.Store.CreateReport(r.Context(), uid, targetType, id, reason)
 	if err != nil {
 		if err == store.ErrNotFound {
 			writeError(w, http.StatusNotFound, "not found")

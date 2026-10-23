@@ -208,6 +208,13 @@ type Store interface {
 	ListChatMessages(ctx context.Context, userID, conversationID int64) ([]models.ChatMessage, error)
 	// RateChatMessage: 1 = 👍, -1 = 👎, 0 = clear, on one of the user's answers.
 	RateChatMessage(ctx context.Context, userID, messageID int64, value int) error
+	// SimilarThreads: visible questions about the same topic as title
+	// ("maybe this was already asked"), see forum_extras.go.
+	SimilarThreads(ctx context.Context, title string) ([]models.Thread, error)
+	// SetAcceptedAnswer marks (or clears, nil) the solution of a thread; author only.
+	SetAcceptedAnswer(ctx context.Context, threadID, userID int64, commentID *int64) error
+	// ResolveReportsFor closes all open reports about one post.
+	ResolveReportsFor(ctx context.Context, targetType string, targetID int64) error
 	// ChatInsights: "disliked", "unanswered" or "frequent" (see chat_feedback.go).
 	ChatInsights(ctx context.Context, kind string, since time.Time, limit int) ([]models.ChatInsight, error)
 }

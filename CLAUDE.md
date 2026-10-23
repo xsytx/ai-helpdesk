@@ -130,6 +130,16 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   matching words (`shared/lib/highlight.tsx`), shows matching FAQ entries
   above the results, and offers "ask the AI / ask on the forum" with the
   search text.
+- **Forum: similar, solved, unanswered, reports (`007_forum_extras.sql`,
+  `store/forum_extras.go`).** The new-question dialog shows "maybe this was
+  already asked" from `GET /api/threads/similar?q=` (topic words of the
+  title, filler/question words dropped, 5-letter prefixes, ≥ half must
+  match). The question's author marks one answer as the solution
+  (`POST /api/threads/{id}/accept {comment_id|null}`; `accepted_comment_id`
+  on threads, only while that answer is visible) → shown first + "Решено" in
+  lists. `/api/feed?sort=unanswered` = no visible answers. "Пожаловаться" in
+  the ⋯ menu (one open report per student and post); admin panel →
+  "Жалобы" (keep = resolve; deleting a post closes all its reports).
 - **Notifications.** The header bell (`NotificationBell`) polls
   `/api/notifications/unread-count` every 30 s and lists
   `/api/notifications` when opened; a click marks it read and opens the
@@ -151,7 +161,7 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
 - **Every public SQL read must hide held posts**: use `threadVisible` /
   `commentVisible` in `backend/internal/store/postgres.go`.
 - **Schema changes** are idempotent SQL applied on every start
-  (`001_init.sql` + `003_chat.sql` + `004_faq.sql` + `005_search.sql` + `006_chat_feedback.sql` in `Migrate`, `002_moderation.sql` in
+  (`001_init.sql` + `003_chat.sql` + `004_faq.sql` + `005_search.sql` + `006_chat_feedback.sql` + `007_forum_extras.sql` in `Migrate`, `002_moderation.sql` in
   `MigrateModeration`): `CREATE ... IF NOT EXISTS` /
   `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`.
 - **Store interface**: adding a method to `store.Store` also needs a stub on
@@ -195,10 +205,12 @@ font, on-demand tour code).
 Also done: forum search (partial words, typos, answers, tags) and tags,
 edit/delete own posts, notifications bell, follow a question, follow-up
 questions in the AI chat, 👍/👎, "ask on the forum" from an answer, admin
-"AI chat" insights → FAQ.
+"AI chat" insights → FAQ, "maybe already asked", solved answers,
+unanswered filter, reports.
 
-Planned next: maps and courses; ideas: similar-question hints while asking,
-search suggestions, Ctrl+K search everywhere, avatar stored on the server,
+Planned next: streaming AI answers + a stop button (the slow wait is the
+biggest annoyance), maps and courses; ideas: search suggestions, Ctrl+K
+search everywhere, avatar stored on the server,
 PWA, admin stats page. Optional: stop admins approving their own flagged
 posts. The 4B model is weak in Kazakh (a Kazakh follow-up understood the
 topic but missed the stored answer).

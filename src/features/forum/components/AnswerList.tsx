@@ -1,6 +1,8 @@
 import type { Answer } from "@/entities/forum";
 import { useAuth } from "@/app/AuthContext";
-import { useLikeAnswer } from "@/features/forum/api";
+import { useAcceptAnswer, useLikeAnswer } from "@/features/forum/api";
+import { cn } from "@/shared/lib/cn";
+import { CheckCircle2 } from "lucide-react";
 import { useLocale } from "@/i18n/LocaleContext";
 import { formatRelativeTime } from "@/shared/lib/format";
 import { HiddenPostNotice } from "@/features/moderation/components/HiddenPostNotice";
@@ -11,11 +13,30 @@ import { postActionError, useDeleteAnswer, useUpdateAnswer, type PostActionError
 import { DeleteConfirm, PostActionErrorText, PostMenu, usePostPermissions } from "./PostMenu";
 import { UserAvatar } from "@/features/profile/components/UserAvatar";
 import { LikeButton } from "./LikeButton";
+import { ReportDialog } from "./ReportDialog";
 
-export function AnswerList({ threadId, answers }: { threadId: string; answers: Answer[] }) {
+/**
+ * The answers, most liked first; the one the question's author marked as
+ * the solution goes on top. The author can mark or unmark it on any answer.
+ */
+export function AnswerList({
+  threadId,
+  answers: byLikes,
+  threadAuthorId,
+  acceptedAnswerId,
+}: {
+  threadId: string;
+  answers: Answer[];
+  threadAuthorId?: string;
+  acceptedAnswerId?: string;
+}) {
   const { user } = useAuth();
   const { locale, t } = useLocale();
   const likeAnswer = useLikeAnswer(threadId);
+  const accept = useAcceptAnswer(threadId);
+  const isAuthor = Boolean(user && threadAuthorId && user.id === threadAuthorId);
+  const accepted = byLikes.find((a) => a.id === acceptedAnswerId);
+  const answers = accepted ? [accepted, ...byLikes.filter((a) => a !== accepted)] : byLikes;
 
   // When likes reorder the answers, slide each one from its old spot.
   const itemRefs = useRef(new Map<string, HTMLElement>());
@@ -41,6 +62,7 @@ export function AnswerList({ threadId, answers }: { threadId: string; answers: A
     <ul className="space-y-4">
       {answers.map((answer, index) => {
         const liked = user ? answer.likedByUserIds.includes(user.id) : false;
+        const isSolution = answer === accepted;
         return (
           <li
             key={answer.id}
@@ -48,7 +70,10 @@ export function AnswerList({ threadId, answers }: { threadId: string; answers: A
               if (el) itemRefs.current.set(answer.id, el);
               else itemRefs.current.delete(answer.id);
             }}
-            className="flex gap-3 rounded-xl border border-border/50 bg-white p-3"
+            className={cn(
+              "flex gap-3 rounded-xl border bg-white p-3",
+              isSolution ? "border-green-300 ring-1 ring-green-200" : "border-border/50",
+            )}
           >
             <div className="flex flex-col items-center gap-1 pt-1">
               <LikeButton
@@ -66,13 +91,35 @@ export function AnswerList({ threadId, answers }: { threadId: string; answers: A
                   });
                 }}
               />
-              {index === 0 ? (
+              {isSolution ? (
+                <span className="inline-flex items-center gap-0.5 text-[10px] font-bold uppercase tracking-wide text-green-700">
+                  <CheckCircle2 className="h-3 w-3" aria-hidden />
+                  {t("solution")}
+                </span>
+              ) : index === 0 && !accepted ? (
                 <span className="text-[10px] font-bold uppercase tracking-wide text-accent">
                   {t("topAnswer")}
                 </span>
               ) : null}
             </div>
-            <AnswerContent threadId={threadId} answer={answer} locale={locale} />
+            <div className="min-w-0 flex-1">
+              <AnswerContent threadId={threadId} answer={answer} locale={locale} />
+              {isAuthor && answer.moderationStatus !== "held" && answer.moderationStatus !== "rejected" ? (
+                <button
+                  type="button"
+                  aria-pressed={isSolution}
+                  disabled={accept.isPending}
+                  onClick={() => accept.mutate({ answerId: isSolution ? null : answer.id, previous: acceptedAnswerId })}
+                  className={cn(
+                    "mt-2 inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold transition-colors disabled:opacity-60",
+                    isSolution ? "text-label hover:bg-background-2" : "text-green-700 hover:bg-green-50",
+                  )}
+                >
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  {isSolution ? t("unmarkSolution") : t("markSolution")}
+                </button>
+              ) : null}
+            </div>
           </li>
         );
       })}
@@ -82,7 +129,8 @@ export function AnswerList({ threadId, answers }: { threadId: string; answers: A
 
 function AnswerContent({ threadId, answer, locale }: { threadId: string; answer: Answer; locale: string }) {
   const { t } = useLocale();
-  const { canEdit, canDelete } = usePostPermissions(answer.authorId);
+  const { canEdit, canDelete, canReport } = usePostPermissions(answer.authorId);
+  const [reporting, setReporting] = useState(false);
   const update = useUpdateAnswer(threadId);
   const remove = useDeleteAnswer(threadId);
   const [mode, setMode] = useState<"view" | "edit" | "confirmDelete">("view");
@@ -128,9 +176,12 @@ function AnswerContent({ threadId, answer, locale }: { threadId: string; answer:
               setMode("edit");
             }}
             onDelete={() => setMode("confirmDelete")}
+            canReport={canReport}
+            onReport={() => setReporting(true)}
           />
         ) : null}
       </div>
+      {reporting ? <ReportDialog target={{ kind: "comment", id: answer.id }} onClose={() => setReporting(false)} /> : null}
       <HiddenPostNotice status={answer.moderationStatus} authorId={answer.authorId} compact className="mt-2" />
       {mode === "edit" ? (
         <form className="mt-2 space-y-2" onSubmit={save}>

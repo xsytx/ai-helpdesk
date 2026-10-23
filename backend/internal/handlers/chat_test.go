@@ -49,6 +49,11 @@ func (s *chatTestStore) UpdateChatConversation(context.Context, int64, int64, *s
 }
 func (s *chatTestStore) DeleteChatConversation(context.Context, int64, int64) error { return nil }
 func (s *chatTestStore) RateChatMessage(context.Context, int64, int64, int) error  { return nil }
+func (s *chatTestStore) SimilarThreads(context.Context, string) ([]models.Thread, error) {
+	return nil, nil
+}
+func (s *chatTestStore) SetAcceptedAnswer(context.Context, int64, int64, *int64) error { return nil }
+func (s *chatTestStore) ResolveReportsFor(context.Context, string, int64) error       { return nil }
 func (s *chatTestStore) ChatInsights(context.Context, string, time.Time, int) ([]models.ChatInsight, error) {
 	return nil, nil
 }

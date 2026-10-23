@@ -12,6 +12,8 @@ import {
 import { useCategoryLabel } from "@/features/moderation/components/ModerationNoticeCard";
 import { FaqEditor } from "@/features/faq/components/FaqEditor";
 import { ChatInsightsSection } from "@/features/chat/components/ChatInsightsSection";
+import { ReportsSection } from "@/features/moderation/components/ReportsSection";
+import { useReports } from "@/features/moderation/reports";
 import type { FaqDraft } from "@/features/faq/api";
 import { useLocale } from "@/i18n/LocaleContext";
 import { cn } from "@/shared/lib/cn";
@@ -145,6 +147,7 @@ function ModerationCard({ item }: { item: ModerationItem }) {
 
 const SECTIONS = [
   { id: "moderation", key: "adminSectionModeration" },
+  { id: "reports", key: "adminSectionReports" },
   { id: "faq", key: "adminSectionFaq" },
   { id: "chat", key: "adminSectionChat" },
 ] as const;
@@ -160,6 +163,7 @@ export function ModerationPage() {
   const [faqDraft, setFaqDraft] = useState<FaqDraft>();
   const openSection = (id: SectionId) => setParams(id === "moderation" ? {} : { section: id }, { replace: true });
   const pending = usePendingModerationCount().data ?? 0;
+  const openReports = useReports("open", isStaffRole(user?.role)).data?.total ?? 0;
 
   if (!isStaffRole(user?.role)) {
     return <p className="mx-auto max-w-3xl text-sm text-label">{t("moderationNoAccess")}</p>;
@@ -181,14 +185,18 @@ export function ModerationPage() {
             )}
           >
             {t(s.key)}
-            {s.id === "moderation" && pending > 0 ? (
-              <span className="rounded-full bg-red-600 px-1.5 text-[11px] font-bold leading-5 text-white">{pending}</span>
+            {(s.id === "moderation" ? pending : s.id === "reports" ? openReports : 0) > 0 ? (
+              <span className="rounded-full bg-red-600 px-1.5 text-[11px] font-bold leading-5 text-white">
+                {s.id === "moderation" ? pending : openReports}
+              </span>
             ) : null}
           </button>
         ))}
       </nav>
       {section === "faq" ? (
         <FaqEditor initialDraft={faqDraft} onDraftUsed={() => setFaqDraft(undefined)} />
+      ) : section === "reports" ? (
+        <ReportsSection />
       ) : section === "chat" ? (
         <ChatInsightsSection
           onMakeFaq={(draft) => {

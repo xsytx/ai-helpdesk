@@ -15,7 +15,7 @@ func (h *Handlers) Stats(w http.ResponseWriter, r *http.Request) {
 // (or top, or most-commented) first.
 func (h *Handlers) ListFeed(w http.ResponseWriter, r *http.Request) {
 	sort := r.URL.Query().Get("sort")
-	if sort != "top" && sort != "comments" {
+	if sort != "top" && sort != "comments" && sort != "unanswered" {
 		sort = "new"
 	}
 	page := queryIntDefault(r, "page", 1, 1, 1<<31-1)

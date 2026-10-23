@@ -4,7 +4,7 @@ import type { TranslationKey } from "@/i18n/translations";
 import { formatRelativeTime } from "@/shared/lib/format";
 import { highlight, snippetAround } from "@/shared/lib/highlight";
 import { UserAvatar } from "@/features/profile/components/UserAvatar";
-import { ChevronUp, MessageCircle } from "lucide-react";
+import { CheckCircle2, ChevronUp, MessageCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 import { TagChip } from "./TagInput";
 
@@ -55,6 +55,12 @@ export function ThreadCard({ thread, highlightWords = [] }: { thread: Thread; hi
               <MessageCircle className="h-3.5 w-3.5" />
               {plural(thread.answerCount, "replies")}
             </span>
+            {thread.acceptedAnswerId ? (
+              <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 font-semibold text-green-700">
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                {t("solved")}
+              </span>
+            ) : null}
           </div>
         </div>
       </Link>

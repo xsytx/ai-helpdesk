@@ -28,6 +28,7 @@ interface ApiThread {
   created_at: string;
   moderation_status?: ModerationStatus;
   search_match?: Thread["searchMatch"];
+  accepted_comment_id?: number;
 }
 
 interface ApiComment {
@@ -55,6 +56,7 @@ function toThread(t: ApiThread): Thread {
     tags: t.tags ?? [],
     moderationStatus: t.moderation_status,
     searchMatch: t.search_match,
+    acceptedAnswerId: t.accepted_comment_id ? String(t.accepted_comment_id) : undefined,
   };
 }
 
@@ -134,7 +136,7 @@ async function fetchThreads(sort: ThreadSort, filter: ThreadFilter): Promise<Thr
     return data.threads.map(toThread);
   }
   const { data } = await apiClient.get<{ threads: ApiThread[] }>("/feed", {
-    params: { sort: sort === "newest" ? "new" : "top", page_size: 50 },
+    params: { sort: sort === "newest" ? "new" : sort === "unanswered" ? "unanswered" : "top", page_size: 50 },
   });
   return data.threads.map(toThread);
 }
@@ -408,6 +410,49 @@ export function useLikeAnswer(threadId: string) {
     },
     onSettled: () => {
       void qc.invalidateQueries({ queryKey: forumKeys.all });
+    },
+  });
+}
+
+/** "Maybe this was already asked": questions on the same topic as a title being written. */
+export function useSimilarThreads(title: string) {
+  const q = title.trim();
+  return useQuery({
+    queryKey: [...forumKeys.all, "similar", q],
+    enabled: !USE_MOCK_API && q.length >= 8,
+    queryFn: async () => {
+      const { data } = await apiClient.get<{ threads: ApiThread[] }>("/threads/similar", { params: { q } });
+      return data.threads.map(toThread);
+    },
+    staleTime: 60_000,
+    placeholderData: (previous) => previous,
+  });
+}
+
+/** The question's author marks an answer as the solution (null takes it back). */
+export function useAcceptAnswer(threadId: string) {
+  const qc = useQueryClient();
+  const key = forumKeys.thread(threadId);
+  const set = (acceptedAnswerId: string | undefined) =>
+    qc.setQueryData<ThreadDetail>(key, (d) => (d ? { ...d, thread: { ...d.thread, acceptedAnswerId } } : d));
+  return useMutation({
+    mutationFn: async ({ answerId }: { answerId: string | null; previous?: string }) => {
+      await apiClient.post(`/threads/${threadId}/accept`, { comment_id: answerId ? Number(answerId) : null });
+    },
+    onMutate: ({ answerId }) => set(answerId ?? undefined),
+    onError: (_err, { previous }) => set(previous),
+    onSettled: () => void qc.invalidateQueries({ queryKey: [...forumKeys.all, "threads"] }),
+  });
+}
+
+export type ReportReason = "spam" | "rude" | "wrong" | "other";
+
+/** A student flags a question or an answer for the moderators. */
+export function useReportPost() {
+  return useMutation({
+    mutationFn: async ({ kind, id, reason, details }: { kind: "thread" | "comment"; id: string; reason: ReportReason; details: string }) => {
+      const text = details.trim() ? `${reason}: ${details.trim()}` : reason;
+      await apiClient.post(`/${kind === "thread" ? "threads" : "comments"}/${id}/report`, { reason: text.slice(0, 500) });
     },
   });
 }

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"errors"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -182,6 +183,10 @@ func (h *Handlers) DeleteThread(w http.ResponseWriter, r *http.Request) {
 		writeStoreErr(w, err, "could not delete thread")
 		return
 	}
+	// The post is gone: its reports have nothing left to review.
+	if err := h.Store.ResolveReportsFor(r.Context(), "thread", id); err != nil {
+		log.Printf("resolve reports for deleted thread %d: %v", id, err)
+	}
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -346,6 +351,9 @@ func (h *Handlers) DeleteComment(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		writeStoreErr(w, err, "could not delete comment")
 		return
+	}
+	if err := h.Store.ResolveReportsFor(r.Context(), "comment", id); err != nil {
+		log.Printf("resolve reports for deleted comment %d: %v", id, err)
 	}
 	w.WriteHeader(http.StatusNoContent)
 }

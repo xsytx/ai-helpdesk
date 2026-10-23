@@ -6,6 +6,7 @@ import { useAuth } from "@/app/AuthContext";
 import { Bell, BellOff } from "lucide-react";
 import { DeleteConfirm, PostActionErrorText, PostMenu, usePostPermissions } from "@/features/forum/components/PostMenu";
 import { TagChip, TagInput } from "@/features/forum/components/TagInput";
+import { ReportDialog } from "@/features/forum/components/ReportDialog";
 import { postActionError, useDeleteThread, useUpdateThread, type PostActionError } from "@/features/forum/postActions";
 import type { Thread } from "@/entities/forum";
 import { Button } from "@/shared/ui/Button";
@@ -67,7 +68,12 @@ export function ThreadDetailPage() {
           <p className="mt-4 text-sm text-label">{t("loading")}</p>
         ) : (
           <div className="mt-4">
-            <AnswerList threadId={threadId} answers={answers} />
+            <AnswerList
+              threadId={threadId}
+              answers={answers}
+              threadAuthorId={thread.authorId}
+              acceptedAnswerId={thread.acceptedAnswerId}
+            />
           </div>
         )}
       </Card>
@@ -83,7 +89,8 @@ export function ThreadDetailPage() {
 function ThreadCardFull({ thread }: { thread: Thread }) {
   const { locale, t } = useLocale();
   const navigate = useNavigate();
-  const { canEdit, canDelete } = usePostPermissions(thread.authorId);
+  const { canEdit, canDelete, canReport } = usePostPermissions(thread.authorId);
+  const [reporting, setReporting] = useState(false);
   const update = useUpdateThread(thread.id);
   const remove = useDeleteThread(thread.id);
   const [mode, setMode] = useState<"view" | "edit" | "confirmDelete">("view");
@@ -121,6 +128,7 @@ function ThreadCardFull({ thread }: { thread: Thread }) {
 
   return (
     <Card>
+      {reporting ? <ReportDialog target={{ kind: "thread", id: thread.id }} onClose={() => setReporting(false)} /> : null}
       <div className="flex gap-3">
         <UserAvatar userId={thread.authorId} name={thread.authorName} />
         <div className="min-w-0 flex-1">
@@ -131,7 +139,14 @@ function ThreadCardFull({ thread }: { thread: Thread }) {
             <div className="flex items-center gap-1">
               <FollowButton threadId={thread.id} />
               {mode === "view" ? (
-                <PostMenu canEdit={canEdit} canDelete={canDelete} onEdit={startEdit} onDelete={() => setMode("confirmDelete")} />
+                <PostMenu
+                  canEdit={canEdit}
+                  canDelete={canDelete}
+                  canReport={canReport}
+                  onEdit={startEdit}
+                  onDelete={() => setMode("confirmDelete")}
+                  onReport={() => setReporting(true)}
+                />
               ) : null}
             </div>
           </div>
