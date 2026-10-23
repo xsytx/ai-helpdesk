@@ -14,7 +14,9 @@ import {
   type ConversationMessages,
   type UiChatMessage,
 } from "@/features/chat/api";
+import { AnswerActions } from "@/features/chat/components/AnswerActions";
 import { ConversationList } from "@/features/chat/components/ConversationList";
+import { CreateThreadDialog } from "@/features/forum/components/CreateThreadDialog";
 import { FaqQuickReplies } from "@/features/chat/components/FaqQuickReplies";
 import { useFaqs } from "@/features/faq/api";
 import { UserAvatar } from "@/features/profile/components/UserAvatar";
@@ -176,6 +178,9 @@ export function ChatPage() {
   const [faqOpen, setFaqOpen] = useState(false);
   const hasFaqButtons = (useFaqs().data ?? []).some((f) => f.pinned);
   const closeList = useCallback(() => setListOpen(false), []);
+  // "Ask on the forum" under an answer: the new-question dialog with that question.
+  const [forumDraft, setForumDraft] = useState<string | null>(null);
+  const closeForumDraft = useCallback(() => setForumDraft(null), []);
   const [assistantStatus, setAssistantStatus] = useState<"ok" | "degraded" | "unknown">("unknown");
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -387,7 +392,7 @@ export function ChatPage() {
                 <FaqQuickReplies onSelect={sendFaq} disabled={pendingKey !== null} />
               </div>
             ) : (
-              messages.map((msg) =>
+              messages.map((msg, index) =>
                 msg.role === "user" ? (
                   <div key={msg.id} className="flex items-end justify-end gap-2">
                     <div className="max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-br-md bg-primary px-4 py-2.5 text-sm text-white">
@@ -396,14 +401,25 @@ export function ChatPage() {
                     <UserAvatar name={user?.name ?? ""} className="h-7 w-7 text-[10px]" />
                   </div>
                 ) : (
-                  <div
-                    key={msg.id}
-                    className={cn(
-                      "mr-auto max-w-[90%] rounded-2xl rounded-bl-md px-4 py-2.5 text-sm text-primary",
-                      msg.error ? "border border-error/30 bg-white" : "bg-background-2",
+                  <div key={msg.id} className="mr-auto max-w-[90%]">
+                    <div
+                      className={cn(
+                        "rounded-2xl rounded-bl-md px-4 py-2.5 text-sm text-primary",
+                        msg.error ? "border border-error/30 bg-white" : "bg-background-2",
+                      )}
+                    >
+                      <AssistantContent msg={msg} t={translate} />
+                    </div>
+                    {msg.error ? null : (
+                      <AnswerActions
+                        msg={msg}
+                        conversationId={conversationId}
+                        onAskForum={() => {
+                          const question = messages[index - 1]?.role === "user" ? messages[index - 1]!.text : "";
+                          setForumDraft(question.slice(0, 120));
+                        }}
+                      />
                     )}
-                  >
-                    <AssistantContent msg={msg} t={translate} />
                   </div>
                 ),
               )
@@ -472,6 +488,7 @@ export function ChatPage() {
       </div>
 
       {listOpen ? <ChatListSheet activeId={conversationId} onClose={closeList} /> : null}
+      <CreateThreadDialog open={forumDraft !== null} onClose={closeForumDraft} initialTitle={forumDraft ?? ""} />
     </div>
   );
 }

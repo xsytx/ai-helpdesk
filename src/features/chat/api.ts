@@ -11,7 +11,11 @@ export interface ChatHistoryMessage {
   ai_explanation?: string | null;
   basis?: string | null;
   language?: string | null;
+  rating?: ChatRating | null;
 }
+
+/** A student's 👍 (1) / 👎 (-1) on an answer. */
+export type ChatRating = 1 | -1;
 
 export interface ChatAskResponse {
   request_id: string;
@@ -23,6 +27,8 @@ export interface ChatAskResponse {
   basis: string;
   source?: { question: string; category: string } | null;
   conversation: ApiConversation;
+  /** The saved answer, for 👍/👎 (missing if saving it failed). */
+  message_id?: number;
 }
 
 interface ApiConversation {
@@ -198,6 +204,8 @@ export function historyToUiMessages(rows: ChatHistoryMessage[]): UiChatMessage[]
     aiExplanation: m.ai_explanation ?? undefined,
     basis: m.basis ?? undefined,
     status: m.role === "assistant" && m.basis === "none" ? "fallback" : "answered",
+    serverId: m.role === "assistant" ? String(m.id) : undefined,
+    rating: m.rating ?? undefined,
   }));
 }
 
@@ -211,6 +219,9 @@ export interface UiChatMessage {
   status?: "answered" | "fallback";
   error?: boolean;
   retryQuestion?: string;
+  /** Saved answers only: the message id on the server (for 👍/👎). */
+  serverId?: string;
+  rating?: ChatRating;
 }
 
 export function askResponseToUiMessage(res: ChatAskResponse): UiChatMessage {
@@ -222,5 +233,26 @@ export function askResponseToUiMessage(res: ChatAskResponse): UiChatMessage {
     aiExplanation: res.ai_explanation,
     basis: res.basis,
     status: res.status,
+    serverId: res.message_id ? String(res.message_id) : undefined,
   };
+}
+
+/**
+ * 👍/👎 on an answer (value 0 takes it back). Shown at once in the chat,
+ * put back if saving fails.
+ */
+export function useRateAnswer(conversationId: string | undefined) {
+  const qc = useQueryClient();
+  const key = chatKeys.messages(conversationId ?? "");
+  const setRating = (serverId: string, rating: ChatRating | undefined) =>
+    qc.setQueryData<ConversationMessages>(key, (d) =>
+      d ? { ...d, messages: d.messages.map((m) => (m.serverId === serverId ? { ...m, rating } : m)) } : d,
+    );
+  return useMutation({
+    mutationFn: async ({ serverId, value }: { serverId: string; value: ChatRating | 0; previous?: ChatRating }) => {
+      await apiClient.put(`/chat/messages/${serverId}/rating`, { value });
+    },
+    onMutate: ({ serverId, value }) => setRating(serverId, value === 0 ? undefined : value),
+    onError: (_err, { serverId, previous }) => setRating(serverId, previous),
+  });
 }

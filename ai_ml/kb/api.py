@@ -20,11 +20,19 @@ LOGGER = logging.getLogger(__name__)
 TRANSIENT = {'llm_overloaded', 'llm_timeout', 'llm_unavailable'}
 
 
+class HistoryItem(BaseModel):
+    model_config = ConfigDict(extra='forbid', strict=True)
+    role: Literal['user', 'assistant']
+    text: str = Field(max_length=4000)
+
+
 class AnswerRequest(BaseModel):
     model_config = ConfigDict(extra='forbid', strict=True)
     question: str = Field(min_length=1, max_length=2000)
     # 'auto' (по умолчанию) — язык определяется по тексту вопроса
     language: Literal['auto', 'ru', 'kk', 'en'] = 'auto'
+    # Предыдущие сообщения этого чата (старые первыми): помогают понять уточняющий вопрос.
+    history: list[HistoryItem] = Field(default_factory=list, max_length=20)
 
     @field_validator('question')
     @classmethod
@@ -157,7 +165,11 @@ def create_app(service=None, journal=None, moderator=None, llm_client=None, sett
             result, status = failure('service_busy'), 503
         else:
             try:
-                raw = app.state.service.answer(payload.question, payload.language)
+                if payload.history:
+                    raw = app.state.service.answer(payload.question, payload.language,
+                                                   history=[h.model_dump() for h in payload.history])
+                else:
+                    raw = app.state.service.answer(payload.question, payload.language)
                 result = AnswerResponse(request_id=request_id, **raw).model_dump()
                 status = 200
             except LLMError as exc:

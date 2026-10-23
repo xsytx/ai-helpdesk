@@ -91,8 +91,21 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   question creates the conversation (title = the question) and the page moves
   to `/chat/:id`. Rename/pin/delete in the list (`ConversationList`; a side
   panel on wide screens, a sheet on phones). Unpinned chats idle for
-  `CHAT_RETENTION_DAYS` (30) are deleted hourly. The model still gets only the
-  current question, not the earlier messages of the chat.
+  `CHAT_RETENTION_DAYS` (30) are deleted hourly.
+- **Follow-up questions.** `ChatAsk` sends the chat's last 6 messages as
+  `history` to `/generate-answer`. `ai_ml` (`kb/generation.py`) searches the
+  knowledge base with the question alone and with the previous question
+  attached, and the prompt gets CONVERSATION SO FAR + PREVIOUS STUDENT
+  QUESTION ("А сколько это стоит?" after a dorm question → the dorm price).
+- **👍/👎 and AI insights (`006_chat_feedback.sql`).** Answers carry
+  `message_id`; `PUT /api/chat/messages/{id}/rating` (1/-1/0). Under each
+  answer: 👍/👎 and "ask on the forum" (prominent when the AI had no answer
+  or got 👎). Admin panel → "AI chat" (`/admin?section=chat`,
+  `GET /api/admin/chat-insights?kind=disliked|unanswered|frequent`, no
+  student names): "Make it an FAQ" opens the FAQ editor prefilled.
+- **Follow a question.** "Следить" on the question page
+  (`POST/DELETE /api/threads/{id}/subscribe`); followers get a notification
+  for each new answer (asking or answering follows automatically).
 - **FAQ (Story 12, `004_faq.sql`).** Each entry has KZ/RU/EN texts
   (`question`/`answer` = English, `_kz`/`_ru` next to them), a category and
   `pinned` = shown as a chat button. Buttons call `POST /api/chat/faq`: the
@@ -138,7 +151,7 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
 - **Every public SQL read must hide held posts**: use `threadVisible` /
   `commentVisible` in `backend/internal/store/postgres.go`.
 - **Schema changes** are idempotent SQL applied on every start
-  (`001_init.sql` + `003_chat.sql` + `004_faq.sql` + `005_search.sql` in `Migrate`, `002_moderation.sql` in
+  (`001_init.sql` + `003_chat.sql` + `004_faq.sql` + `005_search.sql` + `006_chat_feedback.sql` in `Migrate`, `002_moderation.sql` in
   `MigrateModeration`): `CREATE ... IF NOT EXISTS` /
   `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`.
 - **Store interface**: adding a method to `store.Store` also needs a stub on
@@ -179,11 +192,13 @@ editor with order/pin), async AI moderation + admin panel (filters, sort,
 log), staff emails, error/404 pages, performance pass (small logo, bundled
 font, on-demand tour code).
 
-Also done: forum search and tags, edit/delete own posts, notifications bell.
+Also done: forum search (partial words, typos, answers, tags) and tags,
+edit/delete own posts, notifications bell, follow a question, follow-up
+questions in the AI chat, 👍/👎, "ask on the forum" from an answer, admin
+"AI chat" insights → FAQ.
 
-Planned next: a "smarter assistant" sprint (follow-up questions with chat
-context, 👍/👎 on AI answers, "ask on the forum" when the AI can't answer,
-"make it an FAQ" for admins from frequent/👎 questions), then maps and
-courses. Follow-up context needs an `ai_ml` `/generate-answer` change (send
-the last few messages). Optional: stop admins approving their own flagged
-posts.
+Planned next: maps and courses; ideas: similar-question hints while asking,
+search suggestions, Ctrl+K search everywhere, avatar stored on the server,
+PWA, admin stats page. Optional: stop admins approving their own flagged
+posts. The 4B model is weak in Kazakh (a Kazakh follow-up understood the
+topic but missed the stored answer).

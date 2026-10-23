@@ -43,6 +43,8 @@ func newChatEnv(t *testing.T) *modEnv {
 	mux.Handle("PATCH /api/chat/conversations/{id}", authMw(http.HandlerFunc(e.h.UpdateChatConversation)))
 	mux.Handle("DELETE /api/chat/conversations/{id}", authMw(http.HandlerFunc(e.h.DeleteChatConversation)))
 	mux.Handle("POST /api/chat/faq", authMw(http.HandlerFunc(e.h.ChatFAQ)))
+	mux.Handle("PUT /api/chat/messages/{id}/rating", authMw(http.HandlerFunc(e.h.RateChatMessage)))
+	mux.Handle("GET /api/admin/chat-insights", authMw(http.HandlerFunc(e.h.ChatInsights)))
 	mux.HandleFunc("GET /api/faq", e.h.ListFAQs)
 	mux.Handle("POST /api/faq", authMw(http.HandlerFunc(e.h.CreateFAQ)))
 	mux.Handle("PATCH /api/faq/{id}", authMw(http.HandlerFunc(e.h.UpdateFAQ)))

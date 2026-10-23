@@ -48,6 +48,10 @@ func (s *chatTestStore) UpdateChatConversation(context.Context, int64, int64, *s
 	return models.ChatConversation{}, store.ErrNotFound
 }
 func (s *chatTestStore) DeleteChatConversation(context.Context, int64, int64) error { return nil }
+func (s *chatTestStore) RateChatMessage(context.Context, int64, int64, int) error  { return nil }
+func (s *chatTestStore) ChatInsights(context.Context, string, time.Time, int) ([]models.ChatInsight, error) {
+	return nil, nil
+}
 func (s *chatTestStore) DeleteStaleChatConversations(context.Context, time.Time) (int64, error) {
 	return 0, nil
 }

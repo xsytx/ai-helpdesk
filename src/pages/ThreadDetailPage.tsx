@@ -1,7 +1,9 @@
 import { AnswerList } from "@/features/forum/components/AnswerList";
 import { HiddenPostNotice } from "@/features/moderation/components/HiddenPostNotice";
 import { ReplyForm } from "@/features/forum/components/ReplyForm";
-import { useAnswers, useThread } from "@/features/forum/api";
+import { useAnswers, useFollowThread, useThread, useThreadSubscribed } from "@/features/forum/api";
+import { useAuth } from "@/app/AuthContext";
+import { Bell, BellOff } from "lucide-react";
 import { DeleteConfirm, PostActionErrorText, PostMenu, usePostPermissions } from "@/features/forum/components/PostMenu";
 import { TagChip, TagInput } from "@/features/forum/components/TagInput";
 import { postActionError, useDeleteThread, useUpdateThread, type PostActionError } from "@/features/forum/postActions";
@@ -126,9 +128,12 @@ function ThreadCardFull({ thread }: { thread: Thread }) {
             <p className="text-xs text-label">
               {thread.authorName} · {formatRelativeTime(thread.createdAt, locale)}
             </p>
-            {mode === "view" ? (
-              <PostMenu canEdit={canEdit} canDelete={canDelete} onEdit={startEdit} onDelete={() => setMode("confirmDelete")} />
-            ) : null}
+            <div className="flex items-center gap-1">
+              <FollowButton threadId={thread.id} />
+              {mode === "view" ? (
+                <PostMenu canEdit={canEdit} canDelete={canDelete} onEdit={startEdit} onDelete={() => setMode("confirmDelete")} />
+              ) : null}
+            </div>
           </div>
           <HiddenPostNotice status={thread.moderationStatus} authorId={thread.authorId} className="my-2" />
           {mode === "edit" ? (
@@ -188,5 +193,30 @@ function ThreadCardFull({ thread }: { thread: Thread }) {
         </div>
       </div>
     </Card>
+  );
+}
+
+/** Follow the question: a notification for every new answer. */
+function FollowButton({ threadId }: { threadId: string }) {
+  const { t } = useLocale();
+  const { user } = useAuth();
+  const subscribed = useThreadSubscribed(threadId).data;
+  const follow = useFollowThread(threadId);
+  if (!user || subscribed === undefined) return null;
+  return (
+    <button
+      type="button"
+      aria-pressed={subscribed}
+      onClick={() => follow.mutate(!subscribed)}
+      title={subscribed ? t("unfollowThreadHint") : t("followThreadHint")}
+      className={
+        subscribed
+          ? "inline-flex items-center gap-1 rounded-lg bg-background-2 px-2.5 py-1 text-xs font-semibold text-primary hover:bg-background-2-hover"
+          : "inline-flex items-center gap-1 rounded-lg border border-border/70 px-2.5 py-1 text-xs font-semibold text-primary hover:bg-background-2"
+      }
+    >
+      {subscribed ? <BellOff className="h-3.5 w-3.5" /> : <Bell className="h-3.5 w-3.5" />}
+      {subscribed ? t("unfollowThread") : t("followThread")}
+    </button>
   );
 }

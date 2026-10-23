@@ -91,11 +91,11 @@ func (s *PostgresStore) DeleteStaleChatConversations(ctx context.Context, olderT
 
 // --- AI chat: messages ---
 
-const chatMessageColumns = "id, conversation_id, user_id, role, text, forum_answer, ai_explanation, basis, language, created_at"
+const chatMessageColumns = "id, conversation_id, user_id, role, text, forum_answer, ai_explanation, basis, language, rating, created_at"
 
 func scanChatMessage(row pgx.Row) (models.ChatMessage, error) {
 	var m models.ChatMessage
-	err := row.Scan(&m.ID, &m.ConversationID, &m.UserID, &m.Role, &m.Text, &m.ForumAnswer, &m.AIExplanation, &m.Basis, &m.Language, &m.CreatedAt)
+	err := row.Scan(&m.ID, &m.ConversationID, &m.UserID, &m.Role, &m.Text, &m.ForumAnswer, &m.AIExplanation, &m.Basis, &m.Language, &m.Rating, &m.CreatedAt)
 	return m, err
 }
 

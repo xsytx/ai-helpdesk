@@ -261,6 +261,7 @@ func main() {
 	mux.Handle("POST /api/chat/ask", authMw(chatLimiter.Wrap(http.HandlerFunc(h.ChatAsk))))
 	// FAQ buttons answer from the database at once, without the model.
 	mux.Handle("POST /api/chat/faq", authMw(writeLimiter(http.HandlerFunc(h.ChatFAQ))))
+	mux.Handle("PUT /api/chat/messages/{id}/rating", authMw(writeLimiter(http.HandlerFunc(h.RateChatMessage))))
 
 	// --- Moderator/admin API (role checked inside each handler) ---
 	mux.Handle("POST /api/threads/{id}/lock", authMw(http.HandlerFunc(h.LockThread)))
@@ -274,6 +275,7 @@ func main() {
 	mux.Handle("PATCH /api/faq/{id}", authMw(http.HandlerFunc(h.UpdateFAQ)))
 	mux.Handle("DELETE /api/faq/{id}", authMw(http.HandlerFunc(h.DeleteFAQ)))
 	mux.Handle("POST /api/faq/reorder", authMw(http.HandlerFunc(h.ReorderFAQs)))
+	mux.Handle("GET /api/admin/chat-insights", authMw(http.HandlerFunc(h.ChatInsights)))
 
 	// --- Uploaded attachments --- (the website itself is the React app,
 	// served separately by nginx; see the repository root)

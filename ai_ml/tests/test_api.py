@@ -120,3 +120,11 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(body['status'], 'ok')
         self.llm.ping.return_value = {'reachable': True, 'model_available': False}
         self.assertEqual(self.client.get('/health').json()['status'], 'degraded')
+
+    def test_history_is_passed_to_the_service(self):
+        history = [{'role': 'user', 'text': 'Dorm?'}, {'role': 'assistant', 'text': 'Apply at SSC.'}]
+        r = self.client.post('/generate-answer', json={'question': 'How much?', 'history': history})
+        self.assertEqual(r.status_code, 200)
+        self.service.answer.assert_called_once_with('How much?', 'auto', history=history)
+        bad = {'question': 'Q?', 'history': [{'role': 'system', 'text': 'x'}]}
+        self.assertEqual(self.client.post('/generate-answer', json=bad).status_code, 422)

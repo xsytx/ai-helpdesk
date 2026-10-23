@@ -206,4 +206,8 @@ type Store interface {
 	// is not the user's conversation).
 	CreateChatMessage(ctx context.Context, userID int64, msg models.ChatMessage) (models.ChatMessage, error)
 	ListChatMessages(ctx context.Context, userID, conversationID int64) ([]models.ChatMessage, error)
+	// RateChatMessage: 1 = 👍, -1 = 👎, 0 = clear, on one of the user's answers.
+	RateChatMessage(ctx context.Context, userID, messageID int64, value int) error
+	// ChatInsights: "disliked", "unanswered" or "frequent" (see chat_feedback.go).
+	ChatInsights(ctx context.Context, kind string, since time.Time, limit int) ([]models.ChatInsight, error)
 }

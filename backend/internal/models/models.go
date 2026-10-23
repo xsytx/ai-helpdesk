@@ -193,5 +193,19 @@ type ChatMessage struct {
 	AIExplanation  *string   `json:"ai_explanation,omitempty"`
 	Basis          *string   `json:"basis,omitempty"`
 	Language       *string   `json:"language,omitempty"`
-	CreatedAt      time.Time `json:"created_at"`
+	// Rating is the student's 👍 (1) / 👎 (-1) on an answer; nil = not rated.
+	Rating    *int16    `json:"rating,omitempty"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+// ChatInsight is one line in the admin panel's "AI chat" lists: a question
+// (and the AI's answer, if any) without who asked it.
+type ChatInsight struct {
+	MessageID int64     `json:"message_id,omitempty"` // the answer; 0 for "frequent"
+	Question  string    `json:"question"`
+	Context   string    `json:"context,omitempty"` // the student's question before it, if any
+	Answer    string    `json:"answer,omitempty"`
+	Language  *string   `json:"language,omitempty"`
+	Students  int       `json:"students"` // how many students asked it ("frequent")
+	At        time.Time `json:"at"`       // latest time asked / rated
 }

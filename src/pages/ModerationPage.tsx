@@ -11,6 +11,8 @@ import {
 } from "@/features/moderation/api";
 import { useCategoryLabel } from "@/features/moderation/components/ModerationNoticeCard";
 import { FaqEditor } from "@/features/faq/components/FaqEditor";
+import { ChatInsightsSection } from "@/features/chat/components/ChatInsightsSection";
+import type { FaqDraft } from "@/features/faq/api";
 import { useLocale } from "@/i18n/LocaleContext";
 import { cn } from "@/shared/lib/cn";
 import { getErrorMessage } from "@/shared/api/client";
@@ -144,14 +146,19 @@ function ModerationCard({ item }: { item: ModerationItem }) {
 const SECTIONS = [
   { id: "moderation", key: "adminSectionModeration" },
   { id: "faq", key: "adminSectionFaq" },
+  { id: "chat", key: "adminSectionChat" },
 ] as const;
 
-/** The admin panel: the moderation queue and the FAQ editor (?section=faq). */
+type SectionId = (typeof SECTIONS)[number]["id"];
+
+/** The admin panel: moderation queue, FAQ editor (?section=faq), AI chat questions (?section=chat). */
 export function ModerationPage() {
   const { user } = useAuth();
   const { t } = useLocale();
   const [params, setParams] = useSearchParams();
-  const section = params.get("section") === "faq" ? "faq" : "moderation";
+  const section: SectionId = SECTIONS.find((x) => x.id === params.get("section"))?.id ?? "moderation";
+  const [faqDraft, setFaqDraft] = useState<FaqDraft>();
+  const openSection = (id: SectionId) => setParams(id === "moderation" ? {} : { section: id }, { replace: true });
   const pending = usePendingModerationCount().data ?? 0;
 
   if (!isStaffRole(user?.role)) {
@@ -167,7 +174,7 @@ export function ModerationPage() {
             key={s.id}
             type="button"
             aria-current={section === s.id ? "page" : undefined}
-            onClick={() => setParams(s.id === "moderation" ? {} : { section: s.id }, { replace: true })}
+            onClick={() => openSection(s.id)}
             className={cn(
               "-mb-px inline-flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm font-semibold transition-colors",
               section === s.id ? "border-primary text-primary" : "border-transparent text-label hover:text-primary",
@@ -180,7 +187,18 @@ export function ModerationPage() {
           </button>
         ))}
       </nav>
-      {section === "faq" ? <FaqEditor /> : <ModerationSection />}
+      {section === "faq" ? (
+        <FaqEditor initialDraft={faqDraft} onDraftUsed={() => setFaqDraft(undefined)} />
+      ) : section === "chat" ? (
+        <ChatInsightsSection
+          onMakeFaq={(draft) => {
+            setFaqDraft(draft);
+            openSection("faq");
+          }}
+        />
+      ) : (
+        <ModerationSection />
+      )}
     </div>
   );
 }

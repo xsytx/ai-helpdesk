@@ -88,9 +88,22 @@ func (c *Client) setHeaders(req *http.Request) {
 	}
 }
 
-// GenerateAnswer posts {"question": question} — language is omitted so the ML service auto-detects it.
-func (c *Client) GenerateAnswer(ctx context.Context, question string) (GenerateResult, error) {
-	body, err := json.Marshal(map[string]string{"question": question})
+// HistoryItem is an earlier message of the same chat, sent so the model
+// understands follow-up questions ("and how much is it?").
+type HistoryItem struct {
+	Role string `json:"role"` // "user" or "assistant"
+	Text string `json:"text"`
+}
+
+// GenerateAnswer posts {"question": question, "history": [...]} — language
+// is omitted so the ML service auto-detects it; history (oldest first) is
+// left out when empty.
+func (c *Client) GenerateAnswer(ctx context.Context, question string, history ...HistoryItem) (GenerateResult, error) {
+	payload := map[string]any{"question": question}
+	if len(history) > 0 {
+		payload["history"] = history
+	}
+	body, err := json.Marshal(payload)
 	if err != nil {
 		return GenerateResult{}, err
 	}

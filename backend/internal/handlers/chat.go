@@ -37,6 +37,32 @@ type chatAskResp struct {
 	Source        *chatSourcePublic `json:"source"`
 	// Conversation the question and answer were saved to.
 	Conversation *models.ChatConversation `json:"conversation,omitempty"`
+	// MessageID is the saved answer (for 👍/👎); 0 if saving it failed.
+	MessageID int64 `json:"message_id,omitempty"`
+}
+
+// chatHistoryMessages is how much of the conversation the model gets with
+// a question, so it understands follow-ups ("and how much is it?").
+const chatHistoryMessages = 6
+
+// chatHistory returns the last messages of conv for the model, oldest first.
+func (h *Handlers) chatHistory(ctx context.Context, uid int64, conv *models.ChatConversation) []mlclient.HistoryItem {
+	if conv == nil {
+		return nil
+	}
+	msgs, err := h.Store.ListChatMessages(ctx, uid, conv.ID)
+	if err != nil {
+		log.Printf("chat history for the model (conversation=%d): %v", conv.ID, err)
+		return nil
+	}
+	if len(msgs) > chatHistoryMessages {
+		msgs = msgs[len(msgs)-chatHistoryMessages:]
+	}
+	out := make([]mlclient.HistoryItem, 0, len(msgs))
+	for _, m := range msgs {
+		out = append(out, mlclient.HistoryItem{Role: m.Role, Text: m.Text})
+	}
+	return out
 }
 
 // chatTitleRunes is the length of a title made from the first question;
@@ -101,7 +127,7 @@ func (h *Handlers) ChatAsk(w http.ResponseWriter, r *http.Request) {
 	}
 
 	started := time.Now()
-	mlResp, err := h.ML.GenerateAnswer(r.Context(), question)
+	mlResp, err := h.ML.GenerateAnswer(r.Context(), question, h.chatHistory(r.Context(), uid, conv)...)
 	elapsed := time.Since(started)
 	if err != nil {
 		log.Printf("chat ask ml error (user=%d, duration=%s): %v", uid, elapsed, err)
@@ -127,7 +153,7 @@ func (h *Handlers) ChatAsk(w http.ResponseWriter, r *http.Request) {
 	}
 	// Save with a context that survives a closed browser tab: the model already spent
 	// the time to answer, the answer should still land in the student's history.
-	conv, err = h.saveChatTurn(context.WithoutCancel(r.Context()), uid, conv, question, assistant)
+	conv, messageID, err := h.saveChatTurn(context.WithoutCancel(r.Context()), uid, conv, question, assistant)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "could not save the conversation")
 		return
@@ -135,6 +161,7 @@ func (h *Handlers) ChatAsk(w http.ResponseWriter, r *http.Request) {
 
 	resp := buildChatAskResp(mlResp)
 	resp.Conversation = conv
+	resp.MessageID = messageID
 	writeJSON(w, http.StatusOK, resp)
 }
 
@@ -142,12 +169,13 @@ func (h *Handlers) ChatAsk(w http.ResponseWriter, r *http.Request) {
 // conversation first when conv is nil (titled with the question). A new
 // conversation is only created once there is an answer, so failed questions
 // don't leave empty chats in the list.
-func (h *Handlers) saveChatTurn(ctx context.Context, uid int64, conv *models.ChatConversation, question string, assistant models.ChatMessage) (*models.ChatConversation, error) {
+// It returns the saved answer's id (0 if only that save failed).
+func (h *Handlers) saveChatTurn(ctx context.Context, uid int64, conv *models.ChatConversation, question string, assistant models.ChatMessage) (*models.ChatConversation, int64, error) {
 	if conv == nil {
 		c, err := h.Store.CreateChatConversation(ctx, uid, chatTitleFromQuestion(question))
 		if err != nil {
 			log.Printf("chat create conversation (user=%d): %v", uid, err)
-			return nil, err
+			return nil, 0, err
 		}
 		conv = &c
 	}
@@ -157,12 +185,13 @@ func (h *Handlers) saveChatTurn(ctx context.Context, uid int64, conv *models.Cha
 		log.Printf("chat history save user message: %v", err)
 	}
 	assistant.ConversationID = conv.ID
-	if saved, err := h.Store.CreateChatMessage(ctx, uid, assistant); err != nil {
+	saved, err := h.Store.CreateChatMessage(ctx, uid, assistant)
+	if err != nil {
 		log.Printf("chat history save assistant message: %v", err)
-	} else {
-		conv.UpdatedAt = saved.CreatedAt
+		return conv, 0, nil
 	}
-	return conv, nil
+	conv.UpdatedAt = saved.CreatedAt
+	return conv, saved.ID, nil
 }
 
 // --- Instant FAQ answers (Story 12) ---
@@ -196,7 +225,7 @@ func matchFAQ(faqs []models.FAQ, question string) (models.FAQ, string, bool) {
 func (h *Handlers) answerFromFAQ(w http.ResponseWriter, r *http.Request, uid int64, conv *models.ChatConversation, f models.FAQ, lang, question string) {
 	_, answer := f.Text(lang)
 	basis := "faq"
-	conv, err := h.saveChatTurn(context.WithoutCancel(r.Context()), uid, conv, question, models.ChatMessage{
+	conv, messageID, err := h.saveChatTurn(context.WithoutCancel(r.Context()), uid, conv, question, models.ChatMessage{
 		Role: "assistant", Text: answer, Basis: &basis, Language: &lang,
 	})
 	if err != nil {
@@ -211,6 +240,7 @@ func (h *Handlers) answerFromFAQ(w http.ResponseWriter, r *http.Request, uid int
 		Basis:        basis,
 		Source:       &chatSourcePublic{Question: question, Category: f.Category},
 		Conversation: conv,
+		MessageID:    messageID,
 	})
 }
 

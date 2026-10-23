@@ -38,14 +38,15 @@ function missingLanguages(d: FaqDraft): Locale[] {
 
 /**
  * Admin panel section: add, edit, delete and order FAQ entries, and choose
- * which ones are buttons in the AI chat.
+ * which ones are buttons in the AI chat. initialDraft opens the "add" form
+ * already filled in (e.g. "Make it an FAQ" from the AI chat section).
  */
-export function FaqEditor() {
+export function FaqEditor({ initialDraft, onDraftUsed }: { initialDraft?: FaqDraft; onDraftUsed?: () => void }) {
   const { t } = useLocale();
   const { data: entries = [], isPending, isError } = useFaqs();
   const reorder = useReorderFaqs();
   // "new" = the add form is open; an id = that entry is being edited.
-  const [editing, setEditing] = useState<string | null>(null);
+  const [editing, setEditing] = useState<string | null>(initialDraft ? "new" : null);
   const [failed, setFailed] = useState(false);
 
   function move(index: number, by: -1 | 1) {
@@ -68,7 +69,15 @@ export function FaqEditor() {
         ) : null}
       </div>
 
-      {editing === "new" ? <FaqForm initial={emptyDraft()} onDone={() => setEditing(null)} /> : null}
+      {editing === "new" ? (
+        <FaqForm
+          initial={initialDraft ?? emptyDraft()}
+          onDone={() => {
+            setEditing(null);
+            onDraftUsed?.();
+          }}
+        />
+      ) : null}
       {isPending ? <p className="text-sm text-label">{t("loading")}</p> : null}
       {isError ? <p className="text-sm text-error">{t("faqLoadFailed")}</p> : null}
       {failed ? <p className="text-sm text-error">{t("faqActionFailed")}</p> : null}
@@ -184,7 +193,8 @@ function FaqForm({ id, initial, onDone }: { id?: string; initial: FaqDraft; onDo
   const { t } = useLocale();
   const save = useSaveFaq();
   const [draft, setDraft] = useState(initial);
-  const [lang, setLang] = useState<Locale>("en");
+  // Start on the language that is already filled in (a draft from the chat).
+  const [lang, setLang] = useState<Locale>(() => LANGUAGES.find((l) => initial.question[l.locale])?.locale ?? "en");
   const [error, setError] = useState<string>();
   const [tried, setTried] = useState(false);
   const missing = missingLanguages(draft);

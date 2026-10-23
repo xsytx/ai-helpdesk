@@ -139,9 +139,11 @@ async function fetchThreads(sort: ThreadSort, filter: ThreadFilter): Promise<Thr
   return data.threads.map(toThread);
 }
 
-interface ThreadDetail {
+export interface ThreadDetail {
   thread: Thread;
   answers: Answer[];
+  /** The viewer follows the thread (gets notifications about new answers). */
+  subscribed?: boolean;
 }
 
 async function fetchThreadDetail(id: string, userId: string | undefined): Promise<ThreadDetail> {
@@ -150,12 +152,13 @@ async function fetchThreadDetail(id: string, userId: string | undefined): Promis
     if (!thread) throw new Error("Thread not found");
     return { thread, answers: repo.listAnswers(id) };
   }
-  const { data } = await apiClient.get<{ thread: ApiThread; comments: ApiComment[] }>(
+  const { data } = await apiClient.get<{ thread: ApiThread; comments: ApiComment[]; subscribed?: boolean }>(
     `/threads/${id}`,
   );
   return {
     thread: toThread(data.thread),
     answers: sortAnswers(data.comments.map((c) => toAnswer(c, userId))),
+    subscribed: data.subscribed ?? false,
   };
 }
 
@@ -238,6 +241,30 @@ export function useThread(threadId: string) {
 
 export function useAnswers(threadId: string) {
   return useThreadDetail(threadId, (d) => d.answers);
+}
+
+/** Whether the viewer follows the thread; undefined while unknown. */
+export function useThreadSubscribed(threadId: string) {
+  return useThreadDetail(threadId, (d) => d.subscribed);
+}
+
+/**
+ * Follow / unfollow a thread: followers get a notification for every new
+ * answer. Asking or answering follows automatically.
+ */
+export function useFollowThread(threadId: string) {
+  const qc = useQueryClient();
+  const key = forumKeys.thread(threadId);
+  const set = (subscribed: boolean) =>
+    qc.setQueryData<ThreadDetail>(key, (d) => (d ? { ...d, subscribed } : d));
+  return useMutation({
+    mutationFn: async (follow: boolean) => {
+      if (follow) await apiClient.post(`/threads/${threadId}/subscribe`);
+      else await apiClient.delete(`/threads/${threadId}/subscribe`);
+    },
+    onMutate: (follow) => set(follow),
+    onError: (_err, follow) => set(!follow),
+  });
 }
 
 // A new question/answer is either published right away, or held back by the AI moderation
