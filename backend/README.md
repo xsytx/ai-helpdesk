@@ -328,14 +328,21 @@ Authenticated routes (Bearer JWT):
 
 | Method | Path | Description |
 |---|---|---|
-| POST | `/api/chat/ask` | Ask the assistant (proxies to ML `POST /generate-answer`) |
-| GET | `/api/chat/history` | Paginated chat history (`page`, `page_size`) |
+| POST | `/api/chat/ask` | Ask the assistant (proxies to ML `POST /generate-answer`). Body `{question, conversation_id?}`; without `conversation_id` a new conversation is created (titled with the question). The response includes the `conversation`. |
+| GET | `/api/chat/conversations` | The user's conversations, pinned first, then by last message; plus `retention_days` |
+| GET | `/api/chat/conversations/{id}/messages` | One conversation and all its messages, oldest first |
+| PATCH | `/api/chat/conversations/{id}` | Rename and/or pin: `{title?, pinned?}` (title 1–100 characters) |
+| DELETE | `/api/chat/conversations/{id}` | Delete a conversation and its messages |
 | GET | `/api/chat/status` | Proxies ML `GET /health` → `ok` / `degraded` |
+
+Another user's conversation id answers `404`, like a missing one.
 
 Environment (see `.env.example`):
 
 - `ML_SERVICE_URL` — default `http://127.0.0.1:8001`
 - `ML_REQUEST_TIMEOUT_SECONDS` — default `180` (also drives the HTTP server write timeout)
+- `CHAT_RETENTION_DAYS` — default `30`: unpinned conversations with no message for
+  that long are deleted (checked at startup and hourly); `0` keeps them forever
 
 Per-user limits: one in-flight `/ask` at a time and about ten questions per minute.
 

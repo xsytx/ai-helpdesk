@@ -180,8 +180,23 @@ type Store interface {
 	// lowers an admin.
 	SetStaffRole(ctx context.Context, userID int64, role string) error
 
-	// --- AI chat history ---
+	// --- AI chat conversations ---
+	// All of these are scoped to userID: another user's conversation is
+	// ErrNotFound, never ErrForbidden, so ids can't be probed.
 
+	CreateChatConversation(ctx context.Context, userID int64, title string) (models.ChatConversation, error)
+	GetChatConversation(ctx context.Context, userID, id int64) (models.ChatConversation, error)
+	// ListChatConversations: pinned first, then most recently active.
+	ListChatConversations(ctx context.Context, userID int64) ([]models.ChatConversation, error)
+	// UpdateChatConversation changes the title and/or pin; nil leaves it as is.
+	UpdateChatConversation(ctx context.Context, userID, id int64, title *string, pinned *bool) (models.ChatConversation, error)
+	DeleteChatConversation(ctx context.Context, userID, id int64) error
+	// DeleteStaleChatConversations removes unpinned conversations with no
+	// message since olderThan (all users) and returns how many.
+	DeleteStaleChatConversations(ctx context.Context, olderThan time.Time) (int64, error)
+
+	// CreateChatMessage adds msg to msg.ConversationID (ErrNotFound if that
+	// is not the user's conversation).
 	CreateChatMessage(ctx context.Context, userID int64, msg models.ChatMessage) (models.ChatMessage, error)
-	ListChatMessages(ctx context.Context, userID int64, page, pageSize int) (messages []models.ChatMessage, total int, err error)
+	ListChatMessages(ctx context.Context, userID, conversationID int64) ([]models.ChatMessage, error)
 }

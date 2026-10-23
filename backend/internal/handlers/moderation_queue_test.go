@@ -732,19 +732,26 @@ func TestQueueSortNewestOrOldest(t *testing.T) {
 	_, first := e.call(u, "POST", "/api/threads", map[string]any{"title": "First BADWORD post", "body": "body body body"})
 	time.Sleep(20 * time.Millisecond)
 	_, second := e.call(u, "POST", "/api/threads", map[string]any{"title": "Second BADWORD post", "body": "body body body"})
+	// Walks every page: the test database keeps items from earlier runs, so
+	// these two may be far from the first page when sorted oldest first.
 	order := func(sort string) []int64 {
-		code, list := e.call(mod, "GET", "/api/moderation/queue?status=all&page_size=100&sort="+sort, nil)
-		if code != http.StatusOK {
-			t.Fatalf("sort=%s: %d", sort, code)
-		}
 		var ids []int64
-		for _, it := range list["items"].([]any) {
-			id := num(it.(map[string]any)["id"])
-			if id == num(first["queue_id"]) || id == num(second["queue_id"]) {
-				ids = append(ids, id)
+		for page := 1; ; page++ {
+			code, list := e.call(mod, "GET", fmt.Sprintf("/api/moderation/queue?status=all&page_size=100&page=%d&sort=%s", page, sort), nil)
+			if code != http.StatusOK {
+				t.Fatalf("sort=%s: %d", sort, code)
+			}
+			items := list["items"].([]any)
+			for _, it := range items {
+				id := num(it.(map[string]any)["id"])
+				if id == num(first["queue_id"]) || id == num(second["queue_id"]) {
+					ids = append(ids, id)
+				}
+			}
+			if len(items) < 100 {
+				return ids
 			}
 		}
-		return ids
 	}
 	if got := order("new"); len(got) != 2 || got[0] != num(second["queue_id"]) {
 		t.Fatalf("newest first: %v", got)

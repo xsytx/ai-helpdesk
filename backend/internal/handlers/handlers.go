@@ -32,6 +32,9 @@ type Handlers struct {
 	Mod store.ModerationStore
 	// ModCfg controls how new forum posts are checked by the AI moderation.
 	ModCfg ModerationConfig
+	// ChatRetentionDays: unpinned AI chats with no message for this many days
+	// are deleted (0 = keep forever).
+	ChatRetentionDays int
 }
 
 func New(s store.Store, jwtSecret []byte, m mailer.Mailer, uploadDir, baseURL string, allowedEmailDomains []string) *Handlers {
@@ -39,6 +42,7 @@ func New(s store.Store, jwtSecret []byte, m mailer.Mailer, uploadDir, baseURL st
 		Store: s, JWTSecret: jwtSecret, Mailer: m, UploadDir: uploadDir, BaseURL: baseURL,
 		AllowedEmailDomains: allowedEmailDomains,
 		ModCfg:              DefaultModerationConfig(),
+		ChatRetentionDays:   30,
 	}
 }
 

@@ -10,7 +10,7 @@ Sign-in is restricted to `@sdu.edu.kz` university email addresses.
 | Forum (questions, answers, likes, best answer on top) | Working |
 | FAQ | Working (content managed in the database) |
 | Settings (avatar, password, language) | Working (avatar is saved in the browser only) |
-| AI chat assistant | Working: answers from the SDU knowledge base + a local Ollama model |
+| AI chat assistant | Working: answers from the SDU knowledge base + a local Ollama model; separate chats you can rename, pin and delete (unpinned ones are deleted after 30 days without messages) |
 | Forum moderation | Working: new posts are checked by the AI; doubtful ones wait for a moderator |
 | Campus maps, courses | Placeholder pages |
 

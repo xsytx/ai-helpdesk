@@ -15,6 +15,9 @@ import (
 
 type chatAskReq struct {
 	Question string `json:"question"`
+	// ConversationID continues an existing conversation; without it the
+	// question starts a new one, titled with the question.
+	ConversationID *int64 `json:"conversation_id,omitempty"`
 }
 
 type chatSourcePublic struct {
@@ -31,6 +34,25 @@ type chatAskResp struct {
 	Language      string            `json:"language"`
 	Basis         string            `json:"basis"`
 	Source        *chatSourcePublic `json:"source"`
+	// Conversation the question and answer were saved to.
+	Conversation *models.ChatConversation `json:"conversation,omitempty"`
+}
+
+// chatTitleRunes is the length of a title made from the first question;
+// a title the student types may be up to chatTitleMaxRunes.
+const (
+	chatTitleRunes    = 60
+	chatTitleMaxRunes = 100
+)
+
+// chatTitleFromQuestion turns the first question into a one-line title.
+func chatTitleFromQuestion(q string) string {
+	title := strings.Join(strings.Fields(q), " ")
+	if utf8.RuneCountInString(title) <= chatTitleRunes {
+		return title
+	}
+	runes := []rune(title)
+	return strings.TrimSpace(string(runes[:chatTitleRunes-1])) + "…"
 }
 
 func (h *Handlers) ChatAsk(w http.ResponseWriter, r *http.Request) {
@@ -52,6 +74,16 @@ func (h *Handlers) ChatAsk(w http.ResponseWriter, r *http.Request) {
 	if utf8.RuneCountInString(question) > 2000 {
 		writeError(w, http.StatusBadRequest, "question is too long")
 		return
+	}
+
+	var conv *models.ChatConversation
+	if req.ConversationID != nil {
+		c, err := h.Store.GetChatConversation(r.Context(), uid, *req.ConversationID)
+		if err != nil {
+			writeStoreErr(w, err, "could not load the conversation")
+			return
+		}
+		conv = &c
 	}
 
 	if h.ML == nil {
@@ -80,8 +112,19 @@ func (h *Handlers) ChatAsk(w http.ResponseWriter, r *http.Request) {
 	// Save with a context that survives a closed browser tab: the model already spent
 	// the time to answer, the answer should still land in the student's history.
 	saveCtx := context.WithoutCancel(r.Context())
+	// A new conversation is only created once there is an answer, so failed
+	// questions don't leave empty chats in the list.
+	if conv == nil {
+		c, err := h.Store.CreateChatConversation(saveCtx, uid, chatTitleFromQuestion(question))
+		if err != nil {
+			log.Printf("chat create conversation (user=%d): %v", uid, err)
+			writeError(w, http.StatusInternalServerError, "could not save the conversation")
+			return
+		}
+		conv = &c
+	}
 	if _, err := h.Store.CreateChatMessage(saveCtx, uid, models.ChatMessage{
-		Role: "user", Text: question,
+		ConversationID: conv.ID, Role: "user", Text: question,
 	}); err != nil {
 		log.Printf("chat history save user message: %v", err)
 	}
@@ -99,18 +142,24 @@ func (h *Handlers) ChatAsk(w http.ResponseWriter, r *http.Request) {
 	basisPtr := &basis
 	lang := mlResp.Language
 	langPtr := &lang
-	if _, err := h.Store.CreateChatMessage(saveCtx, uid, models.ChatMessage{
-		Role:          "assistant",
-		Text:          assistantText,
-		ForumAnswer:   forumPtr,
-		AIExplanation: aiExplPtr,
-		Basis:         basisPtr,
-		Language:      langPtr,
-	}); err != nil {
+	saved, err := h.Store.CreateChatMessage(saveCtx, uid, models.ChatMessage{
+		ConversationID: conv.ID,
+		Role:           "assistant",
+		Text:           assistantText,
+		ForumAnswer:    forumPtr,
+		AIExplanation:  aiExplPtr,
+		Basis:          basisPtr,
+		Language:       langPtr,
+	})
+	if err != nil {
 		log.Printf("chat history save assistant message: %v", err)
+	} else {
+		conv.UpdatedAt = saved.CreatedAt
 	}
 
-	writeJSON(w, http.StatusOK, buildChatAskResp(mlResp))
+	resp := buildChatAskResp(mlResp)
+	resp.Conversation = conv
+	writeJSON(w, http.StatusOK, resp)
 }
 
 func buildChatAskResp(mlResp mlclient.GenerateResult) chatAskResp {
@@ -132,26 +181,138 @@ func buildChatAskResp(mlResp mlclient.GenerateResult) chatAskResp {
 	return out
 }
 
-func (h *Handlers) ChatHistory(w http.ResponseWriter, r *http.Request) {
+// ListChatConversations returns the user's chats, pinned first, then the
+// most recently active, plus how long an unpinned chat is kept.
+func (h *Handlers) ListChatConversations(w http.ResponseWriter, r *http.Request) {
 	uid, ok := h.userID(r)
 	if !ok {
 		writeError(w, http.StatusUnauthorized, "not authenticated")
 		return
 	}
-	page := queryIntDefault(r, "page", 1, 1, 1<<31-1)
-	pageSize := queryIntDefault(r, "page_size", 100, 1, 200)
-
-	messages, total, err := h.Store.ListChatMessages(r.Context(), uid, page, pageSize)
+	convs, err := h.Store.ListChatConversations(r.Context(), uid)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "could not load chat history")
+		writeError(w, http.StatusInternalServerError, "could not load conversations")
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
-		"messages":  messages,
-		"page":      page,
-		"page_size": pageSize,
-		"total":     total,
+		"conversations":  convs,
+		"retention_days": h.ChatRetentionDays,
 	})
+}
+
+func (h *Handlers) GetChatConversationMessages(w http.ResponseWriter, r *http.Request) {
+	uid, ok := h.userID(r)
+	if !ok {
+		writeError(w, http.StatusUnauthorized, "not authenticated")
+		return
+	}
+	id, err := pathInt64(r, "id")
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid conversation id")
+		return
+	}
+	conv, err := h.Store.GetChatConversation(r.Context(), uid, id)
+	if err != nil {
+		writeStoreErr(w, err, "could not load the conversation")
+		return
+	}
+	messages, err := h.Store.ListChatMessages(r.Context(), uid, id)
+	if err != nil {
+		writeStoreErr(w, err, "could not load chat history")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"conversation": conv,
+		"messages":     messages,
+	})
+}
+
+type chatConversationPatch struct {
+	Title  *string `json:"title,omitempty"`
+	Pinned *bool   `json:"pinned,omitempty"`
+}
+
+// UpdateChatConversation renames and/or pins a chat.
+func (h *Handlers) UpdateChatConversation(w http.ResponseWriter, r *http.Request) {
+	uid, ok := h.userID(r)
+	if !ok {
+		writeError(w, http.StatusUnauthorized, "not authenticated")
+		return
+	}
+	id, err := pathInt64(r, "id")
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid conversation id")
+		return
+	}
+	var req chatConversationPatch
+	if err := decodeJSON(r, &req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid JSON body")
+		return
+	}
+	if req.Title == nil && req.Pinned == nil {
+		writeError(w, http.StatusBadRequest, "nothing to change")
+		return
+	}
+	if req.Title != nil {
+		title := strings.Join(strings.Fields(*req.Title), " ")
+		if title == "" {
+			writeError(w, http.StatusBadRequest, "title must not be empty")
+			return
+		}
+		if utf8.RuneCountInString(title) > chatTitleMaxRunes {
+			writeError(w, http.StatusBadRequest, "title is too long")
+			return
+		}
+		req.Title = &title
+	}
+	conv, err := h.Store.UpdateChatConversation(r.Context(), uid, id, req.Title, req.Pinned)
+	if err != nil {
+		writeStoreErr(w, err, "could not update the conversation")
+		return
+	}
+	writeJSON(w, http.StatusOK, conv)
+}
+
+func (h *Handlers) DeleteChatConversation(w http.ResponseWriter, r *http.Request) {
+	uid, ok := h.userID(r)
+	if !ok {
+		writeError(w, http.StatusUnauthorized, "not authenticated")
+		return
+	}
+	id, err := pathInt64(r, "id")
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid conversation id")
+		return
+	}
+	if err := h.Store.DeleteChatConversation(r.Context(), uid, id); err != nil {
+		writeStoreErr(w, err, "could not delete the conversation")
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// CleanupChatConversations deletes unpinned chats without a message for
+// ChatRetentionDays, now and then every hour, until ctx ends. A retention of
+// 0 or less keeps chats forever.
+func (h *Handlers) CleanupChatConversations(ctx context.Context) {
+	if h.ChatRetentionDays <= 0 {
+		return
+	}
+	ticker := time.NewTicker(time.Hour)
+	defer ticker.Stop()
+	for {
+		cutoff := time.Now().AddDate(0, 0, -h.ChatRetentionDays)
+		if n, err := h.Store.DeleteStaleChatConversations(ctx, cutoff); err != nil {
+			log.Printf("chat cleanup: %v", err)
+		} else if n > 0 {
+			log.Printf("chat cleanup: deleted %d conversations inactive for %d days", n, h.ChatRetentionDays)
+		}
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+		}
+	}
 }
 
 func (h *Handlers) ChatStatus(w http.ResponseWriter, r *http.Request) {

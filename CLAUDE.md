@@ -84,9 +84,15 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   4. admin publishes (`ok`) or rejects (`rejected`) in `/admin`.
   Held/rejected posts are visible only to their author (banner "На проверке")
   and staff. Interrupted checks resume at startup. Staff posts are moderated too.
-- **AI chat.** `POST /api/chat/ask` (auth + rate limit) → `ai_ml`
-  `/generate-answer` → answer with `forum_answer` (from the FAQ knowledge
-  base) and `ai_explanation`. History is one list per user (`chat_messages`).
+- **AI chat.** `POST /api/chat/ask` (auth + rate limit, one question in
+  flight per user) → `ai_ml` `/generate-answer` → answer with `forum_answer`
+  (from the FAQ knowledge base) and `ai_explanation`. Separate conversations
+  (Story 11, `003_chat.sql`): `/chat` is a new chat; its first answered
+  question creates the conversation (title = the question) and the page moves
+  to `/chat/:id`. Rename/pin/delete in the list (`ConversationList`; a side
+  panel on wide screens, a sheet on phones). Unpinned chats idle for
+  `CHAT_RETENTION_DAYS` (30) are deleted hourly. The model still gets only the
+  current question, not the earlier messages of the chat.
 - **Auto-refresh.** React Query polling: feed 15 s, thread 10 s (1.5 s while
   a post is `checking`), admin queue 5 s, admin badge 10 s; paused in
   background tabs; never refetches over a like that is still saving.
@@ -103,7 +109,8 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
 - **Every public SQL read must hide held posts**: use `threadVisible` /
   `commentVisible` in `backend/internal/store/postgres.go`.
 - **Schema changes** are idempotent SQL applied on every start
-  (`001_init.sql`, `002_moderation.sql`): `CREATE ... IF NOT EXISTS` /
+  (`001_init.sql` + `003_chat.sql` in `Migrate`, `002_moderation.sql` in
+  `MigrateModeration`): `CREATE ... IF NOT EXISTS` /
   `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`.
 - **Store interface**: adding a method to `store.Store` also needs a stub on
   `chatTestStore` in `backend/internal/handlers/chat_test.go`.
@@ -136,13 +143,14 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
 ## State and next steps (as of 2026-10-23)
 
 Done: accounts, forum (likes, best answer, auto-refresh), FAQ, settings,
-onboarding tour, AI chat, async AI moderation + admin panel (filters, sort,
-log), staff emails, error/404 pages, performance pass (small logo, bundled
-font, on-demand tour code).
+onboarding tour, AI chat with separate conversations (Story 11: list,
+`/chat/:id`, rename/pin/delete, 30-day auto-delete), async AI moderation +
+admin panel (filters, sort, log), staff emails, error/404 pages, performance
+pass (small logo, bundled font, on-demand tour code).
 
-Planned (Sprint 4 order): **Story 11 — chat conversations** (separate
-dialogs, list, `/chat/:id`, rename/pin/delete, 30-day auto-delete), then
-**Story 12 — FAQ buttons in chat** (instant FAQ answers without the LLM,
+Planned (Sprint 4 order): **Story 12 — FAQ buttons in chat** (instant FAQ answers without the LLM,
 admin pin/order, categories, translations), then notifications bell,
 👍/👎 on answers, forum search/tags/edit/delete, admin FAQ editor, maps and
-courses. Optional: stop admins approving their own flagged posts.
+courses. Optional: stop admins approving their own flagged posts; send the
+last few messages of a chat to the model so follow-up questions ("and how
+much is it?") are understood (needs an `ai_ml` `/generate-answer` change).

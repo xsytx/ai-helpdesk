@@ -190,6 +190,13 @@ func main() {
 	// Finish AI checks interrupted by a restart (posts left in "checking").
 	go h.ResumeModerationChecks(ctx)
 
+	// Unpinned AI chats are deleted after CHAT_RETENTION_DAYS without a
+	// message (0 keeps them forever).
+	if n, err := strconv.Atoi(getenv("CHAT_RETENTION_DAYS", "30")); err == nil && n >= 0 {
+		h.ChatRetentionDays = n
+	}
+	go h.CleanupChatConversations(ctx)
+
 	mux := http.NewServeMux()
 	authMw := middleware.Auth(secret)
 	optionalAuthMw := middleware.OptionalAuth(secret)
@@ -247,7 +254,10 @@ func main() {
 	mux.Handle("POST /api/comments/{id}/report", authMw(http.HandlerFunc(h.ReportComment)))
 
 	mux.Handle("GET /api/chat/status", authMw(http.HandlerFunc(h.ChatStatus)))
-	mux.Handle("GET /api/chat/history", authMw(http.HandlerFunc(h.ChatHistory)))
+	mux.Handle("GET /api/chat/conversations", authMw(http.HandlerFunc(h.ListChatConversations)))
+	mux.Handle("GET /api/chat/conversations/{id}/messages", authMw(http.HandlerFunc(h.GetChatConversationMessages)))
+	mux.Handle("PATCH /api/chat/conversations/{id}", authMw(writeLimiter(http.HandlerFunc(h.UpdateChatConversation))))
+	mux.Handle("DELETE /api/chat/conversations/{id}", authMw(writeLimiter(http.HandlerFunc(h.DeleteChatConversation))))
 	mux.Handle("POST /api/chat/ask", authMw(chatLimiter.Wrap(http.HandlerFunc(h.ChatAsk))))
 
 	// --- Moderator/admin API (role checked inside each handler) ---

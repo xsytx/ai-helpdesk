@@ -31,8 +31,25 @@ func (s *chatTestStore) CreateChatMessage(_ context.Context, userID int64, msg m
 	return out, nil
 }
 
-func (s *chatTestStore) ListChatMessages(context.Context, int64, int, int) ([]models.ChatMessage, int, error) {
-	return nil, 0, nil
+func (s *chatTestStore) ListChatMessages(context.Context, int64, int64) ([]models.ChatMessage, error) {
+	return nil, nil
+}
+func (s *chatTestStore) CreateChatConversation(_ context.Context, _ int64, title string) (models.ChatConversation, error) {
+	s.nextID++
+	return models.ChatConversation{ID: s.nextID, Title: title, CreatedAt: time.Now(), UpdatedAt: time.Now()}, nil
+}
+func (s *chatTestStore) GetChatConversation(context.Context, int64, int64) (models.ChatConversation, error) {
+	return models.ChatConversation{}, store.ErrNotFound
+}
+func (s *chatTestStore) ListChatConversations(context.Context, int64) ([]models.ChatConversation, error) {
+	return nil, nil
+}
+func (s *chatTestStore) UpdateChatConversation(context.Context, int64, int64, *string, *bool) (models.ChatConversation, error) {
+	return models.ChatConversation{}, store.ErrNotFound
+}
+func (s *chatTestStore) DeleteChatConversation(context.Context, int64, int64) error { return nil }
+func (s *chatTestStore) DeleteStaleChatConversations(context.Context, time.Time) (int64, error) {
+	return 0, nil
 }
 
 func (s *chatTestStore) CreateUser(context.Context, string, string, string, string) (models.User, error) {
@@ -196,6 +213,21 @@ func TestChatAskEndpoint(t *testing.T) {
 	}
 	if len(st.created) != 2 || st.created[0].Role != "user" || st.created[1].Role != "assistant" {
 		t.Fatalf("history %+v", st.created)
+	}
+	if out.Conversation == nil || out.Conversation.Title != "What is GPA?" ||
+		st.created[0].ConversationID != out.Conversation.ID || st.created[1].ConversationID != out.Conversation.ID {
+		t.Fatalf("conversation %+v, history %+v", out.Conversation, st.created)
+	}
+}
+
+func TestChatTitleFromQuestion(t *testing.T) {
+	if got := chatTitleFromQuestion("  How do I\n\tget   a dorm?  "); got != "How do I get a dorm?" {
+		t.Fatalf("got %q", got)
+	}
+	long := strings.Repeat("слово ", 30)
+	got := chatTitleFromQuestion(long)
+	if n := len([]rune(got)); n > chatTitleRunes || !strings.HasSuffix(got, "…") {
+		t.Fatalf("got %q (%d runes)", got, n)
 	}
 }
 
