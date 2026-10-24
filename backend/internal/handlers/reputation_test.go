@@ -129,6 +129,22 @@ func TestQuestionPhotos(t *testing.T) {
 		t.Fatalf("photos on the page: %v", atts)
 	}
 
+	// Lists carry the count and the first 3 photos to preview.
+	_, feed := e.call(other, http.MethodGet, "/api/feed?sort=new&page_size=50", nil)
+	found := false
+	for _, th := range feed["threads"].([]any) {
+		m := th.(map[string]any)
+		if num(m["id"]) == tid {
+			found = true
+			if num(m["photo_count"]) != maxAttachmentsPerThread || len(m["preview_photos"].([]any)) != 3 {
+				t.Fatalf("list photos: count %v, previews %v", m["photo_count"], m["preview_photos"])
+			}
+		}
+	}
+	if !found {
+		t.Fatal("question missing from the feed")
+	}
+
 	path := fmt.Sprintf("/api/attachments/%d", num(first["id"]))
 	if code, _ := e.call(other, http.MethodDelete, path, nil); code != http.StatusForbidden {
 		t.Fatalf("someone else deletes a photo: %d, want 403", code)

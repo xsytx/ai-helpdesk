@@ -174,7 +174,9 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   `DELETE /api/attachments/{id}` (author or admin; the file is deleted too).
   Gallery + full-size viewer on the question page (`Photos.tsx`); in edit
   mode photos are added/removed at once. `/uploads/` serves files only, no
-  directory listings.
+  directory listings. Lists (feed, search, profile) carry `photo_count` and
+  `preview_photos` (first 3 URLs, from `threadSelect`); `ThreadCard` shows
+  them (one photo wide, more as squares with "+N").
 - **Avatars and profiles (`009_profiles.sql`).** `users.avatar` = "" (initials),
   a preset id ("avatar3") or an uploaded photo URL (`/uploads/avatars/<id>/…`;
   the browser shrinks it to 512 px). `PUT /api/me/avatar {avatar}` (preset or

@@ -33,6 +33,8 @@ interface ApiThread {
   accepted_comment_id?: number;
   attachments?: { id: number; url: string }[];
   author_avatar?: string;
+  photo_count?: number;
+  preview_photos?: string[];
 }
 
 interface ApiComment {
@@ -65,6 +67,8 @@ function toThread(t: ApiThread): Thread {
     acceptedAnswerId: t.accepted_comment_id ? String(t.accepted_comment_id) : undefined,
     attachments: t.attachments?.map((a) => ({ id: String(a.id), url: a.url })),
     authorAvatar: t.author_avatar ?? "",
+    photoCount: t.photo_count ?? 0,
+    previewPhotos: t.preview_photos ?? [],
   };
 }
 

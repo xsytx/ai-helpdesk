@@ -39,6 +39,7 @@ export function ThreadCard({ thread, highlightWords = [] }: { thread: Thread; hi
           </div>
           <p className="mt-0.5 text-sm font-medium text-primary">{highlight(thread.title, highlightWords)}</p>
           <p className="mt-1 line-clamp-2 text-sm text-primary/85">{highlight(body, highlightWords)}</p>
+          <PhotoPreview photos={thread.previewPhotos ?? []} total={thread.photoCount ?? 0} />
           {thread.tags && thread.tags.length > 0 ? (
             <div className="mt-2 flex flex-wrap gap-1">
               {thread.tags.map((tag) => (
@@ -65,5 +66,39 @@ export function ThreadCard({ thread, highlightWords = [] }: { thread: Thread; hi
         </div>
       </Link>
     </li>
+  );
+}
+
+/**
+ * The question's photos in the list, so you see them before opening it: one
+ * photo as a wide preview, more as small squares, "+N" for the rest.
+ */
+function PhotoPreview({ photos, total }: { photos: string[]; total: number }) {
+  const { plural } = useLocale();
+  if (photos.length === 0) return null;
+  const more = total - photos.length;
+  return (
+    <div className="mt-2 flex gap-1.5" role="img" aria-label={plural(total, "photosCount")}>
+      {photos.map((src, i) => {
+        const last = i === photos.length - 1;
+        return (
+          <div
+            key={src}
+            className={
+              photos.length === 1
+                ? "relative h-36 w-full max-w-sm overflow-hidden rounded-xl bg-background-2"
+                : "relative h-20 w-20 overflow-hidden rounded-lg bg-background-2 sm:h-24 sm:w-24"
+            }
+          >
+            <img src={src} alt="" loading="lazy" className="h-full w-full object-cover" />
+            {last && more > 0 ? (
+              <span className="absolute inset-0 flex items-center justify-center bg-primary/55 text-sm font-bold text-white">
+                +{more}
+              </span>
+            ) : null}
+          </div>
+        );
+      })}
+    </div>
   );
 }

@@ -41,6 +41,10 @@ type Thread struct {
 	AuthorName  string       `json:"author_name"`
 	// AuthorAvatar: see User.Avatar.
 	AuthorAvatar string      `json:"author_avatar,omitempty"`
+	// PhotoCount and PreviewPhotos (the first 3 URLs) let lists show a
+	// question's photos without loading them all.
+	PhotoCount    int      `json:"photo_count,omitempty"`
+	PreviewPhotos []string `json:"preview_photos,omitempty"`
 	Title       string       `json:"title"`
 	Body        string       `json:"body"`
 	BodyHTML    string       `json:"body_html,omitempty"` // rendered Markdown; populated on the thread-detail response only

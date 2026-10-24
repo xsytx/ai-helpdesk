@@ -22,6 +22,9 @@ export interface Thread {
   authorPoints?: number;
   /** Photos (thread page only). */
   attachments?: { id: string; url: string }[];
+  /** In lists: how many photos the question has, and the first few to preview. */
+  photoCount?: number;
+  previewPhotos?: string[];
   /** The answer the author marked as the solution ("Solved"). */
   acceptedAnswerId?: string;
   /** Search results only: where the words were found ("similar" = a near match, e.g. a typo). */

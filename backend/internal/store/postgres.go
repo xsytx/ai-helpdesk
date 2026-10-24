@@ -308,7 +308,12 @@ const threadSelect = `
 	       COALESCE(tgs.tags, ARRAY[]::text[]), t.moderation_status,
 	       -- the accepted answer, only while that answer is visible
 	       (SELECT c.id FROM comments c WHERE c.id = t.accepted_comment_id AND ` + commentVisible + `) AS accepted_answer_id,
-	       u.avatar AS author_avatar
+	       u.avatar AS author_avatar,
+	       -- the question's photos for the list: how many, and the first 3 to preview
+	       (SELECT count(*) FROM attachments a WHERE a.thread_id = t.id AND a.comment_id IS NULL)::int AS photo_count,
+	       COALESCE((SELECT array_agg('/uploads/' || p.path ORDER BY p.id) FROM (
+	           SELECT a.id, a.path FROM attachments a WHERE a.thread_id = t.id AND a.comment_id IS NULL ORDER BY a.id LIMIT 3
+	       ) p), ARRAY[]::text[]) AS preview_photos
 	FROM threads t
 	JOIN users u ON u.id = t.user_id
 	LEFT JOIN (SELECT thread_id, COUNT(*) AS cnt FROM comments c WHERE ` + commentVisible + ` GROUP BY thread_id) cc
@@ -322,7 +327,8 @@ const threadSelect = `
 func scanThread(row pgx.Row) (models.Thread, error) {
 	var t models.Thread
 	err := row.Scan(&t.ID, &t.UserID, &t.AuthorName, &t.Title, &t.Body, &t.Score, &t.LockedAt,
-		&t.CreatedAt, &t.CommentCnt, &t.Tags, &t.ModerationStatus, &t.AcceptedCommentID, &t.AuthorAvatar)
+		&t.CreatedAt, &t.CommentCnt, &t.Tags, &t.ModerationStatus, &t.AcceptedCommentID, &t.AuthorAvatar,
+		&t.PhotoCount, &t.PreviewPhotos)
 	return t, err
 }
 
