@@ -123,7 +123,7 @@ type Store interface {
 	// ListFeed pages through every thread — the Threads-app-style home
 	// feed. sort is "new" (default, newest first), "top" (highest score
 	// first), or "comments" (most commented first).
-	ListFeed(ctx context.Context, sort string, page, pageSize int) (threads []models.Thread, total int, err error)
+	ListFeed(ctx context.Context, sort string, tags []string, page, pageSize int) (threads []models.Thread, total int, err error)
 
 	// --- Profile ---
 

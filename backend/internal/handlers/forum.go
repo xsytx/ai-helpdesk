@@ -64,19 +64,20 @@ type threadReq struct {
 	Tags  []string `json:"tags"`
 }
 
-// normalizeTags lowercases, trims, dedupes, and caps at 8 tags — plenty
-// for a forum post, and enough to keep the trending-tags widget useful.
+// normalizeTags keeps the tags that are on the fixed list
+// (store.ForumTags; lower case, "#" and spaces ignored), without repeats, at
+// most store.MaxTagsPerThread. Anything else is dropped.
 func normalizeTags(raw []string) []string {
 	seen := map[string]bool{}
 	out := make([]string, 0, len(raw))
 	for _, t := range raw {
 		t = strings.ToLower(strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(t), "#")))
-		if t == "" || seen[t] {
+		if !store.IsForumTag(t) || seen[t] {
 			continue
 		}
 		seen[t] = true
 		out = append(out, t)
-		if len(out) == 8 {
+		if len(out) == store.MaxTagsPerThread {
 			break
 		}
 	}

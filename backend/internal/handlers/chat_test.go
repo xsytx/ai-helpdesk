@@ -146,7 +146,7 @@ func (s *chatTestStore) UpdateFAQ(context.Context, int64, store.FAQInput) (model
 }
 func (s *chatTestStore) ReorderFAQs(context.Context, []int64) error { return nil }
 func (s *chatTestStore) DeleteFAQ(context.Context, int64) error { return nil }
-func (s *chatTestStore) ListFeed(context.Context, string, int, int) ([]models.Thread, int, error) {
+func (s *chatTestStore) ListFeed(context.Context, string, []string, int, int) ([]models.Thread, int, error) {
 	return nil, 0, nil
 }
 func (s *chatTestStore) UpdateProfile(context.Context, int64, string, string, string) (models.User, error) {

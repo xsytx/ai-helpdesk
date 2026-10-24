@@ -449,7 +449,7 @@ func TestQueueDateFilter(t *testing.T) {
 func TestApproveBlockedThreadPublishesAsOriginalAuthor(t *testing.T) {
 	e := newModEnv(t)
 	author, mod := e.user("user"), e.user("admin")
-	_, q := e.call(author, "POST", "/api/threads", map[string]any{"title": "Held BADWORD title", "body": "held body text", "tags": []string{"one", "two"}})
+	_, q := e.call(author, "POST", "/api/threads", map[string]any{"title": "Held BADWORD title", "body": "held body text", "tags": []string{"dorm", "food"}})
 	qid := num(q["queue_id"])
 
 	code, item := e.call(mod, "POST", fmt.Sprintf("/api/moderation/queue/%d/approve", qid), map[string]any{"note": "fine, it was a quote"})

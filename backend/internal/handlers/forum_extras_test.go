@@ -104,9 +104,10 @@ func TestSearchTagsAndOwnPostEditing(t *testing.T) {
 	e := newForumEnv(t)
 	author, other, admin := e.user("user"), e.user("user"), e.user("admin")
 	word := fmt.Sprintf("zebra%d", time.Now().UnixNano()%1_000_000)
-	tag := "t" + word
 	code, th := e.call(author, http.MethodPost, "/api/threads", map[string]any{
-		"title": "How to find the " + word + " office", "body": "Asking about the office", "tags": []string{"#" + tag, tag, " Campus "},
+		"title": "How to find the " + word + " office", "body": "Asking about the office",
+		// Only listed tags count: no repeats, unknown ones dropped, at most 5.
+		"tags": []string{"#dorm", "Dorm", " Campus ", "my-own-tag", "exams", "food", "clubs", "it"},
 	})
 	if code != http.StatusCreated {
 		t.Fatalf("create: %d %v", code, th)
@@ -118,16 +119,35 @@ func TestSearchTagsAndOwnPostEditing(t *testing.T) {
 	if threads := found["threads"].([]any); len(threads) != 1 || num(threads[0].(map[string]any)["id"]) != tid {
 		t.Fatalf("search: %v", found)
 	}
-	_, byTag := e.call(other, http.MethodGet, "/api/tags/"+tag+"/threads", nil)
-	if threads := byTag["threads"].([]any); len(threads) != 1 {
+	_, byTag := e.call(other, http.MethodGet, "/api/tags/campus/threads?page_size=50", nil)
+	var tagged map[string]any
+	for _, th := range byTag["threads"].([]any) {
+		if num(th.(map[string]any)["id"]) == tid {
+			tagged = th.(map[string]any)
+		}
+	}
+	if tagged == nil {
 		t.Fatalf("tag filter: %v", byTag)
-	} else if tags := threads[0].(map[string]any)["tags"].([]any); len(tags) != 2 {
-		t.Fatalf("tags should be normalized and deduplicated: %v", tags)
+	}
+	if tags := fmt.Sprint(tagged["tags"]); tags != "[campus clubs dorm exams food]" {
+		t.Fatalf("tags should be the first 5 listed ones: %v", tags)
+	}
+	// The feed takes several tags (any of them) together with a sort.
+	for query, want := range map[string]bool{
+		"sort=top&tags=scholarship,Food":        true,
+		"sort=unanswered&tags=dorm":             true,
+		"sort=new&tags=scholarship,documents":   false,
+		"sort=new&tags=my-own-tag,scholarship":  false,
+	} {
+		_, feed := e.call(other, http.MethodGet, "/api/feed?page_size=50&"+query, nil)
+		if contains(threadIDs(feed), tid) != want {
+			t.Fatalf("feed %s: has the question = %v, want %v", query, !want, want)
+		}
 	}
 
 	// Edit: only the author; the tags sent replace the old ones.
 	tpath := fmt.Sprintf("/api/threads/%d", tid)
-	edit := map[string]any{"title": "How to find the " + word + " office?", "body": "Edited body", "tags": []string{tag}}
+	edit := map[string]any{"title": "How to find the " + word + " office?", "body": "Edited body", "tags": []string{"campus"}}
 	if code, _ := e.call(other, http.MethodPatch, tpath, edit); code != http.StatusForbidden {
 		t.Fatalf("other user edit: %d, want 403", code)
 	}
@@ -178,7 +198,7 @@ func TestSearchFindsPartialWordsTyposAnswersAndTags(t *testing.T) {
 	inAnswer := post("Food on campus", "Where can I eat?")
 	_, c := e.call(other, http.MethodPost, fmt.Sprintf("/api/threads/%d/comments", inAnswer), map[string]any{"body": "Try the " + word + " in block A"})
 	e.waitStatus("comment", num(c["id"]), "ok")
-	inTag := post("Opening hours", "When does it open?", word)
+	inTag := post("Opening hours", "When does it open?", "scholarship")
 
 	search := func(q string) ([]int64, []string) {
 		_, out := e.call(u, http.MethodGet, "/api/search?q="+url.QueryEscape(q), nil)
@@ -195,13 +215,14 @@ func TestSearchFindsPartialWordsTyposAnswersAndTags(t *testing.T) {
 		return ids, how
 	}
 
-	// Half a word finds all four, title match first, then body, then answer/tag.
+	// Half a word finds all three, title match first, then body, then answer.
 	ids, how := search(word[:len(word)-3])
-	if len(ids) != 4 || ids[0] != inTitle || ids[1] != inBody {
-		t.Fatalf("prefix search: ids %v (title=%d body=%d answer=%d tag=%d), matched %v", ids, inTitle, inBody, inAnswer, inTag, how)
+	if len(ids) != 3 || fmt.Sprint(how) != "[title body answer]" {
+		t.Fatalf("prefix search: ids %v (title=%d body=%d answer=%d), matched %v", ids, inTitle, inBody, inAnswer, how)
 	}
-	if fmt.Sprint(how) != "[title body answer tag]" && fmt.Sprint(how) != "[title body tag answer]" {
-		t.Fatalf("matched_by %v", how)
+	// Part of a tag's name finds questions with that tag.
+	if ids, how := search("scholarsh"); len(ids) != 1 || ids[0] != inTag || how[0] != "tag" {
+		t.Fatalf("tag search: %v %v", ids, how)
 	}
 	// A typo (first letter wrong) still finds the title and the body.
 	typo := "k" + word[1:]

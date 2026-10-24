@@ -11,7 +11,7 @@ import { shrinkImage } from "@/shared/lib/image";
 export const forumKeys = {
   all: ["forum"] as const,
   threads: (sort: ThreadSort, filter: ThreadFilter = {}) =>
-    [...forumKeys.all, "threads", sort, filter.q ?? "", filter.tag ?? ""] as const,
+    [...forumKeys.all, "threads", sort, filter.q ?? "", (filter.tags ?? []).join(",")] as const,
   trendingTags: () => [...forumKeys.all, "trending-tags"] as const,
   thread: (id: string) => [...forumKeys.all, "thread", id] as const,
 };
@@ -120,10 +120,10 @@ const sortAnswers = (answers: Answer[]) =>
 
 // --- Fetchers ---
 
-/** What the forum list shows: everything, a search (q) or one tag. */
+/** What the forum list shows: everything, a search (q), or questions with any of these tags. */
 export interface ThreadFilter {
   q?: string;
-  tag?: string;
+  tags?: string[];
 }
 
 async function fetchThreads(sort: ThreadSort, filter: ThreadFilter): Promise<Thread[]> {
@@ -132,25 +132,22 @@ async function fetchThreads(sort: ThreadSort, filter: ThreadFilter): Promise<Thr
     return repo
       .listThreads(sort)
       .filter((t) => !q || `${t.title} ${t.body}`.toLowerCase().includes(q))
-      .filter((t) => !filter.tag || t.tags?.includes(filter.tag));
+      .filter((t) => !filter.tags?.length || filter.tags.some((x) => t.tags?.includes(x)));
   }
-  // A search is ordered by relevance and a tag list by date (the backend
-  // decides both), so the sort toggle only applies to the full feed.
+  // A search is ordered by relevance (the backend decides), so the sort
+  // toggle applies to the feed only, with or without tags.
   if (filter.q) {
     const { data } = await apiClient.get<{ threads: ApiThread[] }>("/search", {
       params: { q: filter.q, page_size: 50 },
     });
     return data.threads.map(toThread);
   }
-  if (filter.tag) {
-    const { data } = await apiClient.get<{ threads: ApiThread[] }>(
-      `/tags/${encodeURIComponent(filter.tag)}/threads`,
-      { params: { page_size: 50 } },
-    );
-    return data.threads.map(toThread);
-  }
   const { data } = await apiClient.get<{ threads: ApiThread[] }>("/feed", {
-    params: { sort: sort === "newest" ? "new" : sort === "unanswered" ? "unanswered" : "top", page_size: 50 },
+    params: {
+      sort: sort === "newest" ? "new" : sort === "unanswered" ? "unanswered" : "top",
+      tags: filter.tags?.length ? filter.tags.join(",") : undefined,
+      page_size: 50,
+    },
   });
   return data.threads.map(toThread);
 }

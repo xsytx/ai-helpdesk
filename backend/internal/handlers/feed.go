@@ -1,6 +1,12 @@
 package handlers
 
-import "net/http"
+import (
+	"net/http"
+	"slices"
+	"strings"
+
+	"campus-forum/internal/store"
+)
 
 func (h *Handlers) Stats(w http.ResponseWriter, r *http.Request) {
 	st, err := h.Store.Stats(r.Context())
@@ -21,7 +27,15 @@ func (h *Handlers) ListFeed(w http.ResponseWriter, r *http.Request) {
 	page := queryIntDefault(r, "page", 1, 1, 1<<31-1)
 	pageSize := queryIntDefault(r, "page_size", 20, 1, 50)
 
-	threads, total, err := h.Store.ListFeed(r.Context(), sort, page, pageSize)
+	// ?tags=dorm,food: questions with any of these topics (unknown names are ignored).
+	var tags []string
+	for _, name := range strings.Split(r.URL.Query().Get("tags"), ",") {
+		if name = strings.ToLower(strings.TrimSpace(name)); store.IsForumTag(name) && !slices.Contains(tags, name) {
+			tags = append(tags, name)
+		}
+	}
+
+	threads, total, err := h.Store.ListFeed(r.Context(), sort, tags, page, pageSize)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "could not load feed")
 		return

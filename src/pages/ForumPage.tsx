@@ -1,6 +1,7 @@
 import { CreateThreadDialog } from "@/features/forum/components/CreateThreadDialog";
 import { FaqSearchMatches, SearchHelp } from "@/features/forum/components/SearchExtras";
 import { TagChip } from "@/features/forum/components/TagInput";
+import { FORUM_TAGS } from "@/features/forum/tags";
 import { searchWords } from "@/shared/lib/highlight";
 import { ThreadList } from "@/features/forum/components/ThreadList";
 import { ThreadSortToggle } from "@/features/forum/components/ThreadSortToggle";
@@ -15,18 +16,29 @@ import { useSearchParams } from "react-router-dom";
 
 const SEARCH_DELAY_MS = 300;
 
+/** The address for a search or a set of topics (?tags=dorm,food). */
+function listParams(q: string, tags: string[]): Record<string, string> {
+  if (q) return { q };
+  return tags.length ? { tags: tags.join(",") } : {};
+}
+
 export function ForumPage() {
   const { t } = useLocale();
   const [sort, setSort] = useState<ThreadSort>("top");
   const [createOpen, setCreateOpen] = useState(false);
-  // Search and tag live in the address (/forum?q=… or /forum?tag=…), so
-  // tag links work and "back" returns to the same list.
+  // Search and topics live in the address (/forum?q=… or /forum?tags=dorm,food),
+  // so tag links work and "back" returns to the same list. ?tag= is the old form.
   const [params, setParams] = useSearchParams();
   const q = params.get("q")?.trim() ?? "";
-  const tag = params.get("tag") ?? "";
+  const tags = (params.get("tags") ?? params.get("tag") ?? "")
+    .split(",")
+    .filter((x): x is string => (FORUM_TAGS as readonly string[]).includes(x));
+  const tagsKey = tags.join(",");
   const [input, setInput] = useState(q);
-  const { data: threads = [], isLoading, isError, isPlaceholderData } = useThreads(sort, { q, tag: q ? undefined : tag });
+  const { data: threads = [], isLoading, isError, isPlaceholderData } = useThreads(sort, { q, tags: q ? undefined : tags });
   const trending = useTrendingTags().data ?? [];
+  const uses = new Map(trending.map((x) => [x.name, x.count]));
+  const tagsByUse = [...FORUM_TAGS].sort((a, b) => (uses.get(b) ?? 0) - (uses.get(a) ?? 0));
   const words = searchWords(q);
 
   // Follow address changes (a tag link, back/forward) in the search box.
@@ -37,15 +49,18 @@ export function ForumPage() {
     const next = input.trim();
     if (next === q) return;
     const timer = window.setTimeout(() => {
-      setParams(next ? { q: next } : tag ? { tag } : {}, { replace: true });
+      setParams(listParams(next, tagsKey ? tagsKey.split(",") : []), { replace: true });
     }, SEARCH_DELAY_MS);
     return () => window.clearTimeout(timer);
-  }, [input, q, tag, setParams]);
+  }, [input, q, tagsKey, setParams]);
 
-  const filtered = Boolean(q || tag);
+  const toggleTag = (name: string) =>
+    setParams(listParams("", tags.includes(name) ? tags.filter((x) => x !== name) : [...tags, name]), { replace: true });
+
+  const filtered = Boolean(q || tags.length);
   const emptyText = q
     ? t("forumSearchEmpty").replace("{q}", q)
-    : tag
+    : tags.length
       ? t("forumTagEmpty")
       : sort === "unanswered"
         ? t("forumAllAnswered")
@@ -57,7 +72,7 @@ export function ForumPage() {
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-xl font-bold text-primary">{t("discussionForum")}</h1>
           <div className="flex flex-wrap items-center gap-2">
-            {!q && !tag ? <ThreadSortToggle sort={sort} onSortChange={setSort} withUnanswered /> : null}
+            {!q ? <ThreadSortToggle sort={sort} onSortChange={setSort} withUnanswered /> : null}
             <Button size="sm" onClick={() => setCreateOpen(true)}>
               <Plus className="h-4 w-4" />
               {t("newQuestion")}
@@ -81,7 +96,7 @@ export function ForumPage() {
               type="button"
               onClick={() => {
                 setInput("");
-                setParams(tag ? { tag } : {}, { replace: true });
+                setParams(listParams("", tags), { replace: true });
               }}
               className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-1 text-label hover:bg-background-2 hover:text-primary"
               aria-label={t("forumClearFilter")}
@@ -91,26 +106,22 @@ export function ForumPage() {
           ) : null}
         </div>
 
-        {!q && (tag || trending.length > 0) ? (
+        {!q ? (
+          // Every tag as a filter, the most used first; several = any of them.
           <div className="mb-4 flex flex-wrap items-center gap-1.5">
             <span className="mr-1 text-xs font-semibold uppercase tracking-wide text-label">{t("forumPopularTags")}</span>
-            {tag && !trending.some((x) => x.name === tag) ? (
-              <button type="button" onClick={() => setParams({}, { replace: true })} aria-pressed>
-                <TagChip tag={tag} active />
-              </button>
-            ) : null}
-            {trending.map((x) => (
+            {tagsByUse.map((name) => (
               <button
-                key={x.name}
+                key={name}
                 type="button"
-                aria-pressed={tag === x.name}
-                onClick={() => setParams(tag === x.name ? {} : { tag: x.name }, { replace: true })}
+                aria-pressed={tags.includes(name)}
+                onClick={() => toggleTag(name)}
                 className="hover:opacity-80"
               >
-                <TagChip tag={x.name} active={tag === x.name} />
+                <TagChip tag={name} active={tags.includes(name)} />
               </button>
             ))}
-            {tag ? (
+            {tags.length ? (
               <button
                 type="button"
                 onClick={() => setParams({}, { replace: true })}

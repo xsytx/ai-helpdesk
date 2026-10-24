@@ -132,9 +132,13 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   in `/admin?section=faq` (`FaqEditor`); the editor requires all three
   languages.
 - **Forum extras.** Search box and tag filter on `/forum` live in the URL
-  (`?q=` → `/api/search`, `?tag=` → `/api/tags/{name}/threads`; popular tags
-  from `/api/tags/trending`); tags are added in the new-question dialog
-  (`TagInput`, max 8). Authors edit/delete their own question or answer from
+  (`?q=` → `/api/search`; `?tags=dorm,food` → `/api/feed?tags=…` = questions
+  with any of them, works with every sort; old `?tag=` links still work;
+  chips ordered by `/api/tags/trending`). Tags are chosen (`TagPicker` in `TagInput.tsx`,
+  max 5) from a fixed list: `store.ForumTags` in `store/tags.go` and
+  `FORUM_TAGS` in `features/forum/tags.ts` must match; labels are the
+  `tag*` translation keys. The backend drops unlisted tags; `010_tags.sql`
+  mapped the old free-typed tags. Authors edit/delete their own question or answer from
   the "⋯" menu (`PostMenu`, `features/forum/postActions.ts`); admins may
   delete any post. Edits are moderated again: `409` = held post, `422` =
   edit breaks the rules. Editing a question sends its tags too (the backend
@@ -214,7 +218,7 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
 - **Every public SQL read must hide held posts**: use `threadVisible` /
   `commentVisible` in `backend/internal/store/postgres.go`.
 - **Schema changes** are idempotent SQL applied on every start
-  (`001_init.sql` + `003_chat.sql` + `004_faq.sql` + `005_search.sql` + `006_chat_feedback.sql` + `007_forum_extras.sql` + `008_reputation.sql` + `009_profiles.sql` in `Migrate`, `002_moderation.sql` in
+  (`001_init.sql` + `003_chat.sql` + `004_faq.sql` + `005_search.sql` + `006_chat_feedback.sql` + `007_forum_extras.sql` + `008_reputation.sql` + `009_profiles.sql` + `010_tags.sql` in `Migrate`, `002_moderation.sql` in
   `MigrateModeration`): `CREATE ... IF NOT EXISTS` /
   `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`.
 - **Store interface**: adding a method to `store.Store` also needs a stub on

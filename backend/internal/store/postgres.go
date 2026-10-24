@@ -71,7 +71,10 @@ func (s *PostgresStore) Migrate(ctx context.Context) error {
 	if _, err := s.pool.Exec(ctx, reputationSQL); err != nil {
 		return err
 	}
-	_, err := s.pool.Exec(ctx, profilesSQL)
+	if _, err := s.pool.Exec(ctx, profilesSQL); err != nil {
+		return err
+	}
+	_, err := s.pool.Exec(ctx, tagsSQL)
 	return err
 }
 
@@ -355,7 +358,8 @@ func threadOrderBy(sort string) string {
 }
 
 // ListFeed pages through every thread — the home feed.
-func (s *PostgresStore) ListFeed(ctx context.Context, sort string, page, pageSize int) ([]models.Thread, int, error) {
+// tags (optional): only questions with at least one of them.
+func (s *PostgresStore) ListFeed(ctx context.Context, sort string, tags []string, page, pageSize int) ([]models.Thread, int, error) {
 	if page < 1 {
 		page = 1
 	}
@@ -368,13 +372,16 @@ func (s *PostgresStore) ListFeed(ctx context.Context, sort string, page, pageSiz
 	if sort == "unanswered" {
 		where += ` AND NOT EXISTS (SELECT 1 FROM comments c WHERE c.thread_id = t.id AND ` + commentVisible + `)`
 	}
+	where += ` AND (COALESCE(cardinality($1::text[]), 0) = 0 OR EXISTS (
+		SELECT 1 FROM thread_tags tt JOIN tags tg ON tg.id = tt.tag_id
+		WHERE tt.thread_id = t.id AND tg.name = ANY($1::text[])))`
 	var total int
-	if err := s.pool.QueryRow(ctx, `SELECT COUNT(*) FROM threads t WHERE `+where).Scan(&total); err != nil {
+	if err := s.pool.QueryRow(ctx, `SELECT COUNT(*) FROM threads t WHERE `+where, tags).Scan(&total); err != nil {
 		return nil, 0, err
 	}
 
-	q := threadSelect + ` WHERE ` + where + ` ` + threadOrderBy(sort) + ` LIMIT $1 OFFSET $2`
-	rows, err := s.pool.Query(ctx, q, pageSize, (page-1)*pageSize)
+	q := threadSelect + ` WHERE ` + where + ` ` + threadOrderBy(sort) + ` LIMIT $2 OFFSET $3`
+	rows, err := s.pool.Query(ctx, q, tags, pageSize, (page-1)*pageSize)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -392,13 +399,15 @@ func (s *PostgresStore) ListFeed(ctx context.Context, sort string, page, pageSiz
 }
 
 // setThreadTags replaces threadID's tag set with names, creating any tag
-// row that doesn't exist yet. An empty/nil names just clears the tags.
+// row that doesn't exist yet. An empty/nil names just clears the tags. Names
+// not on the ForumTags list are skipped (e.g. tags of a post held by
+// moderation before the list existed, approved later).
 func (s *PostgresStore) setThreadTags(ctx context.Context, threadID int64, names []string) error {
 	if _, err := s.pool.Exec(ctx, `DELETE FROM thread_tags WHERE thread_id = $1`, threadID); err != nil {
 		return err
 	}
 	for _, name := range names {
-		if name == "" {
+		if !IsForumTag(name) {
 			continue
 		}
 		var tagID int64

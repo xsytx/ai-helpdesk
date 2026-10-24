@@ -189,7 +189,7 @@ inbox at that point.
 | GET    | `/api/me`                         | ✓    | Current user                      |
 | PATCH  | `/api/me`                         | ✓    | `{display_name, major, bio}`      |
 | POST   | `/api/me/password`                | ✓    | `{current_password, new_password}` — routine password change, not the forgot-password flow |
-| GET    | `/api/feed`                       | –    | `?sort=new\|top\|comments&page=&page_size=` — home feed, every thread |
+| GET    | `/api/feed`                       | –    | `?sort=new\|top\|comments\|unanswered&tags=dorm,food&page=&page_size=` — home feed; `tags` = any of these topics |
 | GET    | `/api/stats`                      | –    | Platform-wide counts (users/threads/comments/tags) |
 | GET    | `/api/search`                     | –    | `?q=&page=&page_size=` — full-text search |
 | GET    | `/api/tags/trending` / `/api/tags/{name}/threads` | – | Trending tags / browse by tag |

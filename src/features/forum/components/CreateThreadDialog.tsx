@@ -9,7 +9,7 @@ import { X } from "lucide-react";
 import { SimilarQuestions } from "./SimilarQuestions";
 import { PhotoPicker } from "./Photos";
 import { uploadPhoto } from "@/features/forum/api";
-import { TagInput } from "./TagInput";
+import { TagPicker } from "./TagInput";
 import { FormEvent, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
@@ -167,7 +167,7 @@ export function CreateThreadDialog({
               className="w-full resize-y rounded-xl border border-border bg-white px-3.5 py-2.5 text-sm text-primary placeholder:text-grey focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20"
             />
           </div>
-          <TagInput id="thread-tags" tags={tags} onChange={setTags} />
+          <TagPicker id="thread-tags" tags={tags} onChange={setTags} />
           <PhotoPicker files={photos} onChange={setPhotos} />
           {error ? (
             <p className="text-sm text-error" role="alert">

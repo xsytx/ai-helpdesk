@@ -5,7 +5,8 @@ import { useAnswers, useFollowThread, useThread, useThreadSubscribed } from "@/f
 import { useAuth } from "@/app/AuthContext";
 import { Bell, BellOff } from "lucide-react";
 import { DeleteConfirm, PostActionErrorText, PostMenu, usePostPermissions } from "@/features/forum/components/PostMenu";
-import { TagChip, TagInput } from "@/features/forum/components/TagInput";
+import { TagChip, TagPicker } from "@/features/forum/components/TagInput";
+import { FORUM_TAGS } from "@/features/forum/tags";
 import { ReportDialog } from "@/features/forum/components/ReportDialog";
 import { PhotoEditor, PhotoGallery } from "@/features/forum/components/Photos";
 import { LevelBadge } from "@/features/reputation/components/LevelBadge";
@@ -104,7 +105,8 @@ function ThreadCardFull({ thread }: { thread: Thread }) {
   const tags = thread.tags ?? [];
 
   function startEdit() {
-    setDraft({ title: thread.title, body: thread.body, tags });
+    // Old free-typed tags can't be chosen any more: start from the listed ones.
+    setDraft({ title: thread.title, body: thread.body, tags: tags.filter((x) => (FORUM_TAGS as readonly string[]).includes(x)) });
     setError(undefined);
     setMode("edit");
   }
@@ -179,7 +181,7 @@ function ThreadCardFull({ thread }: { thread: Thread }) {
                 onChange={(e) => setDraft((d) => ({ ...d, body: e.target.value }))}
                 className="w-full resize-y rounded-xl border border-border px-3.5 py-2.5 text-sm text-primary focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20"
               />
-              <TagInput id={`edit-tags-${thread.id}`} tags={draft.tags} onChange={(tags) => setDraft((d) => ({ ...d, tags }))} />
+              <TagPicker id={`edit-tags-${thread.id}`} tags={draft.tags} onChange={(tags) => setDraft((d) => ({ ...d, tags }))} />
               <PhotoEditor
                 photos={thread.attachments ?? []}
                 max={MAX_PHOTOS}
@@ -206,7 +208,7 @@ function ThreadCardFull({ thread }: { thread: Thread }) {
               {tags.length > 0 ? (
                 <div className="mt-3 flex flex-wrap gap-1.5">
                   {tags.map((tag) => (
-                    <Link key={tag} viewTransition to={`/forum?tag=${encodeURIComponent(tag)}`} className="hover:opacity-80">
+                    <Link key={tag} viewTransition to={`/forum?tags=${encodeURIComponent(tag)}`} className="hover:opacity-80">
                       <TagChip tag={tag} />
                     </Link>
                   ))}
