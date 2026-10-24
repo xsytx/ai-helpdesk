@@ -41,12 +41,13 @@ type userPublic struct {
 	Major         string `json:"major"`
 	Bio           string `json:"bio"`
 	EmailVerified bool   `json:"email_verified"`
+	Avatar        string `json:"avatar"`
 }
 
 func toUserPublic(u models.User) userPublic {
 	return userPublic{
 		ID: u.ID, Email: u.Email, DisplayName: u.DisplayName, Role: u.Role,
-		Major: u.Major, Bio: u.Bio, EmailVerified: u.EmailVerifiedAt != nil,
+		Major: u.Major, Bio: u.Bio, EmailVerified: u.EmailVerifiedAt != nil, Avatar: u.Avatar,
 	}
 }
 

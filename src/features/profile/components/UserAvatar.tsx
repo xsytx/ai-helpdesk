@@ -1,22 +1,21 @@
 import { useAuth } from "@/app/AuthContext";
 import { Avatar } from "@/shared/ui/Avatar";
-import { useUserAvatar } from "../api";
 import { resolveAvatarSrc } from "../avatars";
 
 interface UserAvatarProps {
-  /** Author of the content; the saved picture is shown only when it's the current user. */
+  /** Who it is; without it (or for the current user) the signed-in user's own avatar is shown. */
   userId?: string;
   name: string;
+  /** The person's avatar as the server sent it with the post ("" = initials). */
+  avatar?: string;
   className?: string;
 }
 
-/**
- * Avatar that shows the current user's chosen picture. Other users fall back to
- * initials until the API returns their avatarId alongside posts.
- */
-export function UserAvatar({ userId, name, className }: UserAvatarProps) {
+/** A person's picture: their avatar, or their initials. */
+export function UserAvatar({ userId, name, avatar, className }: UserAvatarProps) {
   const { user } = useAuth();
-  const { data: avatarId } = useUserAvatar();
   const isMe = user != null && (userId === undefined || userId === user.id);
-  return <Avatar name={name} src={isMe ? resolveAvatarSrc(avatarId) : undefined} className={className} />;
+  // For yourself the freshest value is your own account (just changed in Settings).
+  const value = isMe ? user.avatar : avatar;
+  return <Avatar name={name} src={resolveAvatarSrc(value)} className={className} />;
 }

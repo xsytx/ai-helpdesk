@@ -1,4 +1,4 @@
-import { MAX_ORIGINAL_PHOTO_BYTES, MAX_PHOTO_BYTES, MAX_PHOTOS, PHOTO_TYPES } from "@/features/forum/api";
+import { deletePhoto, MAX_ORIGINAL_PHOTO_BYTES, MAX_PHOTO_BYTES, MAX_PHOTOS, PHOTO_TYPES } from "@/features/forum/api";
 import { useLocale } from "@/i18n/LocaleContext";
 import type { TranslationKey } from "@/i18n/translations";
 import { ChevronLeft, ChevronRight, ImagePlus, X } from "lucide-react";
@@ -69,8 +69,16 @@ export function PhotoThumb({ src, onRemove, label }: { src: string; onRemove?: (
   );
 }
 
-/** New question: photos chosen on this device, uploaded after the question is posted. */
-export function PhotoPicker({ files, onChange }: { files: File[]; onChange: (files: File[]) => void }) {
+/** A new post: photos chosen on this device, uploaded after the post is published. */
+export function PhotoPicker({
+  files,
+  onChange,
+  max = MAX_PHOTOS,
+}: {
+  files: File[];
+  onChange: (files: File[]) => void;
+  max?: number;
+}) {
   const { t } = useLocale();
   const [problem, setProblem] = useState<TranslationKey>();
   // Previews of local files; freed when they're no longer shown.
@@ -88,23 +96,89 @@ export function PhotoPicker({ files, onChange }: { files: File[]; onChange: (fil
         {previews.map((src, i) => (
           <PhotoThumb key={src} src={src} label={files[i]?.name ?? ""} onRemove={() => onChange(files.filter((_, j) => j !== i))} />
         ))}
-        {files.length < MAX_PHOTOS ? (
+        {files.length < max ? (
           <AddPhotoButton
             onFiles={(chosen) => {
-              const { ok, problem } = checkPhotos(chosen, MAX_PHOTOS - files.length);
+              const { ok, problem } = checkPhotos(chosen, max - files.length);
               setProblem(problem);
               if (ok.length) onChange([...files, ...ok]);
             }}
           />
         ) : null}
       </div>
-      {problem ? <p className="text-xs text-error">{t(problem)}</p> : <p className="text-xs text-label">{t("photosHint")}</p>}
+      {problem ? (
+        <p className="text-xs text-error">{t(problem).replace("{n}", String(max))}</p>
+      ) : (
+        <p className="text-xs text-label">{t("photosHint").replace("{n}", String(max))}</p>
+      )}
     </div>
   );
 }
 
-/** A question's photos as a grid; a click opens them full size. */
-export function PhotoGallery({ photos }: { photos: { id: string; url: string }[] }) {
+/**
+ * Editing a post's photos: removing or adding one takes effect at once (not
+ * with "Save"), so the list always shows what is stored. onChanged reloads
+ * the post.
+ */
+export function PhotoEditor({
+  photos,
+  max,
+  upload,
+  onChanged,
+}: {
+  photos: { id: string; url: string }[];
+  max: number;
+  upload: (file: File) => Promise<unknown>;
+  onChanged: () => Promise<unknown>;
+}) {
+  const { t } = useLocale();
+  const [busy, setBusy] = useState(false);
+  const [problem, setProblem] = useState<TranslationKey>();
+
+  async function run(task: () => Promise<unknown>) {
+    setBusy(true);
+    try {
+      await task();
+    } catch {
+      setProblem("postActionFailed");
+    } finally {
+      await onChanged();
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="space-y-1.5">
+      <p className="text-sm font-medium text-label">{t("photosLabel")}</p>
+      <div className="flex flex-wrap gap-2">
+        {photos.map((p) => (
+          <PhotoThumb key={p.id} src={p.url} label="" onRemove={busy ? undefined : () => void run(() => deletePhoto(p.id))} />
+        ))}
+        {photos.length < max ? (
+          <AddPhotoButton
+            disabled={busy}
+            onFiles={(chosen) => {
+              const { ok, problem } = checkPhotos(chosen, max - photos.length);
+              setProblem(problem);
+              if (ok.length)
+                void run(async () => {
+                  for (const f of ok) await upload(f);
+                });
+            }}
+          />
+        ) : null}
+      </div>
+      {problem ? (
+        <p className="text-xs text-error">{t(problem).replace("{n}", String(max))}</p>
+      ) : (
+        <p className="text-xs text-label">{t("photosEditHint")}</p>
+      )}
+    </div>
+  );
+}
+
+/** A post's photos as a grid (small: for answers); a click opens them full size. */
+export function PhotoGallery({ photos, small = false }: { photos: { id: string; url: string }[]; small?: boolean }) {
   const { t } = useLocale();
   const [open, setOpen] = useState<number | null>(null);
   if (photos.length === 0) return null;
@@ -117,7 +191,11 @@ export function PhotoGallery({ photos }: { photos: { id: string; url: string }[]
             type="button"
             onClick={() => setOpen(i)}
             aria-label={`${t("photoOpen")} ${i + 1}`}
-            className="h-28 w-28 overflow-hidden rounded-xl border border-border/60 bg-background-2 transition-opacity hover:opacity-90 sm:h-32 sm:w-32"
+            className={
+              small
+                ? "h-20 w-20 overflow-hidden rounded-lg border border-border/60 bg-background-2 transition-opacity hover:opacity-90"
+                : "h-28 w-28 overflow-hidden rounded-xl border border-border/60 bg-background-2 transition-opacity hover:opacity-90 sm:h-32 sm:w-32"
+            }
           >
             <img src={p.url} alt="" loading="lazy" className="h-full w-full object-cover" />
           </button>

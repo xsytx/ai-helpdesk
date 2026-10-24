@@ -21,6 +21,8 @@ interface AuthContextValue {
   isAuthenticated: boolean;
   login: (user: User, token: string) => void;
   logout: () => void;
+  /** The same account with new details (e.g. a new avatar). */
+  updateUser: (user: User) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -56,6 +58,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     queryClient.clear();
     setUser(null);
   }, [queryClient]);
+
+  const updateUser = useCallback((next: User) => {
+    safeStorage.set(USER_KEY, JSON.stringify(next));
+    setUser(next);
+  }, []);
 
   // The login is shared by every tab of this site. When another tab logs in
   // as someone else or logs out, follow it at once — otherwise this tab
@@ -109,8 +116,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isAuthenticated: Boolean(user),
       login,
       logout,
+      updateUser,
     }),
-    [user, login, logout],
+    [user, login, logout, updateUser],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

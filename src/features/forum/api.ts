@@ -32,6 +32,7 @@ interface ApiThread {
   search_match?: Thread["searchMatch"];
   accepted_comment_id?: number;
   attachments?: { id: number; url: string }[];
+  author_avatar?: string;
 }
 
 interface ApiComment {
@@ -44,6 +45,8 @@ interface ApiComment {
   score: number;
   created_at: string;
   moderation_status?: ModerationStatus;
+  author_avatar?: string;
+  attachments?: { id: number; url: string }[];
 }
 
 function toThread(t: ApiThread): Thread {
@@ -61,6 +64,7 @@ function toThread(t: ApiThread): Thread {
     searchMatch: t.search_match,
     acceptedAnswerId: t.accepted_comment_id ? String(t.accepted_comment_id) : undefined,
     attachments: t.attachments?.map((a) => ({ id: String(a.id), url: a.url })),
+    authorAvatar: t.author_avatar ?? "",
   };
 }
 
@@ -75,6 +79,8 @@ function toAnswer(c: ApiComment, userId: string | undefined): Answer {
     createdAt: c.created_at,
     likes: c.score,
     moderationStatus: c.moderation_status,
+    authorAvatar: c.author_avatar ?? "",
+    attachments: c.attachments?.map((a) => ({ id: String(a.id), url: a.url })),
     // A remembered like on an answer with no likes is stale (e.g. un-liked on
     // another device), so it doesn't count.
     likedByUserIds: userId && c.score > 0 && readLikes(userId).has(id) ? [userId] : [],
@@ -470,6 +476,9 @@ export function useReportPost() {
   });
 }
 
+/** Photos in one answer. */
+export const MAX_ANSWER_PHOTOS = 4;
+
 /**
  * Photos: at most 10 per question. Photos are shrunk before upload (see
  * shrinkImage), so a big phone photo is fine; what reaches the server must
@@ -490,6 +499,27 @@ export async function uploadPhoto(threadId: string, file: File) {
   return { id: String(data.id), url: data.url };
 }
 
+export async function uploadAnswerPhoto(answerId: string, file: File) {
+  const form = new FormData();
+  form.append("file", await shrinkImage(file));
+  const { data } = await apiClient.post<{ id: number; url: string }>(`/comments/${answerId}/attachments`, form, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return { id: String(data.id), url: data.url };
+}
+
 export async function deletePhoto(photoId: string) {
   await apiClient.delete(`/attachments/${photoId}`);
+}
+
+/** The questions a user asked (their profile), newest first. */
+export function useUserQuestions(userId: string) {
+  return useQuery({
+    queryKey: ["users", userId, "questions"],
+    enabled: Boolean(userId) && !USE_MOCK_API,
+    queryFn: async () => {
+      const { data } = await apiClient.get<{ threads: ApiThread[] }>(`/users/${userId}/threads`, { params: { page_size: 50 } });
+      return data.threads.map(toThread);
+    },
+  });
 }

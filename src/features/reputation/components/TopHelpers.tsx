@@ -4,6 +4,7 @@ import { useLocale } from "@/i18n/LocaleContext";
 import { cn } from "@/shared/lib/cn";
 import { Card } from "@/shared/ui/Card";
 import { Trophy } from "lucide-react";
+import { Link } from "react-router-dom";
 import { useState } from "react";
 import { LevelBadge } from "./LevelBadge";
 
@@ -52,9 +53,14 @@ export function TopHelpers() {
       ) : (
         <ol className="mt-3 space-y-1">
           {helpers.map((h, i) => (
-            <li key={h.userId} className="flex items-center gap-3 rounded-xl px-2 py-2">
+            <li key={h.userId}>
+              <Link
+                viewTransition
+                to={`/users/${h.userId}`}
+                className="flex items-center gap-3 rounded-xl px-2 py-2 transition-colors hover:bg-background-2/70"
+              >
               <span className={cn("w-4 text-center text-sm font-bold", MEDAL[i] ?? "text-label")}>{i + 1}</span>
-              <UserAvatar userId={h.userId} name={h.name} className="h-8 w-8 text-[10px]" />
+              <UserAvatar userId={h.userId} name={h.name} avatar={h.avatar} className="h-8 w-8 text-[10px]" />
               <div className="min-w-0 flex-1">
                 <p className="flex flex-wrap items-center gap-1.5 text-sm font-semibold text-primary">
                   <span className="truncate">{h.name}</span>
@@ -63,6 +69,7 @@ export function TopHelpers() {
                 {h.solutions > 0 ? <p className="text-xs text-label">{plural(h.solutions, "solutionsCount")}</p> : null}
               </div>
               <span className="shrink-0 text-sm font-bold text-primary">+{h.points}</span>
+              </Link>
             </li>
           ))}
         </ol>

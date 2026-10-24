@@ -4,6 +4,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"campus-forum/internal/models"
 )
 
 type publicProfile struct {
@@ -13,6 +15,12 @@ type publicProfile struct {
 	Bio           string    `json:"bio"`
 	EmailVerified bool      `json:"email_verified"`
 	CreatedAt     time.Time `json:"created_at"`
+	Avatar        string    `json:"avatar"`
+	// Staff is true for admins/moderators (shown as a badge).
+	Staff bool `json:"staff"`
+	// Questions: visible questions they asked.
+	Questions  int               `json:"questions"`
+	Reputation models.Reputation `json:"reputation"`
 }
 
 // GetUserProfile returns the public profile of any user by id — no email,
@@ -31,6 +39,16 @@ func (h *Handlers) GetUserProfile(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, "user not found")
 		return
 	}
+	_, questions, err := h.Store.ListThreadsByUser(r.Context(), id, 1, 1)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "could not load the profile")
+		return
+	}
+	reps, err := h.Store.Reputation(r.Context(), []int64{id})
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "could not load the profile")
+		return
+	}
 	writeJSON(w, http.StatusOK, publicProfile{
 		ID:            u.ID,
 		DisplayName:   u.DisplayName,
@@ -38,6 +56,10 @@ func (h *Handlers) GetUserProfile(w http.ResponseWriter, r *http.Request) {
 		Bio:           u.Bio,
 		EmailVerified: u.EmailVerifiedAt != nil,
 		CreatedAt:     u.CreatedAt,
+		Avatar:        u.Avatar,
+		Staff:         u.Role == "admin" || u.Role == "moderator",
+		Questions:     questions,
+		Reputation:    reps[id],
 	})
 }
 

@@ -7,11 +7,10 @@ import { Bell, BellOff } from "lucide-react";
 import { DeleteConfirm, PostActionErrorText, PostMenu, usePostPermissions } from "@/features/forum/components/PostMenu";
 import { TagChip, TagInput } from "@/features/forum/components/TagInput";
 import { ReportDialog } from "@/features/forum/components/ReportDialog";
-import { AddPhotoButton, checkPhotos, PhotoGallery, PhotoThumb } from "@/features/forum/components/Photos";
+import { PhotoEditor, PhotoGallery } from "@/features/forum/components/Photos";
 import { LevelBadge } from "@/features/reputation/components/LevelBadge";
-import { deletePhoto, forumKeys, MAX_PHOTOS, uploadPhoto } from "@/features/forum/api";
+import { forumKeys, MAX_PHOTOS, uploadPhoto } from "@/features/forum/api";
 import { useQueryClient } from "@tanstack/react-query";
-import type { TranslationKey } from "@/i18n/translations";
 import { postActionError, useDeleteThread, useUpdateThread, type PostActionError } from "@/features/forum/postActions";
 import type { Thread } from "@/entities/forum";
 import { Button } from "@/shared/ui/Button";
@@ -96,6 +95,7 @@ function ThreadCardFull({ thread }: { thread: Thread }) {
   const navigate = useNavigate();
   const { canEdit, canDelete, canReport } = usePostPermissions(thread.authorId);
   const [reporting, setReporting] = useState(false);
+  const qc = useQueryClient();
   const update = useUpdateThread(thread.id);
   const remove = useDeleteThread(thread.id);
   const [mode, setMode] = useState<"view" | "edit" | "confirmDelete">("view");
@@ -135,11 +135,15 @@ function ThreadCardFull({ thread }: { thread: Thread }) {
     <Card>
       {reporting ? <ReportDialog target={{ kind: "thread", id: thread.id }} onClose={() => setReporting(false)} /> : null}
       <div className="flex gap-3">
-        <UserAvatar userId={thread.authorId} name={thread.authorName} />
+        <Link viewTransition to={`/users/${thread.authorId}`} aria-label={thread.authorName} className="shrink-0">
+          <UserAvatar userId={thread.authorId} name={thread.authorName} avatar={thread.authorAvatar} />
+        </Link>
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
             <p className="text-xs text-label">
-              {thread.authorName}{" "}
+              <Link viewTransition to={`/users/${thread.authorId}`} className="font-medium text-primary hover:underline">
+                {thread.authorName}
+              </Link>{" "}
               <LevelBadge level={thread.authorLevel} points={thread.authorPoints} hideNewcomer className="mx-0.5 align-middle" /> ·{" "}
               {formatRelativeTime(thread.createdAt, locale)}
             </p>
@@ -176,7 +180,12 @@ function ThreadCardFull({ thread }: { thread: Thread }) {
                 className="w-full resize-y rounded-xl border border-border px-3.5 py-2.5 text-sm text-primary focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20"
               />
               <TagInput id={`edit-tags-${thread.id}`} tags={draft.tags} onChange={(tags) => setDraft((d) => ({ ...d, tags }))} />
-              <PhotoEditor threadId={thread.id} photos={thread.attachments ?? []} />
+              <PhotoEditor
+                photos={thread.attachments ?? []}
+                max={MAX_PHOTOS}
+                upload={(file) => uploadPhoto(thread.id, file)}
+                onChanged={() => qc.invalidateQueries({ queryKey: forumKeys.thread(thread.id) })}
+              />
               {draft.title.trim().length < 5 ? <p className="text-xs text-error">{t("threadTitleTooShort")}</p> : null}
               {draft.body.trim().length < 10 ? <p className="text-xs text-error">{t("threadBodyTooShort")}</p> : null}
               <PostActionErrorText error={error} />
@@ -242,53 +251,5 @@ function FollowButton({ threadId }: { threadId: string }) {
       {subscribed ? <BellOff className="h-3.5 w-3.5" /> : <Bell className="h-3.5 w-3.5" />}
       {subscribed ? t("unfollowThread") : t("followThread")}
     </button>
-  );
-}
-
-/**
- * Editing a question: its photos. Removing or adding one takes effect at once
- * (not with "Save"), so the list always shows what is stored.
- */
-function PhotoEditor({ threadId, photos }: { threadId: string; photos: { id: string; url: string }[] }) {
-  const { t } = useLocale();
-  const qc = useQueryClient();
-  const [busy, setBusy] = useState(false);
-  const [problem, setProblem] = useState<TranslationKey>();
-  const refresh = () => qc.invalidateQueries({ queryKey: forumKeys.thread(threadId) });
-
-  async function run(task: () => Promise<unknown>) {
-    setBusy(true);
-    try {
-      await task();
-    } catch {
-      setProblem("postActionFailed");
-    } finally {
-      await refresh();
-      setBusy(false);
-    }
-  }
-
-  return (
-    <div className="space-y-1.5">
-      <p className="text-sm font-medium text-label">{t("photosLabel")}</p>
-      <div className="flex flex-wrap gap-2">
-        {photos.map((p) => (
-          <PhotoThumb key={p.id} src={p.url} label="" onRemove={busy ? undefined : () => void run(() => deletePhoto(p.id))} />
-        ))}
-        {photos.length < MAX_PHOTOS ? (
-          <AddPhotoButton
-            disabled={busy}
-            onFiles={(chosen) => {
-              const { ok, problem } = checkPhotos(chosen, MAX_PHOTOS - photos.length);
-              setProblem(problem);
-              if (ok.length) void run(async () => {
-                for (const f of ok) await uploadPhoto(threadId, f);
-              });
-            }}
-          />
-        ) : null}
-      </div>
-      {problem ? <p className="text-xs text-error">{t(problem)}</p> : <p className="text-xs text-label">{t("photosEditHint")}</p>}
-    </div>
   );
 }

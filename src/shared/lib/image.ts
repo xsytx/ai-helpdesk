@@ -12,7 +12,7 @@ const JPEG_QUALITY = 0.82;
  * would stop the animation), and so does anything the browser can't read or
  * that would not get smaller.
  */
-export async function shrinkImage(file: File): Promise<File> {
+export async function shrinkImage(file: File, maxSide = MAX_SIDE): Promise<File> {
   if (file.type === "image/gif" || typeof createImageBitmap !== "function") return file;
   let bitmap: ImageBitmap;
   try {
@@ -21,7 +21,7 @@ export async function shrinkImage(file: File): Promise<File> {
   } catch {
     return file;
   }
-  const scale = Math.min(1, MAX_SIDE / Math.max(bitmap.width, bitmap.height));
+  const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
   const width = Math.round(bitmap.width * scale);
   const height = Math.round(bitmap.height * scale);
   const canvas = document.createElement("canvas");

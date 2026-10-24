@@ -12,6 +12,9 @@ import (
 //go:embed migrations/008_reputation.sql
 var reputationSQL string
 
+//go:embed migrations/009_profiles.sql
+var profilesSQL string
+
 // Points for helping other students. Counted from the forum itself, only
 // from visible posts:
 //   - an answer the asker marked as the solution (not on your own question);
@@ -116,7 +119,7 @@ func newReputation(id int64, answers, likes, solutions, points int) models.Reput
 // all-time one.
 func (s *PostgresStore) TopHelpers(ctx context.Context, since time.Time, limit int) ([]models.Helper, error) {
 	rows, err := s.pool.Query(ctx, `
-		SELECT r.user_id, u.display_name, r.answers, r.likes, r.solutions, r.points
+		SELECT r.user_id, u.display_name, u.avatar, r.answers, r.likes, r.solutions, r.points
 		FROM (`+repTotals+`) r JOIN users u ON u.id = r.user_id
 		WHERE u.banned_at IS NULL AND r.points > 0
 		ORDER BY r.points DESC, r.solutions DESC, u.display_name
@@ -129,7 +132,7 @@ func (s *PostgresStore) TopHelpers(ctx context.Context, since time.Time, limit i
 	var ids []int64
 	for rows.Next() {
 		var h models.Helper
-		if err := rows.Scan(&h.UserID, &h.Name, &h.Answers, &h.Likes, &h.Solutions, &h.Points); err != nil {
+		if err := rows.Scan(&h.UserID, &h.Name, &h.Avatar, &h.Answers, &h.Likes, &h.Solutions, &h.Points); err != nil {
 			return nil, err
 		}
 		out = append(out, h)

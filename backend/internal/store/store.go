@@ -150,7 +150,14 @@ type Store interface {
 
 	// --- Attachments ---
 
-	CreateAttachment(ctx context.Context, threadID int64, path, contentType string, sizeBytes int64) (models.Attachment, error)
+	// CreateAttachment: a photo of a question (commentID nil) or of one of its answers.
+	CreateAttachment(ctx context.Context, threadID int64, commentID *int64, path, contentType string, sizeBytes int64) (models.Attachment, error)
+	// AnswerAttachments: photos of a thread's answers, by answer id.
+	AnswerAttachments(ctx context.Context, threadID int64) (map[int64][]models.Attachment, error)
+	CountAnswerAttachments(ctx context.Context, commentID int64) (int, error)
+	GetComment(ctx context.Context, id int64) (models.Comment, error)
+	// SetAvatar changes a user's avatar and returns the previous one.
+	SetAvatar(ctx context.Context, userID int64, avatar string) (string, error)
 	ListAttachments(ctx context.Context, threadID int64) ([]models.Attachment, error)
 
 	// --- Email verification ---

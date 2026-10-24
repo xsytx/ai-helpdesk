@@ -68,7 +68,10 @@ func (s *PostgresStore) Migrate(ctx context.Context) error {
 	if _, err := s.pool.Exec(ctx, forumExtrasSQL); err != nil {
 		return err
 	}
-	_, err := s.pool.Exec(ctx, reputationSQL)
+	if _, err := s.pool.Exec(ctx, reputationSQL); err != nil {
+		return err
+	}
+	_, err := s.pool.Exec(ctx, profilesSQL)
 	return err
 }
 
@@ -84,11 +87,11 @@ func isPgErrorCode(err error, code string) bool {
 
 // --- Users ---
 
-const userColumns = "id, email, display_name, role, banned_at, email_verified_at, major, bio, created_at"
+const userColumns = "id, email, display_name, role, banned_at, email_verified_at, major, bio, avatar, created_at"
 
 func scanUser(row pgx.Row) (models.User, error) {
 	var u models.User
-	err := row.Scan(&u.ID, &u.Email, &u.DisplayName, &u.Role, &u.BannedAt, &u.EmailVerifiedAt, &u.Major, &u.Bio, &u.CreatedAt)
+	err := row.Scan(&u.ID, &u.Email, &u.DisplayName, &u.Role, &u.BannedAt, &u.EmailVerifiedAt, &u.Major, &u.Bio, &u.Avatar, &u.CreatedAt)
 	return u, err
 }
 
@@ -117,7 +120,7 @@ func (s *PostgresStore) GetUserByEmail(ctx context.Context, email string) (model
 	q := `SELECT password_hash, salt, ` + userColumns + ` FROM users WHERE email = $1`
 	var u models.User
 	err := s.pool.QueryRow(ctx, q, email).Scan(&u.PasswordHash, &u.Salt,
-		&u.ID, &u.Email, &u.DisplayName, &u.Role, &u.BannedAt, &u.EmailVerifiedAt, &u.Major, &u.Bio, &u.CreatedAt)
+		&u.ID, &u.Email, &u.DisplayName, &u.Role, &u.BannedAt, &u.EmailVerifiedAt, &u.Major, &u.Bio, &u.Avatar, &u.CreatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return models.User{}, ErrNotFound
 	}
@@ -131,7 +134,7 @@ func (s *PostgresStore) GetUserByID(ctx context.Context, id int64) (models.User,
 	q := `SELECT password_hash, salt, ` + userColumns + ` FROM users WHERE id = $1`
 	var u models.User
 	err := s.pool.QueryRow(ctx, q, id).Scan(&u.PasswordHash, &u.Salt,
-		&u.ID, &u.Email, &u.DisplayName, &u.Role, &u.BannedAt, &u.EmailVerifiedAt, &u.Major, &u.Bio, &u.CreatedAt)
+		&u.ID, &u.Email, &u.DisplayName, &u.Role, &u.BannedAt, &u.EmailVerifiedAt, &u.Major, &u.Bio, &u.Avatar, &u.CreatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return models.User{}, ErrNotFound
 	}
@@ -242,7 +245,7 @@ func (s *PostgresStore) ListCommentsByUser(ctx context.Context, userID int64, pa
 
 	q := `
 		SELECT c.id, c.thread_id, c.user_id, u.display_name, c.parent_comment_id, c.body, c.score, c.created_at,
-		       t.title
+		       t.title, u.avatar, COALESCE(t.accepted_comment_id = c.id, false)
 		FROM comments c
 		JOIN users u ON u.id = c.user_id
 		JOIN threads t ON t.id = c.thread_id
@@ -259,7 +262,7 @@ func (s *PostgresStore) ListCommentsByUser(ctx context.Context, userID int64, pa
 	for rows.Next() {
 		var c models.CommentWithThread
 		if err := rows.Scan(&c.ID, &c.ThreadID, &c.UserID, &c.AuthorName, &c.ParentCommentID, &c.Body, &c.Score, &c.CreatedAt,
-			&c.ThreadTitle); err != nil {
+			&c.ThreadTitle, &c.AuthorAvatar, &c.IsSolution); err != nil {
 			return nil, 0, err
 		}
 		out = append(out, c)
@@ -304,7 +307,8 @@ const threadSelect = `
 	       t.created_at, COALESCE(cc.cnt, 0),
 	       COALESCE(tgs.tags, ARRAY[]::text[]), t.moderation_status,
 	       -- the accepted answer, only while that answer is visible
-	       (SELECT c.id FROM comments c WHERE c.id = t.accepted_comment_id AND ` + commentVisible + `) AS accepted_answer_id
+	       (SELECT c.id FROM comments c WHERE c.id = t.accepted_comment_id AND ` + commentVisible + `) AS accepted_answer_id,
+	       u.avatar AS author_avatar
 	FROM threads t
 	JOIN users u ON u.id = t.user_id
 	LEFT JOIN (SELECT thread_id, COUNT(*) AS cnt FROM comments c WHERE ` + commentVisible + ` GROUP BY thread_id) cc
@@ -318,7 +322,7 @@ const threadSelect = `
 func scanThread(row pgx.Row) (models.Thread, error) {
 	var t models.Thread
 	err := row.Scan(&t.ID, &t.UserID, &t.AuthorName, &t.Title, &t.Body, &t.Score, &t.LockedAt,
-		&t.CreatedAt, &t.CommentCnt, &t.Tags, &t.ModerationStatus, &t.AcceptedCommentID)
+		&t.CreatedAt, &t.CommentCnt, &t.Tags, &t.ModerationStatus, &t.AcceptedCommentID, &t.AuthorAvatar)
 	return t, err
 }
 
@@ -495,14 +499,14 @@ func (s *PostgresStore) ownershipErr(ctx context.Context, table string, id int64
 
 const commentSelect = `
 	SELECT c.id, c.thread_id, c.user_id, u.display_name, c.parent_comment_id, c.body, c.score, c.created_at,
-	       c.moderation_status
+	       c.moderation_status, u.avatar
 	FROM comments c
 	JOIN users u ON u.id = c.user_id`
 
 func scanComment(row pgx.Row) (models.Comment, error) {
 	var c models.Comment
 	err := row.Scan(&c.ID, &c.ThreadID, &c.UserID, &c.AuthorName, &c.ParentCommentID, &c.Body, &c.Score, &c.CreatedAt,
-		&c.ModerationStatus)
+		&c.ModerationStatus, &c.AuthorAvatar)
 	return c, err
 }
 
@@ -1071,29 +1075,76 @@ func (s *PostgresStore) SubscriberEmails(ctx context.Context, threadID, excludeU
 
 // --- Attachments ---
 
-func (s *PostgresStore) CreateAttachment(ctx context.Context, threadID int64, path, contentType string, sizeBytes int64) (models.Attachment, error) {
+func (s *PostgresStore) CreateAttachment(ctx context.Context, threadID int64, commentID *int64, path, contentType string, sizeBytes int64) (models.Attachment, error) {
 	const q = `
-		INSERT INTO attachments (thread_id, path, content_type, size_bytes)
-		VALUES ($1, $2, $3, $4)
+		INSERT INTO attachments (thread_id, comment_id, path, content_type, size_bytes)
+		VALUES ($1, $5, $2, $3, $4)
 		RETURNING id, created_at`
 	var a models.Attachment
 	a.ThreadID = threadID
+	a.CommentID = commentID
 	a.ContentType = contentType
 	a.SizeBytes = sizeBytes
 	a.URL = "/uploads/" + path
-	err := s.pool.QueryRow(ctx, q, threadID, path, contentType, sizeBytes).Scan(&a.ID, &a.CreatedAt)
+	err := s.pool.QueryRow(ctx, q, threadID, path, contentType, sizeBytes, commentID).Scan(&a.ID, &a.CreatedAt)
 	if isPgErrorCode(err, pgForeignKeyViolation) {
 		return models.Attachment{}, ErrNotFound
 	}
 	return a, err
 }
 
+// AnswerAttachments returns the photos of a thread's answers, by answer id.
+func (s *PostgresStore) AnswerAttachments(ctx context.Context, threadID int64) (map[int64][]models.Attachment, error) {
+	rows, err := s.pool.Query(ctx,
+		`SELECT id, thread_id, comment_id, path, content_type, size_bytes, created_at FROM attachments
+		 WHERE thread_id = $1 AND comment_id IS NOT NULL ORDER BY id`, threadID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := map[int64][]models.Attachment{}
+	for rows.Next() {
+		var a models.Attachment
+		var path string
+		if err := rows.Scan(&a.ID, &a.ThreadID, &a.CommentID, &path, &a.ContentType, &a.SizeBytes, &a.CreatedAt); err != nil {
+			return nil, err
+		}
+		a.URL = "/uploads/" + path
+		out[*a.CommentID] = append(out[*a.CommentID], a)
+	}
+	return out, rows.Err()
+}
+
+// CountAnswerAttachments: how many photos one answer has.
+func (s *PostgresStore) CountAnswerAttachments(ctx context.Context, commentID int64) (int, error) {
+	var n int
+	err := s.pool.QueryRow(ctx, `SELECT count(*) FROM attachments WHERE comment_id = $1`, commentID).Scan(&n)
+	return n, err
+}
+
+// GetComment returns one comment (any moderation status).
+func (s *PostgresStore) GetComment(ctx context.Context, id int64) (models.Comment, error) {
+	return s.getCommentByID(ctx, id)
+}
+
+// SetAvatar changes a user's avatar and returns the previous one.
+func (s *PostgresStore) SetAvatar(ctx context.Context, userID int64, avatar string) (string, error) {
+	var old string
+	err := s.pool.QueryRow(ctx,
+		`UPDATE users u SET avatar = $2 FROM (SELECT avatar FROM users WHERE id = $1) prev
+		 WHERE u.id = $1 RETURNING prev.avatar`, userID, avatar).Scan(&old)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", ErrNotFound
+	}
+	return old, err
+}
+
 func (s *PostgresStore) GetAttachment(ctx context.Context, id int64) (models.Attachment, error) {
 	var a models.Attachment
 	var path string
 	err := s.pool.QueryRow(ctx,
-		`SELECT id, thread_id, path, content_type, size_bytes, created_at FROM attachments WHERE id = $1`, id,
-	).Scan(&a.ID, &a.ThreadID, &path, &a.ContentType, &a.SizeBytes, &a.CreatedAt)
+		`SELECT id, thread_id, comment_id, path, content_type, size_bytes, created_at FROM attachments WHERE id = $1`, id,
+	).Scan(&a.ID, &a.ThreadID, &a.CommentID, &path, &a.ContentType, &a.SizeBytes, &a.CreatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return a, ErrNotFound
 	}
@@ -1116,7 +1167,8 @@ func (s *PostgresStore) DeleteAttachment(ctx context.Context, id int64) (models.
 
 func (s *PostgresStore) ListAttachments(ctx context.Context, threadID int64) ([]models.Attachment, error) {
 	rows, err := s.pool.Query(ctx,
-		`SELECT id, thread_id, path, content_type, size_bytes, created_at FROM attachments WHERE thread_id = $1 ORDER BY id`,
+		`SELECT id, thread_id, path, content_type, size_bytes, created_at FROM attachments
+		 WHERE thread_id = $1 AND comment_id IS NULL ORDER BY id`,
 		threadID)
 	if err != nil {
 		return nil, err

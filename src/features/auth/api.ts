@@ -11,6 +11,7 @@ export interface ApiUser {
   major: string;
   bio: string;
   email_verified: boolean;
+  avatar?: string;
 }
 
 interface AuthResponse {
@@ -28,6 +29,7 @@ export function toUser(u: ApiUser): User {
     name: u.display_name,
     role,
     emailVerified: u.email_verified,
+    avatar: u.avatar ?? "",
   };
 }
 

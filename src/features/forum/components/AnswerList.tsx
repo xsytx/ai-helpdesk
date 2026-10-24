@@ -14,6 +14,10 @@ import { DeleteConfirm, PostActionErrorText, PostMenu, usePostPermissions } from
 import { UserAvatar } from "@/features/profile/components/UserAvatar";
 import { LikeButton } from "./LikeButton";
 import { ReportDialog } from "./ReportDialog";
+import { PhotoEditor, PhotoGallery } from "./Photos";
+import { forumKeys, MAX_ANSWER_PHOTOS, uploadAnswerPhoto } from "../api";
+import { useQueryClient } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
 import { LevelBadge } from "@/features/reputation/components/LevelBadge";
 
 /**
@@ -133,6 +137,7 @@ function AnswerContent({ threadId, answer, locale }: { threadId: string; answer:
   const { canEdit, canDelete, canReport } = usePostPermissions(answer.authorId);
   const [reporting, setReporting] = useState(false);
   const update = useUpdateAnswer(threadId);
+  const qc = useQueryClient();
   const remove = useDeleteAnswer(threadId);
   const [mode, setMode] = useState<"view" | "edit" | "confirmDelete">("view");
   const [body, setBody] = useState("");
@@ -162,10 +167,14 @@ function AnswerContent({ threadId, answer, locale }: { threadId: string; answer:
   return (
     <div className="min-w-0 flex-1">
       <div className="flex items-center gap-2">
-        <UserAvatar userId={answer.authorId} name={answer.authorName} className="h-8 w-8 text-[10px]" />
+        <Link viewTransition to={`/users/${answer.authorId}`} aria-label={answer.authorName} className="shrink-0">
+          <UserAvatar userId={answer.authorId} name={answer.authorName} avatar={answer.authorAvatar} className="h-8 w-8 text-[10px]" />
+        </Link>
         <div className="min-w-0 flex-1">
           <p className="flex flex-wrap items-center gap-1.5 text-sm font-semibold text-primary">
-            {answer.authorName}
+            <Link viewTransition to={`/users/${answer.authorId}`} className="hover:underline">
+              {answer.authorName}
+            </Link>
             <LevelBadge level={answer.authorLevel} points={answer.authorPoints} hideNewcomer />
           </p>
           <p className="text-xs text-label">{formatRelativeTime(answer.createdAt, locale)}</p>
@@ -197,6 +206,12 @@ function AnswerContent({ threadId, answer, locale }: { threadId: string; answer:
             onChange={(e) => setBody(e.target.value)}
             className="w-full resize-y rounded-xl border border-border px-3 py-2 text-sm text-primary focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20"
           />
+          <PhotoEditor
+            photos={answer.attachments ?? []}
+            max={MAX_ANSWER_PHOTOS}
+            upload={(file) => uploadAnswerPhoto(answer.id, file)}
+            onChanged={() => qc.invalidateQueries({ queryKey: forumKeys.thread(threadId) })}
+          />
           <PostActionErrorText error={error} />
           <div className="flex gap-2">
             <Button type="submit" size="sm" disabled={update.isPending || !body.trim()}>
@@ -210,6 +225,7 @@ function AnswerContent({ threadId, answer, locale }: { threadId: string; answer:
       ) : (
         <>
           <p className="mt-2 whitespace-pre-wrap text-sm text-primary/90">{answer.body}</p>
+          <PhotoGallery photos={answer.attachments ?? []} small />
           {mode === "confirmDelete" ? (
             <DeleteConfirm
               messageKey="deleteAnswerConfirm"

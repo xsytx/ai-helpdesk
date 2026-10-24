@@ -234,6 +234,14 @@ func (h *Handlers) GetThread(w http.ResponseWriter, r *http.Request) {
 	if uid, ok := h.userID(r); ok {
 		subscribed, _ = h.Store.IsSubscribed(r.Context(), uid, id)
 	}
+	// Photos in answers.
+	if photos, err := h.Store.AnswerAttachments(r.Context(), id); err == nil {
+		for i := range comments {
+			comments[i].Attachments = photos[comments[i].ID]
+		}
+	} else {
+		log.Printf("answer photos for thread %d: %v", id, err)
+	}
 	// Reputation badges for the people on the page.
 	authors := []int64{t.UserID}
 	for _, c := range comments {

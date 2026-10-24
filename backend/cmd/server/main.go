@@ -233,6 +233,8 @@ func main() {
 	mux.Handle("PATCH /api/me", authMw(http.HandlerFunc(h.UpdateProfile)))
 	mux.Handle("POST /api/me/password", authMw(http.HandlerFunc(h.ChangePassword)))
 	mux.Handle("GET /api/me/reputation", authMw(http.HandlerFunc(h.MyReputation)))
+	mux.Handle("PUT /api/me/avatar", authMw(writeLimiter(http.HandlerFunc(h.SetAvatar))))
+	mux.Handle("POST /api/me/avatar", authMw(writeLimiter(http.HandlerFunc(h.UploadAvatar))))
 	// Rate-limited like the other auth endpoints: verifying is "type in a
 	// secret" (a brute-forceable 6-digit code) and resending emails, so
 	// both need the same per-IP throttle as login/register.
@@ -243,6 +245,7 @@ func main() {
 	mux.Handle("DELETE /api/threads/{id}", authMw(http.HandlerFunc(h.DeleteThread)))
 	mux.Handle("POST /api/threads/{id}/attachments", authMw(writeLimiter(http.HandlerFunc(h.UploadAttachment))))
 	mux.Handle("DELETE /api/attachments/{id}", authMw(http.HandlerFunc(h.DeleteAttachment)))
+	mux.Handle("POST /api/comments/{id}/attachments", authMw(writeLimiter(http.HandlerFunc(h.UploadAnswerAttachment))))
 	mux.Handle("POST /api/threads/{id}/subscribe", authMw(http.HandlerFunc(h.SubscribeThread)))
 	mux.Handle("DELETE /api/threads/{id}/subscribe", authMw(http.HandlerFunc(h.UnsubscribeThread)))
 	mux.Handle("POST /api/threads/{id}/comments", authMw(writeLimiter(http.HandlerFunc(h.CreateComment))))

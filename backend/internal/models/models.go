@@ -14,7 +14,9 @@ type User struct {
 	EmailVerifiedAt *time.Time `json:"email_verified_at,omitempty"`
 	Major           string     `json:"major"`
 	Bio             string     `json:"bio"`
-	CreatedAt       time.Time  `json:"created_at"`
+	// Avatar: "" (initials), a preset id ("avatar3") or an uploaded photo's URL.
+	Avatar    string    `json:"avatar"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 // IsModerator reports whether the user can take moderation actions
@@ -37,6 +39,8 @@ type Thread struct {
 	ID          int64        `json:"id"`
 	UserID      int64        `json:"user_id"`
 	AuthorName  string       `json:"author_name"`
+	// AuthorAvatar: see User.Avatar.
+	AuthorAvatar string      `json:"author_avatar,omitempty"`
 	Title       string       `json:"title"`
 	Body        string       `json:"body"`
 	BodyHTML    string       `json:"body_html,omitempty"` // rendered Markdown; populated on the thread-detail response only
@@ -61,6 +65,7 @@ type Comment struct {
 	ThreadID        int64     `json:"thread_id"`
 	UserID          int64     `json:"user_id"`
 	AuthorName      string    `json:"author_name"`
+	AuthorAvatar    string    `json:"author_avatar,omitempty"`
 	ParentCommentID *int64    `json:"parent_comment_id,omitempty"`
 	Body            string    `json:"body"`
 	BodyHTML        string    `json:"body_html,omitempty"` // rendered Markdown; populated on the thread-detail response only
@@ -68,6 +73,8 @@ type Comment struct {
 	CreatedAt       time.Time `json:"created_at"`
 	// ModerationStatus: ok | checking | held | rejected (see 002_moderation.sql).
 	ModerationStatus string `json:"moderation_status"`
+	// Attachments: the answer's photos (thread page only).
+	Attachments []Attachment `json:"attachments,omitempty"`
 }
 
 // Attachment is an uploaded image on a thread, served from local disk at
@@ -75,6 +82,8 @@ type Comment struct {
 type Attachment struct {
 	ID          int64     `json:"id"`
 	ThreadID    int64     `json:"thread_id"`
+	// CommentID: set for a photo in an answer, nil for one in the question.
+	CommentID   *int64    `json:"comment_id,omitempty"`
 	URL         string    `json:"url"`
 	ContentType string    `json:"content_type"`
 	SizeBytes   int64     `json:"size_bytes"`
@@ -103,6 +112,7 @@ type Helper struct {
 	Likes     int    `json:"likes"`
 	Solutions int    `json:"solutions"`
 	Level     string `json:"level"`
+	Avatar    string `json:"avatar,omitempty"`
 }
 
 // Tag is a free-form label a thread can carry — the only organizing
@@ -119,6 +129,8 @@ type Tag struct {
 type CommentWithThread struct {
 	Comment
 	ThreadTitle string `json:"thread_title"`
+	// IsSolution: the question's author marked this answer as the solution.
+	IsSolution bool `json:"is_solution"`
 }
 
 // Notification tells a user that someone commented on their thread

@@ -54,6 +54,7 @@ export const router = createBrowserRouter([
                   // keeps its state (and a running question) when switching chats.
                   { path: "chat/:conversationId?", element: lazyPage(() => import("@/pages/ChatPage"), "ChatPage") },
                   { path: "forum", element: lazyPage(() => import("@/pages/ForumPage"), "ForumPage") },
+                  { path: "users/:userId", element: lazyPage(() => import("@/pages/ProfilePage"), "ProfilePage") },
                   {
                     path: "forum/:threadId",
                     element: lazyPage(() => import("@/pages/ThreadDetailPage"), "ThreadDetailPage"),

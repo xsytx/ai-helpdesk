@@ -15,6 +15,8 @@ export interface Thread {
   /** Lowercase labels, e.g. "dorm" (shown as #dorm). */
   tags?: string[];
   moderationStatus?: ModerationStatus;
+  /** The author's avatar ("" = initials). */
+  authorAvatar?: string;
   /** The author's level (thread page only). */
   authorLevel?: ReputationLevel;
   authorPoints?: number;
@@ -35,6 +37,9 @@ export interface Answer {
   createdAt: string;
   likes: number;
   likedByUserIds: string[];
+  authorAvatar?: string;
+  /** Photos in the answer. */
+  attachments?: { id: string; url: string }[];
   /** The author's level (thread page only). */
   authorLevel?: ReputationLevel;
   authorPoints?: number;

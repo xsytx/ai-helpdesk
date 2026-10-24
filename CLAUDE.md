@@ -169,6 +169,22 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   Gallery + full-size viewer on the question page (`Photos.tsx`); in edit
   mode photos are added/removed at once. `/uploads/` serves files only, no
   directory listings.
+- **Avatars and profiles (`009_profiles.sql`).** `users.avatar` = "" (initials),
+  a preset id ("avatar3") or an uploaded photo URL (`/uploads/avatars/<id>/…`;
+  the browser shrinks it to 512 px). `PUT /api/me/avatar {avatar}` (preset or
+  ""), `POST /api/me/avatar` (photo; the old photo file is deleted). Posts,
+  top helpers and profiles carry `author_avatar`/`avatar`; `UserAvatar`
+  shows it (for yourself: your own account). Avatars that used to live only
+  in the browser are moved to the account once (`useMoveLegacyAvatar`).
+  Public profile `/users/:id` (`ProfilePage`): `GET /api/users/{id}` (no
+  email; level, points, staff flag, question count), its answers
+  (`/comments`, with `is_solution`) and questions. Names/avatars on the
+  question page, answers, top helpers and the header avatar link to it.
+- **Photos in answers.** `attachments.comment_id` (NULL = question photo).
+  Up to 4 per answer: `POST /api/comments/{id}/attachments`; delete with
+  `DELETE /api/attachments/{id}` (the answer's author). Shown under the
+  answer; added in the reply form and edited like question photos
+  (`PhotoEditor`, `PhotoPicker max`).
 - **Notifications.** The header bell (`NotificationBell`) polls
   `/api/notifications/unread-count` every 30 s and lists
   `/api/notifications` when opened; a click marks it read and opens the
@@ -190,7 +206,7 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
 - **Every public SQL read must hide held posts**: use `threadVisible` /
   `commentVisible` in `backend/internal/store/postgres.go`.
 - **Schema changes** are idempotent SQL applied on every start
-  (`001_init.sql` + `003_chat.sql` + `004_faq.sql` + `005_search.sql` + `006_chat_feedback.sql` + `007_forum_extras.sql` + `008_reputation.sql` in `Migrate`, `002_moderation.sql` in
+  (`001_init.sql` + `003_chat.sql` + `004_faq.sql` + `005_search.sql` + `006_chat_feedback.sql` + `007_forum_extras.sql` + `008_reputation.sql` + `009_profiles.sql` in `Migrate`, `002_moderation.sql` in
   `MigrateModeration`): `CREATE ... IF NOT EXISTS` /
   `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`.
 - **Store interface**: adding a method to `store.Store` also needs a stub on
@@ -238,10 +254,11 @@ questions in the AI chat, 👍/👎, "ask on the forum" from an answer, admin
 unanswered filter, reports.
 
 Also done: streaming answers with a stop button; reputation, levels and top
-helpers; photos on questions.
+helpers; photos on questions and answers; avatars on the server; public
+profile pages.
 
 Planned next: maps and courses (future sprints — don't start them unasked); ideas: search suggestions, Ctrl+K
-search everywhere, avatar stored on the server,
-PWA, admin stats page. Optional: stop admins approving their own flagged
+search everywhere, PWA, admin stats page, database backups, CI checks on
+GitHub. Optional: stop admins approving their own flagged
 posts. The 4B model is weak in Kazakh (a Kazakh follow-up understood the
 topic but missed the stored answer).

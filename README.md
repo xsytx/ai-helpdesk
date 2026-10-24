@@ -11,7 +11,7 @@ Sign-in is restricted to `@sdu.edu.kz` university email addresses.
 | Notifications (bell in the header when someone answers your question) | Working |
 | Reputation (points and levels for helping, top helpers of the week), photos on questions | Working |
 | FAQ | Working: in English, Kazakh and Russian, by category; admins edit it in the Admin panel and choose which questions are instant-answer buttons in the chat |
-| Settings (avatar, password, language) | Working (avatar is saved in the browser only) |
+| Settings (avatar, password, language), public profile pages | Working |
 | AI chat assistant | Working: answers from the SDU knowledge base + a local Ollama model, shown word by word as they are written (with a stop button); understands follow-up questions; 👍/👎 on answers; separate chats you can rename, pin and delete (unpinned ones are deleted after 30 days without messages) |
 | Forum moderation | Working: new posts are checked by the AI; doubtful ones wait for a moderator |
 | Campus maps, courses | Placeholder pages |
@@ -160,11 +160,12 @@ Or connect a database app (DBeaver, pgAdmin) to `localhost:5432`.
 Database and user are `campus_forum`, and the password is `DB_PASSWORD`
 from `.env` (default `campus_forum`).
 
-**Where data lives:** accounts, forum posts and FAQ are in the Postgres
-Docker volume `sdu_ai_helpdesk_db-data`. Stopping or rebuilding keeps it.
+**Where data lives:** accounts (with avatars), forum posts, chats and FAQ
+are in the Postgres Docker volume `sdu_ai_helpdesk_db-data`; uploaded photos
+and avatars are in `sdu_ai_helpdesk_app-data`. Stopping or rebuilding keeps both.
 `docker compose down -v` **deletes everything**, so only use it to start
-from an empty database. Avatars, likes and the language choice are stored
-in each user's browser.
+from an empty database. The language choice and which answers you liked are
+remembered in each user's browser.
 
 ## Putting it on a server
 

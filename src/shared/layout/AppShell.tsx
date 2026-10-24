@@ -5,7 +5,8 @@ import { isStaffRole, usePendingModerationCount } from "@/features/moderation/ap
 import { NotificationBell } from "@/features/notifications/components/NotificationBell";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { Logo } from "./Logo";
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
+import { useMoveLegacyAvatar } from "@/features/profile/api";
 import {
   BookOpen,
   MapPin,
@@ -36,6 +37,8 @@ export function AppShell() {
   const displayName = user?.name ?? "Student";
   const isStaff = isStaffRole(user?.role);
   const pending = usePendingModerationCount().data ?? 0;
+  // Avatars used to live only in the browser: move one to the account once.
+  useMoveLegacyAvatar();
   // Moderators and admins get the moderation queue just above "Settings".
   const nav = isStaff ? [...desktopNav.slice(0, -1), adminNav, ...desktopNav.slice(-1)] : desktopNav;
 
@@ -90,7 +93,13 @@ export function AppShell() {
           <div className="flex items-center gap-2">
             <LanguageSwitcher />
             <NotificationBell />
-            <UserAvatar name={displayName} />
+            {user ? (
+              <Link viewTransition to={`/users/${user.id}`} aria-label={t("myProfile")} title={t("myProfile")} className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40">
+                <UserAvatar name={displayName} />
+              </Link>
+            ) : (
+              <UserAvatar name={displayName} />
+            )}
           </div>
         </header>
 

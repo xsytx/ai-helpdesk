@@ -164,7 +164,15 @@ func (s *chatTestStore) IsSubscribed(context.Context, int64, int64) (bool, error
 func (s *chatTestStore) SubscriberEmails(context.Context, int64, int64) ([]string, error) {
 	return nil, nil
 }
-func (s *chatTestStore) CreateAttachment(context.Context, int64, string, string, int64) (models.Attachment, error) {
+func (s *chatTestStore) AnswerAttachments(context.Context, int64) (map[int64][]models.Attachment, error) {
+	return nil, nil
+}
+func (s *chatTestStore) CountAnswerAttachments(context.Context, int64) (int, error) { return 0, nil }
+func (s *chatTestStore) GetComment(context.Context, int64) (models.Comment, error) {
+	return models.Comment{}, store.ErrNotFound
+}
+func (s *chatTestStore) SetAvatar(context.Context, int64, string) (string, error) { return "", nil }
+func (s *chatTestStore) CreateAttachment(context.Context, int64, *int64, string, string, int64) (models.Attachment, error) {
 	return models.Attachment{}, nil
 }
 func (s *chatTestStore) ListAttachments(context.Context, int64) ([]models.Attachment, error) {

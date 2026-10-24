@@ -115,7 +115,7 @@ func (s *PostgresStore) SearchThreads(ctx context.Context, q string, page, pageS
 		var t models.Thread
 		var titleSim float64
 		if err := rows.Scan(&t.ID, &t.UserID, &t.AuthorName, &t.Title, &t.Body, &t.Score, &t.LockedAt,
-			&t.CreatedAt, &t.CommentCnt, &t.Tags, &t.ModerationStatus, &t.AcceptedCommentID, &t.SearchMatch, &titleSim); err != nil {
+			&t.CreatedAt, &t.CommentCnt, &t.Tags, &t.ModerationStatus, &t.AcceptedCommentID, &t.AuthorAvatar, &t.SearchMatch, &titleSim); err != nil {
 			return nil, 0, err
 		}
 		out = append(out, t)

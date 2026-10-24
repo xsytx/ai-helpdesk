@@ -59,6 +59,7 @@ export interface Helper {
   points: number;
   solutions: number;
   level: ReputationLevel;
+  avatar: string;
 }
 
 export function useTopHelpers(period: HelpersPeriod) {
@@ -67,10 +68,17 @@ export function useTopHelpers(period: HelpersPeriod) {
     enabled: !USE_MOCK_API,
     queryFn: async () => {
       const { data } = await apiClient.get<{
-        helpers: { user_id: number; name: string; points: number; solutions: number; level: ReputationLevel }[];
+        helpers: { user_id: number; name: string; points: number; solutions: number; level: ReputationLevel; avatar?: string }[];
       }>("/leaderboard", { params: { period, limit: 5 } });
       return data.helpers.map(
-        (h): Helper => ({ userId: String(h.user_id), name: h.name, points: h.points, solutions: h.solutions, level: h.level }),
+        (h): Helper => ({
+          userId: String(h.user_id),
+          name: h.name,
+          points: h.points,
+          solutions: h.solutions,
+          level: h.level,
+          avatar: h.avatar ?? "",
+        }),
       );
     },
     staleTime: 60_000,

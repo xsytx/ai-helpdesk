@@ -75,12 +75,17 @@ func TestReputationPointsLevelsAndTopHelpers(t *testing.T) {
 
 func (e *modEnv) upload(u modUser, threadID int64, content []byte) (int, map[string]any) {
 	e.t.Helper()
+	return e.uploadTo(u, fmt.Sprintf("/api/threads/%d/attachments", threadID), content)
+}
+
+func (e *modEnv) uploadTo(u modUser, path string, content []byte) (int, map[string]any) {
+	e.t.Helper()
 	var buf bytes.Buffer
 	mw := multipart.NewWriter(&buf)
 	fw, _ := mw.CreateFormFile("file", "photo.png")
 	fw.Write(content)
 	mw.Close()
-	req, _ := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/api/threads/%d/attachments", e.srv.URL, threadID), &buf)
+	req, _ := http.NewRequest(http.MethodPost, e.srv.URL+path, &buf)
 	req.Header.Set("Authorization", "Bearer "+u.token)
 	req.Header.Set("Content-Type", mw.FormDataContentType())
 	resp, err := http.DefaultClient.Do(req)

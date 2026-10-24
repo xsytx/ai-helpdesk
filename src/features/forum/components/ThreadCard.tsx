@@ -28,7 +28,7 @@ export function ThreadCard({ thread, highlightWords = [] }: { thread: Thread; hi
         to={`/forum/${thread.id}`}
         className="flex gap-3 rounded-xl p-2 transition-colors hover:bg-background-2/80"
       >
-        <UserAvatar userId={thread.authorId} name={thread.authorName} />
+        <UserAvatar userId={thread.authorId} name={thread.authorName} avatar={thread.authorAvatar} />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
             <span className="text-sm font-semibold text-primary">{thread.authorName}</span>
