@@ -151,6 +151,24 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   lists. `/api/feed?sort=unanswered` = no visible answers. "Пожаловаться" in
   the ⋯ menu (one open report per student and post); admin panel →
   "Жалобы" (keep = resolve; deleting a post closes all its reports).
+- **Reputation and top helpers (`008_reputation.sql`, `store/reputation.go`).**
+  Points are counted from existing data, visible posts only: +10 per answer
+  marked as the solution (not on your own question; `threads.accepted_at`
+  dates it), +2 per like on an answer from someone else, +1 per answer.
+  Levels by all-time points: newcomer 0, helper 10, expert 50, master 150
+  (`LevelFor`; same thresholds in `features/reputation/api.ts`). Badges next
+  to names on the question page (`GET /api/threads/{id}` → `reputation`;
+  newcomers get none), "Моя репутация" in Settings (`/api/me/reputation`),
+  "Лучшие помощники" on the home page (`/api/leaderboard?period=week|month|all`).
+- **Photos on questions.** Up to 10 per question (PNG/JPG/GIF/WEBP, 5 MB,
+  type sniffed by the backend). The browser shrinks photos first
+  (`shared/lib/image.ts`: longest side 1600 px, JPEG, metadata dropped; GIFs
+  untouched), so originals up to 30 MB are fine. They are uploaded after the question is created
+  (`POST /api/threads/{id}/attachments`), removed with
+  `DELETE /api/attachments/{id}` (author or admin; the file is deleted too).
+  Gallery + full-size viewer on the question page (`Photos.tsx`); in edit
+  mode photos are added/removed at once. `/uploads/` serves files only, no
+  directory listings.
 - **Notifications.** The header bell (`NotificationBell`) polls
   `/api/notifications/unread-count` every 30 s and lists
   `/api/notifications` when opened; a click marks it read and opens the
@@ -172,7 +190,7 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
 - **Every public SQL read must hide held posts**: use `threadVisible` /
   `commentVisible` in `backend/internal/store/postgres.go`.
 - **Schema changes** are idempotent SQL applied on every start
-  (`001_init.sql` + `003_chat.sql` + `004_faq.sql` + `005_search.sql` + `006_chat_feedback.sql` + `007_forum_extras.sql` in `Migrate`, `002_moderation.sql` in
+  (`001_init.sql` + `003_chat.sql` + `004_faq.sql` + `005_search.sql` + `006_chat_feedback.sql` + `007_forum_extras.sql` + `008_reputation.sql` in `Migrate`, `002_moderation.sql` in
   `MigrateModeration`): `CREATE ... IF NOT EXISTS` /
   `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`.
 - **Store interface**: adding a method to `store.Store` also needs a stub on
@@ -219,9 +237,10 @@ questions in the AI chat, 👍/👎, "ask on the forum" from an answer, admin
 "AI chat" insights → FAQ, "maybe already asked", solved answers,
 unanswered filter, reports.
 
-Also done: streaming answers with a stop button.
+Also done: streaming answers with a stop button; reputation, levels and top
+helpers; photos on questions.
 
-Planned next: maps and courses; ideas: search suggestions, Ctrl+K
+Planned next: maps and courses (future sprints — don't start them unasked); ideas: search suggestions, Ctrl+K
 search everywhere, avatar stored on the server,
 PWA, admin stats page. Optional: stop admins approving their own flagged
 posts. The 4B model is weak in Kazakh (a Kazakh follow-up understood the

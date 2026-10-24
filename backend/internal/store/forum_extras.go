@@ -127,7 +127,9 @@ func (s *PostgresStore) SetAcceptedAnswer(ctx context.Context, threadID, userID 
 			return ErrInvalidTarget
 		}
 	}
-	_, err = s.pool.Exec(ctx, `UPDATE threads SET accepted_comment_id = $2 WHERE id = $1`, threadID, commentID)
+	_, err = s.pool.Exec(ctx,
+		`UPDATE threads SET accepted_comment_id = $2, accepted_at = CASE WHEN $2::bigint IS NULL THEN NULL ELSE now() END
+		 WHERE id = $1`, threadID, commentID)
 	return err
 }
 

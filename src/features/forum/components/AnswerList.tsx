@@ -14,6 +14,7 @@ import { DeleteConfirm, PostActionErrorText, PostMenu, usePostPermissions } from
 import { UserAvatar } from "@/features/profile/components/UserAvatar";
 import { LikeButton } from "./LikeButton";
 import { ReportDialog } from "./ReportDialog";
+import { LevelBadge } from "@/features/reputation/components/LevelBadge";
 
 /**
  * The answers, most liked first; the one the question's author marked as
@@ -163,7 +164,10 @@ function AnswerContent({ threadId, answer, locale }: { threadId: string; answer:
       <div className="flex items-center gap-2">
         <UserAvatar userId={answer.authorId} name={answer.authorName} className="h-8 w-8 text-[10px]" />
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold text-primary">{answer.authorName}</p>
+          <p className="flex flex-wrap items-center gap-1.5 text-sm font-semibold text-primary">
+            {answer.authorName}
+            <LevelBadge level={answer.authorLevel} points={answer.authorPoints} hideNewcomer />
+          </p>
           <p className="text-xs text-label">{formatRelativeTime(answer.createdAt, locale)}</p>
         </div>
         {mode === "view" ? (

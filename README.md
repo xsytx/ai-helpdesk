@@ -9,6 +9,7 @@ Sign-in is restricted to `@sdu.edu.kz` university email addresses.
 | Accounts (sign up, 6-digit email verification, login, forgot/change password) | Working |
 | Forum (questions, answers, likes, solved answers, search, tags, "maybe already asked", unanswered filter, reports, edit/delete your own posts) | Working |
 | Notifications (bell in the header when someone answers your question) | Working |
+| Reputation (points and levels for helping, top helpers of the week), photos on questions | Working |
 | FAQ | Working: in English, Kazakh and Russian, by category; admins edit it in the Admin panel and choose which questions are instant-answer buttons in the chat |
 | Settings (avatar, password, language) | Working (avatar is saved in the browser only) |
 | AI chat assistant | Working: answers from the SDU knowledge base + a local Ollama model, shown word by word as they are written (with a stop button); understands follow-up questions; 👍/👎 on answers; separate chats you can rename, pin and delete (unpinned ones are deleted after 30 days without messages) |

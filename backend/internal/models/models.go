@@ -81,6 +81,30 @@ type Attachment struct {
 	CreatedAt   time.Time `json:"created_at"`
 }
 
+// Reputation is how much a student has helped others (see store/reputation.go).
+type Reputation struct {
+	UserID    int64 `json:"user_id"`
+	Points    int   `json:"points"`
+	Answers   int   `json:"answers"`
+	Likes     int   `json:"likes"`
+	Solutions int   `json:"solutions"`
+	// Level: newcomer, helper, expert or master (by all-time points).
+	Level string `json:"level"`
+	// NextLevelAt is the points the next level starts at; 0 at the top.
+	NextLevelAt int `json:"next_level_at"`
+}
+
+// Helper is one line of the "top helpers" list: points earned in the period.
+type Helper struct {
+	UserID    int64  `json:"user_id"`
+	Name      string `json:"name"`
+	Points    int    `json:"points"`
+	Answers   int    `json:"answers"`
+	Likes     int    `json:"likes"`
+	Solutions int    `json:"solutions"`
+	Level     string `json:"level"`
+}
+
 // Tag is a free-form label a thread can carry — the only organizing
 // structure threads have. Count (when populated) is how many threads
 // currently carry it, for the trending-tags widget.

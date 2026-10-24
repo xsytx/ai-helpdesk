@@ -54,6 +54,18 @@ func (s *chatTestStore) SimilarThreads(context.Context, string) ([]models.Thread
 }
 func (s *chatTestStore) SetAcceptedAnswer(context.Context, int64, int64, *int64) error { return nil }
 func (s *chatTestStore) ResolveReportsFor(context.Context, string, int64) error       { return nil }
+func (s *chatTestStore) Reputation(context.Context, []int64) (map[int64]models.Reputation, error) {
+	return map[int64]models.Reputation{}, nil
+}
+func (s *chatTestStore) TopHelpers(context.Context, time.Time, int) ([]models.Helper, error) {
+	return nil, nil
+}
+func (s *chatTestStore) GetAttachment(context.Context, int64) (models.Attachment, error) {
+	return models.Attachment{}, store.ErrNotFound
+}
+func (s *chatTestStore) DeleteAttachment(context.Context, int64) (models.Attachment, string, error) {
+	return models.Attachment{}, "", store.ErrNotFound
+}
 func (s *chatTestStore) ChatInsights(context.Context, string, time.Time, int) ([]models.ChatInsight, error) {
 	return nil, nil
 }

@@ -2,6 +2,7 @@ import { useLocale } from "@/i18n/LocaleContext";
 import { AskAnythingSection } from "@/features/chat/components/AskAnythingSection";
 import { ForumPreview } from "@/features/forum/components/ForumPreview";
 import { FaqPanel } from "@/features/chat/components/FaqPanel";
+import { TopHelpers } from "@/features/reputation/components/TopHelpers";
 import { hasTourRequest, startTour } from "@/features/onboarding/tour";
 import { useEffect } from "react";
 
@@ -21,12 +22,15 @@ export function HomePage() {
       <AskAnythingSection />
       <div className="grid gap-6 lg:grid-cols-[1fr_minmax(260px,320px)]">
         <ForumPreview />
-        <section aria-labelledby="faq-heading">
-          <h2 id="faq-heading" className="sr-only">
-            {t("faq")}
-          </h2>
-          <FaqPanel compact={false} />
-        </section>
+        <div className="flex flex-col gap-6">
+          <TopHelpers />
+          <section aria-labelledby="faq-heading">
+            <h2 id="faq-heading" className="sr-only">
+              {t("faq")}
+            </h2>
+            <FaqPanel compact={false} />
+          </section>
+        </div>
       </div>
     </div>
   );

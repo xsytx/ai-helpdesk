@@ -213,6 +213,15 @@ type Store interface {
 	SimilarThreads(ctx context.Context, title string) ([]models.Thread, error)
 	// SetAcceptedAnswer marks (or clears, nil) the solution of a thread; author only.
 	SetAcceptedAnswer(ctx context.Context, threadID, userID int64, commentID *int64) error
+	// Reputation: all-time points and level of some users (see reputation.go).
+	Reputation(ctx context.Context, userIDs []int64) (map[int64]models.Reputation, error)
+	// TopHelpers: users by points earned since a time, best first.
+	TopHelpers(ctx context.Context, since time.Time, limit int) ([]models.Helper, error)
+	// GetAttachment: one photo (ErrNotFound if it doesn't exist).
+	GetAttachment(ctx context.Context, id int64) (models.Attachment, error)
+	// DeleteAttachment removes a photo's row and returns it (for the file path
+	// and its thread); ErrNotFound if it doesn't exist.
+	DeleteAttachment(ctx context.Context, id int64) (models.Attachment, string, error)
 	// ResolveReportsFor closes all open reports about one post.
 	ResolveReportsFor(ctx context.Context, targetType string, targetID int64) error
 	// ChatInsights: "disliked", "unanswered" or "frequent" (see chat_feedback.go).

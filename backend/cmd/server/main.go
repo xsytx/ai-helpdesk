@@ -223,6 +223,7 @@ func main() {
 	mux.HandleFunc("GET /api/tags/{name}/threads", h.ListThreadsByTag)
 	mux.Handle("GET /api/threads/{id}", optionalAuthMw(http.HandlerFunc(h.GetThread)))
 	mux.HandleFunc("GET /api/threads/similar", h.SimilarThreads)
+	mux.HandleFunc("GET /api/leaderboard", h.Leaderboard)
 	mux.HandleFunc("GET /api/users/{id}", h.GetUserProfile)
 	mux.HandleFunc("GET /api/users/{id}/threads", h.ListUserThreads)
 	mux.HandleFunc("GET /api/users/{id}/comments", h.ListUserComments)
@@ -231,6 +232,7 @@ func main() {
 	mux.Handle("GET /api/me", authMw(http.HandlerFunc(h.Me)))
 	mux.Handle("PATCH /api/me", authMw(http.HandlerFunc(h.UpdateProfile)))
 	mux.Handle("POST /api/me/password", authMw(http.HandlerFunc(h.ChangePassword)))
+	mux.Handle("GET /api/me/reputation", authMw(http.HandlerFunc(h.MyReputation)))
 	// Rate-limited like the other auth endpoints: verifying is "type in a
 	// secret" (a brute-forceable 6-digit code) and resending emails, so
 	// both need the same per-IP throttle as login/register.
@@ -239,7 +241,8 @@ func main() {
 	mux.Handle("POST /api/threads", authMw(writeLimiter(http.HandlerFunc(h.CreateThread))))
 	mux.Handle("PATCH /api/threads/{id}", authMw(http.HandlerFunc(h.UpdateThread)))
 	mux.Handle("DELETE /api/threads/{id}", authMw(http.HandlerFunc(h.DeleteThread)))
-	mux.Handle("POST /api/threads/{id}/attachments", authMw(http.HandlerFunc(h.UploadAttachment)))
+	mux.Handle("POST /api/threads/{id}/attachments", authMw(writeLimiter(http.HandlerFunc(h.UploadAttachment))))
+	mux.Handle("DELETE /api/attachments/{id}", authMw(http.HandlerFunc(h.DeleteAttachment)))
 	mux.Handle("POST /api/threads/{id}/subscribe", authMw(http.HandlerFunc(h.SubscribeThread)))
 	mux.Handle("DELETE /api/threads/{id}/subscribe", authMw(http.HandlerFunc(h.UnsubscribeThread)))
 	mux.Handle("POST /api/threads/{id}/comments", authMw(writeLimiter(http.HandlerFunc(h.CreateComment))))
@@ -283,7 +286,9 @@ func main() {
 
 	// --- Uploaded attachments --- (the website itself is the React app,
 	// served separately by nginx; see the repository root)
-	mux.Handle("/uploads/", http.StripPrefix("/uploads/", http.FileServer(http.Dir(uploadDir))))
+	// Uploaded photos by exact name only: no directory listings (they would
+	// list the photos of every question, also hidden ones).
+	mux.Handle("/uploads/", http.StripPrefix("/uploads/", http.FileServer(noDirListing{http.Dir(uploadDir)})))
 
 	var rootHandler http.Handler = mux
 	rootHandler = middleware.CORS(corsOrigin)(rootHandler)
@@ -306,4 +311,19 @@ func main() {
 	if err := srv.ListenAndServe(); err != nil {
 		log.Fatal(err)
 	}
+}
+
+// noDirListing serves files but answers 404 for directories.
+type noDirListing struct{ fs http.FileSystem }
+
+func (n noDirListing) Open(name string) (http.File, error) {
+	f, err := n.fs.Open(name)
+	if err != nil {
+		return nil, err
+	}
+	if st, err := f.Stat(); err == nil && st.IsDir() {
+		f.Close()
+		return nil, os.ErrNotExist
+	}
+	return f, nil
 }

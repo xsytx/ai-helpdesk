@@ -1,6 +1,7 @@
 import { useAuth } from "@/app/AuthContext";
 import { AvatarPicker } from "@/features/profile/components/AvatarPicker";
 import { PasswordChangeForm } from "@/features/profile/components/PasswordChangeForm";
+import { MyReputationCard } from "@/features/reputation/components/MyReputationCard";
 import { useLocale } from "@/i18n/LocaleContext";
 import { Card } from "@/shared/ui/Card";
 import { Button } from "@/shared/ui/Button";
@@ -56,6 +57,7 @@ export function SettingsPage() {
           </Button>
         ) : null}
       </Card>
+      <MyReputationCard />
       <Card>
         <AvatarPicker />
       </Card>

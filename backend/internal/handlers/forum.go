@@ -234,10 +234,20 @@ func (h *Handlers) GetThread(w http.ResponseWriter, r *http.Request) {
 	if uid, ok := h.userID(r); ok {
 		subscribed, _ = h.Store.IsSubscribed(r.Context(), uid, id)
 	}
+	// Reputation badges for the people on the page.
+	authors := []int64{t.UserID}
+	for _, c := range comments {
+		authors = append(authors, c.UserID)
+	}
+	reputation, err := h.Store.Reputation(r.Context(), authors)
+	if err != nil {
+		log.Printf("reputation for thread %d: %v", id, err)
+	}
 	writeJSON(w, http.StatusOK, map[string]any{
 		"thread":     t,
 		"comments":   comments,
 		"subscribed": subscribed,
+		"reputation": reputation,
 	})
 }
 

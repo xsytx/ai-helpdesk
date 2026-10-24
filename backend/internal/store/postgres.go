@@ -65,7 +65,10 @@ func (s *PostgresStore) Migrate(ctx context.Context) error {
 	if _, err := s.pool.Exec(ctx, chatFeedbackSQL); err != nil {
 		return err
 	}
-	_, err := s.pool.Exec(ctx, forumExtrasSQL)
+	if _, err := s.pool.Exec(ctx, forumExtrasSQL); err != nil {
+		return err
+	}
+	_, err := s.pool.Exec(ctx, reputationSQL)
 	return err
 }
 
@@ -1083,6 +1086,32 @@ func (s *PostgresStore) CreateAttachment(ctx context.Context, threadID int64, pa
 		return models.Attachment{}, ErrNotFound
 	}
 	return a, err
+}
+
+func (s *PostgresStore) GetAttachment(ctx context.Context, id int64) (models.Attachment, error) {
+	var a models.Attachment
+	var path string
+	err := s.pool.QueryRow(ctx,
+		`SELECT id, thread_id, path, content_type, size_bytes, created_at FROM attachments WHERE id = $1`, id,
+	).Scan(&a.ID, &a.ThreadID, &path, &a.ContentType, &a.SizeBytes, &a.CreatedAt)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return a, ErrNotFound
+	}
+	a.URL = "/uploads/" + path
+	return a, err
+}
+
+func (s *PostgresStore) DeleteAttachment(ctx context.Context, id int64) (models.Attachment, string, error) {
+	var a models.Attachment
+	var path string
+	err := s.pool.QueryRow(ctx,
+		`DELETE FROM attachments WHERE id = $1 RETURNING id, thread_id, path, content_type, size_bytes, created_at`, id,
+	).Scan(&a.ID, &a.ThreadID, &path, &a.ContentType, &a.SizeBytes, &a.CreatedAt)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return a, "", ErrNotFound
+	}
+	a.URL = "/uploads/" + path
+	return a, path, err
 }
 
 func (s *PostgresStore) ListAttachments(ctx context.Context, threadID int64) ([]models.Attachment, error) {

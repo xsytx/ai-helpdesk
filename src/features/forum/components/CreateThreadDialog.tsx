@@ -7,6 +7,8 @@ import { Button } from "@/shared/ui/Button";
 import { Input } from "@/shared/ui/Input";
 import { X } from "lucide-react";
 import { SimilarQuestions } from "./SimilarQuestions";
+import { PhotoPicker } from "./Photos";
+import { uploadPhoto } from "@/features/forum/api";
 import { TagInput } from "./TagInput";
 import { FormEvent, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
@@ -29,6 +31,8 @@ export function CreateThreadDialog({
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [tags, setTags] = useState<string[]>([]);
+  const [photos, setPhotos] = useState<File[]>([]);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string>();
   const [notice, setNotice] = useState<ModerationNotice>();
 
@@ -37,6 +41,7 @@ export function CreateThreadDialog({
       setTitle("");
       setBody("");
       setTags([]);
+      setPhotos([]);
       setError(undefined);
       setNotice(undefined);
       return;
@@ -85,6 +90,14 @@ export function CreateThreadDialog({
         setNotice(result.notice);
         return;
       }
+      // Photos go up once the question exists; one that fails doesn't stop the rest.
+      if (photos.length > 0) {
+        setUploading(true);
+        for (const photo of photos) {
+          await uploadPhoto(result.thread.id, photo).catch(() => undefined);
+        }
+        setUploading(false);
+      }
       onClose();
       navigate(`/forum/${result.thread.id}`, { viewTransition: true });
     } catch {
@@ -105,9 +118,10 @@ export function CreateThreadDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby="create-thread-title"
-        className="relative z-10 w-full max-w-lg rounded-2xl bg-white p-5 shadow-xl md:p-6"
+        // Never taller than the screen: the fields scroll, the buttons stay at the bottom.
+        className="relative z-10 flex max-h-[calc(100dvh-2rem)] w-full max-w-lg flex-col rounded-2xl bg-white p-5 shadow-xl md:p-6"
       >
-        <div className="mb-4 flex items-center justify-between">
+        <div className="mb-4 flex shrink-0 items-center justify-between">
           <h2 id="create-thread-title" className="text-lg font-bold text-primary">
             {t("newQuestion")}
           </h2>
@@ -121,14 +135,15 @@ export function CreateThreadDialog({
           </button>
         </div>
         {notice ? (
-          <div className="space-y-4">
+          <div className="min-h-0 space-y-4 overflow-y-auto">
             <ModerationNoticeCard notice={notice} />
             <Button type="button" className="w-full" onClick={onClose}>
               {t("close")}
             </Button>
           </div>
         ) : (
-        <form className="space-y-4" onSubmit={handleSubmit}>
+        <form className="flex min-h-0 flex-1 flex-col" onSubmit={handleSubmit}>
+          <div className="-mx-1 min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-1 pb-1">
           <Input
             label={t("threadTitle")}
             name="title"
@@ -153,17 +168,19 @@ export function CreateThreadDialog({
             />
           </div>
           <TagInput id="thread-tags" tags={tags} onChange={setTags} />
+          <PhotoPicker files={photos} onChange={setPhotos} />
           {error ? (
             <p className="text-sm text-error" role="alert">
               {error}
             </p>
           ) : null}
-          <div className="flex gap-2 pt-1">
+          </div>
+          <div className="mt-3 flex shrink-0 gap-2 border-t border-border/50 pt-3">
             <Button type="button" variant="secondary" className="flex-1" onClick={onClose}>
               {t("cancel")}
             </Button>
-            <Button type="submit" className="flex-1" disabled={createThread.isPending}>
-              {createThread.isPending ? "…" : t("postQuestion")}
+            <Button type="submit" className="flex-1" disabled={createThread.isPending || uploading}>
+              {uploading ? t("photoUploading") : createThread.isPending ? "…" : t("postQuestion")}
             </Button>
           </div>
         </form>

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -15,6 +16,9 @@ import (
 )
 
 const maxAttachmentBytes = 5 << 20 // 5MB — plenty for a forum image, small enough to not choke local disk storage
+
+// maxAttachmentsPerThread: photos one question may have.
+const maxAttachmentsPerThread = 10
 
 var allowedAttachmentTypes = map[string]string{
 	"image/png":  ".png",
@@ -45,6 +49,11 @@ func (h *Handlers) UploadAttachment(w http.ResponseWriter, r *http.Request) {
 	}
 	if t.UserID != uid && !h.isModerator(r, uid) {
 		writeError(w, http.StatusForbidden, "you don't own this thread")
+		return
+	}
+
+	if existing, err := h.Store.ListAttachments(r.Context(), threadID); err == nil && len(existing) >= maxAttachmentsPerThread {
+		writeError(w, http.StatusConflict, fmt.Sprintf("a question can have at most %d photos", maxAttachmentsPerThread))
 		return
 	}
 
@@ -114,4 +123,43 @@ func (h *Handlers) UploadAttachment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusCreated, a)
+}
+
+// DeleteAttachment removes a photo from a question (its author or a
+// moderator), with its file.
+func (h *Handlers) DeleteAttachment(w http.ResponseWriter, r *http.Request) {
+	uid, ok := h.userID(r)
+	if !ok {
+		writeError(w, http.StatusUnauthorized, "not authenticated")
+		return
+	}
+	id, err := pathInt64(r, "id")
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid attachment id")
+		return
+	}
+	att, err := h.Store.GetAttachment(r.Context(), id)
+	if err != nil {
+		writeStoreErr(w, err, "could not delete the photo")
+		return
+	}
+	t, err := h.Store.GetThread(r.Context(), att.ThreadID)
+	if err != nil {
+		writeStoreErr(w, err, "could not delete the photo")
+		return
+	}
+	if t.UserID != uid && !h.isModerator(r, uid) {
+		writeError(w, http.StatusForbidden, "you don't own this thread")
+		return
+	}
+	_, path, err := h.Store.DeleteAttachment(r.Context(), id)
+	if err != nil {
+		writeStoreErr(w, err, "could not delete the photo")
+		return
+	}
+	// The row is gone; a file left behind would only waste disk space.
+	if err := os.Remove(filepath.Join(h.UploadDir, filepath.FromSlash(path))); err != nil && !errors.Is(err, os.ErrNotExist) {
+		log.Printf("delete attachment file %s: %v", path, err)
+	}
+	w.WriteHeader(http.StatusNoContent)
 }

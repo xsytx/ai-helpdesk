@@ -1,10 +1,12 @@
 import type { Answer, ModerationStatus, Thread, ThreadSort } from "@/entities/forum";
+import type { ReputationLevel } from "@/entities/reputation";
 import { useAuth } from "@/app/AuthContext";
 import { parseModerationNotice, type ModerationNotice } from "@/features/moderation/notice";
 import { apiClient, USE_MOCK_API } from "@/shared/api/client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as repo from "./forumRepository";
 import { safeStorage } from "@/shared/lib/storage";
+import { shrinkImage } from "@/shared/lib/image";
 
 export const forumKeys = {
   all: ["forum"] as const,
@@ -29,6 +31,7 @@ interface ApiThread {
   moderation_status?: ModerationStatus;
   search_match?: Thread["searchMatch"];
   accepted_comment_id?: number;
+  attachments?: { id: number; url: string }[];
 }
 
 interface ApiComment {
@@ -57,6 +60,7 @@ function toThread(t: ApiThread): Thread {
     moderationStatus: t.moderation_status,
     searchMatch: t.search_match,
     acceptedAnswerId: t.accepted_comment_id ? String(t.accepted_comment_id) : undefined,
+    attachments: t.attachments?.map((a) => ({ id: String(a.id), url: a.url })),
   };
 }
 
@@ -154,12 +158,21 @@ async function fetchThreadDetail(id: string, userId: string | undefined): Promis
     if (!thread) throw new Error("Thread not found");
     return { thread, answers: repo.listAnswers(id) };
   }
-  const { data } = await apiClient.get<{ thread: ApiThread; comments: ApiComment[]; subscribed?: boolean }>(
-    `/threads/${id}`,
-  );
+  const { data } = await apiClient.get<{
+    thread: ApiThread;
+    comments: ApiComment[];
+    subscribed?: boolean;
+    reputation?: Record<string, { points: number; level: ReputationLevel }>;
+  }>(`/threads/${id}`);
+  // Everyone's level, for the badge next to their name.
+  const level = (authorId: string) => {
+    const r = data.reputation?.[authorId];
+    return r ? { authorLevel: r.level, authorPoints: r.points } : {};
+  };
+  const thread = toThread(data.thread);
   return {
-    thread: toThread(data.thread),
-    answers: sortAnswers(data.comments.map((c) => toAnswer(c, userId))),
+    thread: { ...thread, ...level(thread.authorId) },
+    answers: sortAnswers(data.comments.map((c) => ({ ...toAnswer(c, userId), ...level(String(c.user_id)) }))),
     subscribed: data.subscribed ?? false,
   };
 }
@@ -455,4 +468,28 @@ export function useReportPost() {
       await apiClient.post(`/${kind === "thread" ? "threads" : "comments"}/${id}/report`, { reason: text.slice(0, 500) });
     },
   });
+}
+
+/**
+ * Photos: at most 10 per question. Photos are shrunk before upload (see
+ * shrinkImage), so a big phone photo is fine; what reaches the server must
+ * be at most 5 MB (it checks again).
+ */
+export const MAX_PHOTOS = 10;
+export const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
+/** Largest file accepted before shrinking (GIFs aren't shrunk: MAX_PHOTO_BYTES). */
+export const MAX_ORIGINAL_PHOTO_BYTES = 30 * 1024 * 1024;
+export const PHOTO_TYPES = ["image/png", "image/jpeg", "image/gif", "image/webp"];
+
+export async function uploadPhoto(threadId: string, file: File) {
+  const form = new FormData();
+  form.append("file", await shrinkImage(file));
+  const { data } = await apiClient.post<{ id: number; url: string }>(`/threads/${threadId}/attachments`, form, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return { id: String(data.id), url: data.url };
+}
+
+export async function deletePhoto(photoId: string) {
+  await apiClient.delete(`/attachments/${photoId}`);
 }

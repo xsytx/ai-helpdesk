@@ -1,3 +1,4 @@
+import type { ReputationLevel } from "./reputation";
 /** ok/checking = visible to everyone; held/rejected = hidden by moderation (author and moderators still see it). */
 export type ModerationStatus = "ok" | "checking" | "held" | "rejected";
 
@@ -14,6 +15,11 @@ export interface Thread {
   /** Lowercase labels, e.g. "dorm" (shown as #dorm). */
   tags?: string[];
   moderationStatus?: ModerationStatus;
+  /** The author's level (thread page only). */
+  authorLevel?: ReputationLevel;
+  authorPoints?: number;
+  /** Photos (thread page only). */
+  attachments?: { id: string; url: string }[];
   /** The answer the author marked as the solution ("Solved"). */
   acceptedAnswerId?: string;
   /** Search results only: where the words were found ("similar" = a near match, e.g. a typo). */
@@ -29,6 +35,9 @@ export interface Answer {
   createdAt: string;
   likes: number;
   likedByUserIds: string[];
+  /** The author's level (thread page only). */
+  authorLevel?: ReputationLevel;
+  authorPoints?: number;
   moderationStatus?: ModerationStatus;
 }
 
