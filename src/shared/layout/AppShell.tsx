@@ -43,8 +43,8 @@ export function AppShell() {
   const nav = isStaff ? [...desktopNav.slice(0, -1), adminNav, ...desktopNav.slice(-1)] : desktopNav;
 
   return (
-    <div className="flex min-h-dvh flex-col bg-[#f4f6fb] md:flex-row">
-      <aside className="hidden w-56 shrink-0 flex-col gap-4 border-r border-border/40 bg-white px-4 py-5 md:flex">
+    <div className="flex min-h-dvh flex-col bg-page md:flex-row">
+      <aside className="hidden w-56 shrink-0 flex-col gap-4 border-r border-border/40 bg-surface px-4 py-5 md:flex">
         <Logo />
         <Button
           variant="secondary"
@@ -85,7 +85,7 @@ export function AppShell() {
       </aside>
 
       <div className="flex min-h-dvh flex-1 flex-col">
-        <header className="sticky top-0 z-40 flex items-center justify-between gap-3 border-b border-border/40 bg-white/95 px-4 py-3 backdrop-blur md:px-6">
+        <header className="sticky top-0 z-40 flex items-center justify-between gap-3 border-b border-border/40 bg-surface/95 px-4 py-3 backdrop-blur md:px-6">
           <div className="md:hidden">
             <Logo />
           </div>
@@ -108,7 +108,7 @@ export function AppShell() {
         </main>
 
         <nav
-          className="fixed inset-x-0 bottom-0 z-40 flex items-end justify-around border-t border-border/50 bg-white px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 md:hidden"
+          className="fixed inset-x-0 bottom-0 z-40 flex items-end justify-around border-t border-border/50 bg-surface px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 md:hidden"
           aria-label="Main"
         >
           <MobileTab to="/" label={t("home")} icon={Home} />

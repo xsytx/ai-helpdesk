@@ -10,6 +10,9 @@ import (
 //go:embed migrations/011_forum_answers.sql
 var forumAnswersSQL string
 
+//go:embed migrations/012_chat_followups.sql
+var chatFollowupsSQL string
+
 // ForumAnswers returns published questions that have a trustworthy answer,
 // for the AI chat to use (Stories 8-9): the accepted answer, otherwise the
 // most-liked answer with at least one like or an answer by staff. Only posts

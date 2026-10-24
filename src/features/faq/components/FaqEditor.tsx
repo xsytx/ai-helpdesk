@@ -129,7 +129,7 @@ function FaqRow({
   const missing = missingLanguages(toDraft(entry));
 
   return (
-    <li className="rounded-2xl border border-white/60 bg-white p-4 shadow-sm">
+    <li className="rounded-2xl border border-surface/60 bg-surface p-4 shadow-sm">
       <div className="flex items-start gap-3">
         <span className="mt-0.5 w-5 shrink-0 text-right text-xs font-semibold text-label">{index + 1}</span>
         <div className="min-w-0 flex-1">
@@ -233,7 +233,7 @@ function FaqForm({ id, initial, onDone }: { id?: string; initial: FaqDraft; onDo
               onClick={() => setLang(l.locale)}
               className={cn(
                 "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold",
-                lang === l.locale ? "bg-white text-primary shadow-sm" : "text-label hover:text-primary",
+                lang === l.locale ? "bg-surface text-primary shadow-sm" : "text-label hover:text-primary",
               )}
             >
               {l.name}
@@ -253,7 +253,7 @@ function FaqForm({ id, initial, onDone }: { id?: string; initial: FaqDraft; onDo
             value={draft.question[lang]}
             maxLength={200}
             onChange={(e) => setText("question", e.target.value)}
-            className="flex h-11 w-full rounded-xl border border-border bg-white px-3.5 text-sm text-primary focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20"
+            className="flex h-11 w-full rounded-xl border border-border bg-surface px-3.5 text-sm text-primary focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20"
           />
         </div>
         <div className="space-y-1.5">
@@ -266,7 +266,7 @@ function FaqForm({ id, initial, onDone }: { id?: string; initial: FaqDraft; onDo
             maxLength={4000}
             rows={4}
             onChange={(e) => setText("answer", e.target.value)}
-            className="w-full resize-y rounded-xl border border-border bg-white px-3.5 py-2.5 text-sm text-primary focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20"
+            className="w-full resize-y rounded-xl border border-border bg-surface px-3.5 py-2.5 text-sm text-primary focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20"
           />
         </div>
 
@@ -276,7 +276,7 @@ function FaqForm({ id, initial, onDone }: { id?: string; initial: FaqDraft; onDo
             <select
               value={draft.category}
               onChange={(e) => setDraft((d) => ({ ...d, category: e.target.value as FaqDraft["category"] }))}
-              className="h-9 rounded-xl border border-border bg-white px-2.5 text-sm text-primary focus-visible:border-primary focus-visible:outline-none"
+              className="h-9 rounded-xl border border-border bg-surface px-2.5 text-sm text-primary focus-visible:border-primary focus-visible:outline-none"
             >
               {FAQ_CATEGORIES.map((c) => (
                 <option key={c} value={c}>

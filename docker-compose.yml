@@ -84,7 +84,7 @@ services:
       # the host is reached through host.docker.internal.
       LLM_BASE_URL: "${OLLAMA_URL:-http://host.docker.internal:11434}"
       LLM_TIMEOUT_SECONDS: "${LLM_TIMEOUT_SECONDS:-120}"
-      LLM_NUM_PREDICT: "${LLM_NUM_PREDICT:-350}"
+      LLM_NUM_PREDICT: "${LLM_NUM_PREDICT:-450}"
     # Makes host.docker.internal work on Linux too (Docker Desktop has it already).
     extra_hosts:
       - "host.docker.internal:host-gateway"

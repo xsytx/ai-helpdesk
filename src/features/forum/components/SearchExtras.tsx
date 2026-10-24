@@ -37,7 +37,7 @@ export function FaqSearchMatches({ words }: { words: string[] }) {
                 type="button"
                 aria-expanded={open}
                 onClick={() => setOpenId(open ? null : m.id)}
-                className="flex w-full items-start justify-between gap-2 rounded-lg px-2 py-1.5 text-left text-sm font-medium text-primary hover:bg-white"
+                className="flex w-full items-start justify-between gap-2 rounded-lg px-2 py-1.5 text-left text-sm font-medium text-primary hover:bg-surface"
               >
                 <span>{highlight(m.question, words)}</span>
                 <ChevronDown className={cn("mt-0.5 h-4 w-4 shrink-0 text-label transition-transform", open && "rotate-180")} aria-hidden />

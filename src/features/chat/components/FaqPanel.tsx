@@ -65,7 +65,7 @@ function FaqItem({ entry, open, onToggle }: { entry: FaqEntry; open: boolean; on
         aria-expanded={open}
         onClick={onToggle}
         className={cn(
-          "flex w-full items-start justify-between gap-2 rounded-xl border border-border/80 bg-white px-3 py-3 text-left text-sm font-medium text-primary transition-colors hover:bg-background-2",
+          "flex w-full items-start justify-between gap-2 rounded-xl border border-border/80 bg-surface px-3 py-3 text-left text-sm font-medium text-primary transition-colors hover:bg-background-2",
           open && "rounded-b-none border-b-0 bg-background-2",
         )}
       >

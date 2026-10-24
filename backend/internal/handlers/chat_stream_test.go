@@ -36,7 +36,7 @@ func fakeStreamML(t *testing.T, e *modEnv, hang chan struct{}) {
 		line(map[string]any{"type": "delta", "text": "Hello "})
 		line(map[string]any{"type": "delta", "text": "world"})
 		line(map[string]any{"type": "done", "request_id": "rid", "status": "answered", "answer": "Hello world",
-			"ai_explanation": "Hello world", "language": "en", "basis": "general"})
+			"ai_explanation": "Hello world", "language": "en", "basis": "general", "followups": []string{"And goodbye?"}})
 	}))
 	t.Cleanup(srv.Close)
 	e.h.ML = mlclient.New(srv.URL, 5*time.Second)
@@ -87,6 +87,10 @@ func TestChatStreamSendsPiecesAndSaves(t *testing.T) {
 	list := msgs["messages"].([]any)
 	if len(list) != 2 || list[1].(map[string]any)["text"] != "Hello world" {
 		t.Fatalf("saved %v", list)
+	}
+	// Suggested next questions come with the answer and are saved with it.
+	if fmt.Sprint(done["followups"]) != "[And goodbye?]" || fmt.Sprint(list[1].(map[string]any)["followups"]) != "[And goodbye?]" {
+		t.Fatalf("followups: done %v, saved %v", done["followups"], list[1])
 	}
 }
 

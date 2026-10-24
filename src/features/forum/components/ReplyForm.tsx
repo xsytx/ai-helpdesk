@@ -64,7 +64,7 @@ export function ReplyForm({ threadId }: { threadId: string }) {
         placeholder={t("answerPlaceholder")}
         rows={3}
         maxLength={2000}
-        className="w-full resize-y rounded-xl border border-border bg-white px-3.5 py-2.5 text-sm text-primary placeholder:text-grey focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20"
+        className="w-full resize-y rounded-xl border border-border bg-surface px-3.5 py-2.5 text-sm text-primary placeholder:text-grey focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20"
       />
       <PhotoPicker files={photos} onChange={setPhotos} max={MAX_ANSWER_PHOTOS} />
       {notice ? <ModerationNoticeCard notice={notice} /> : null}

@@ -42,7 +42,7 @@ export function ReportsSection() {
             onClick={() => setStatus(s)}
             className={cn(
               "rounded-xl px-3.5 py-2 text-sm font-semibold transition-colors",
-              status === s ? "bg-primary text-white" : "bg-white text-primary hover:bg-background-2",
+              status === s ? "bg-brand text-white" : "bg-surface text-primary hover:bg-background-2",
             )}
           >
             {s === "open" ? t("reportsOpen") : t("reportsResolved")}
@@ -73,7 +73,7 @@ function ReportCard({ report }: { report: PostReport }) {
   const onError = () => setFailed(true);
 
   return (
-    <li className="rounded-2xl border border-white/60 bg-white p-4 shadow-sm">
+    <li className="rounded-2xl border border-surface/60 bg-surface p-4 shadow-sm">
       <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-semibold">
         <span className="rounded-full bg-red-100 px-2 py-0.5 text-red-800">{reason.label}</span>
         <span className="rounded-full bg-background-2 px-2 py-0.5 text-primary">

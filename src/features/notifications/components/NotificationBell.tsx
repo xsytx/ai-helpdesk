@@ -50,7 +50,7 @@ export function NotificationBell() {
           align="end"
           sideOffset={6}
           collisionPadding={12}
-          className="z-50 flex max-h-[min(28rem,70dvh)] w-[min(22rem,calc(100vw-1.5rem))] flex-col rounded-2xl border border-border bg-white shadow-lg"
+          className="z-50 flex max-h-[min(28rem,70dvh)] w-[min(22rem,calc(100vw-1.5rem))] flex-col rounded-2xl border border-border bg-surface shadow-lg"
         >
           <div className="flex items-center justify-between gap-2 border-b border-border/60 px-4 py-3">
             <p className="text-sm font-bold text-primary">{t("notifications")}</p>

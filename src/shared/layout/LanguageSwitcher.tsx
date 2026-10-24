@@ -28,7 +28,7 @@ export function LanguageSwitcher() {
       </DropdownMenu.Trigger>
       <DropdownMenu.Portal>
         <DropdownMenu.Content
-          className="z-50 min-w-[4.5rem] rounded-xl border border-border bg-white p-1 shadow-lg"
+          className="z-50 min-w-[4.5rem] rounded-xl border border-border bg-surface p-1 shadow-lg"
           sideOffset={6}
           align="end"
         >

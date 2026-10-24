@@ -92,7 +92,7 @@ function PhotoPreview({ photos, total }: { photos: string[]; total: number }) {
           >
             <img src={src} alt="" loading="lazy" className="h-full w-full object-cover" />
             {last && more > 0 ? (
-              <span className="absolute inset-0 flex items-center justify-center bg-primary/55 text-sm font-bold text-white">
+              <span className="absolute inset-0 flex items-center justify-center bg-brand/55 text-sm font-bold text-white">
                 +{more}
               </span>
             ) : null}

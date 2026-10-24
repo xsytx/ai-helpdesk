@@ -45,7 +45,7 @@ function SortButton({
       onClick={onClick}
       className={
         active
-          ? "rounded-md bg-white px-3 py-1.5 text-primary shadow-sm"
+          ? "rounded-md bg-surface px-3 py-1.5 text-primary shadow-sm"
           : "rounded-md px-3 py-1.5 text-label hover:text-primary"
       }
     >

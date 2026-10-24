@@ -28,7 +28,7 @@ export function PasswordField({
           id={id}
           type={show ? "text" : "password"}
           className={cn(
-            "flex h-11 w-full rounded-xl border bg-white py-2 pl-3.5 pr-11 text-sm text-primary placeholder:text-grey",
+            "flex h-11 w-full rounded-xl border bg-surface py-2 pl-3.5 pr-11 text-sm text-primary placeholder:text-grey",
             "border-border focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20",
             error && "border-error focus-visible:ring-error/20",
             className,

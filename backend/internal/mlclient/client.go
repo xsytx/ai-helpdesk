@@ -45,6 +45,8 @@ type GenerateResult struct {
 	Source         *Source  `json:"source"`
 	SourceType     *string  `json:"source_type"`
 	RetrievalScore *float64 `json:"retrieval_score"`
+	// Followups: 0-3 questions the student may ask next.
+	Followups []string `json:"followups"`
 }
 
 type errorBody struct {

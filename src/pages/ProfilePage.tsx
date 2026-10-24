@@ -47,7 +47,7 @@ export function ProfilePage() {
               {p.name}
               <LevelBadge level={p.reputation.level} points={p.reputation.points} className="px-2 py-1 text-xs" />
               {p.staff ? (
-                <span className="inline-flex items-center gap-1 rounded-full bg-primary px-2 py-1 text-xs font-semibold text-white">
+                <span className="inline-flex items-center gap-1 rounded-full bg-brand px-2 py-1 text-xs font-semibold text-white">
                   <ShieldCheck className="h-3.5 w-3.5" aria-hidden />
                   {t("profileStaff")}
                 </span>

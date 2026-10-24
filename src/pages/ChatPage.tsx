@@ -28,7 +28,7 @@ import { getErrorStatus } from "@/shared/api/client";
 import { Button } from "@/shared/ui/Button";
 import { Card } from "@/shared/ui/Card";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowUp, ChevronDown, History, Loader2, Plus, Square, Users, X, Zap } from "lucide-react";
+import { ArrowUp, ChevronDown, CornerDownRight, History, Loader2, Plus, Square, Users, X, Zap } from "lucide-react";
 import { createPortal } from "react-dom";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -119,6 +119,35 @@ function AssistantContent({
 
 type UiChatMessageWithRetry = UiChatMessage & { onRetry?: () => void };
 
+/** Questions the student may ask next: one tap asks them. */
+function FollowupQuestions({
+  questions,
+  disabled,
+  onAsk,
+}: {
+  questions: string[];
+  disabled: boolean;
+  onAsk: (question: string) => void;
+}) {
+  const { t } = useLocale();
+  return (
+    <div className="mt-2 flex flex-wrap gap-1.5" role="group" aria-label={t("chatFollowupsLabel")}>
+      {questions.map((q) => (
+        <button
+          key={q}
+          type="button"
+          disabled={disabled}
+          onClick={() => onAsk(q)}
+          className="inline-flex max-w-full items-center gap-1 rounded-full border border-border bg-surface px-3 py-1 text-left text-xs font-medium text-primary transition-colors hover:border-primary/40 hover:bg-background-2 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <CornerDownRight className="h-3 w-3 shrink-0 text-label" aria-hidden />
+          <span className="min-w-0">{q}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
 /** Where a question goes: a saved chat, or "new" (the server creates the chat). */
 interface Target {
   key: string;
@@ -145,12 +174,12 @@ function ChatListSheet({ activeId, onClose }: { activeId?: string; onClose: () =
 
   // On <body>: the page area is its own layer (page transitions) and would trap it.
   return createPortal(
-    <div className="fixed inset-0 z-50 flex bg-primary/30 lg:hidden">
+    <div className="fixed inset-0 z-50 flex bg-brand/30 dark:bg-black/60 lg:hidden">
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="chat-list-title"
-        className="flex w-[85%] max-w-xs flex-col bg-white p-4 shadow-xl"
+        className="flex w-[85%] max-w-xs flex-col bg-surface p-4 shadow-xl"
       >
         <div className="mb-3 flex items-center justify-between">
           <h2 id="chat-list-title" className="text-lg font-bold text-primary">
@@ -465,7 +494,7 @@ export function ChatPage() {
           <button
             type="button"
             onClick={() => setListOpen(true)}
-            className="shrink-0 rounded-xl border border-border/60 bg-white p-2 text-primary hover:bg-background-2 lg:hidden"
+            className="shrink-0 rounded-xl border border-border/60 bg-surface p-2 text-primary hover:bg-background-2 lg:hidden"
             aria-label={t("chats")}
           >
             <History className="h-4 w-4" />
@@ -504,7 +533,7 @@ export function ChatPage() {
               messages.map((msg, index) =>
                 msg.role === "user" ? (
                   <div key={msg.id} className="flex items-end justify-end gap-2">
-                    <div className="max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-br-md bg-primary px-4 py-2.5 text-sm text-white">
+                    <div className="max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-br-md bg-brand px-4 py-2.5 text-sm text-white">
                       {msg.text}
                     </div>
                     <UserAvatar name={user?.name ?? ""} className="h-7 w-7 text-[10px]" />
@@ -525,7 +554,7 @@ export function ChatPage() {
                     <div
                       className={cn(
                         "rounded-2xl rounded-bl-md px-4 py-2.5 text-sm text-primary",
-                        msg.error ? "border border-error/30 bg-white" : "bg-background-2",
+                        msg.error ? "border border-error/30 bg-surface" : "bg-background-2",
                       )}
                     >
                       <AssistantContent msg={msg} t={translate} />
@@ -540,6 +569,14 @@ export function ChatPage() {
                         }}
                       />
                     )}
+                    {/* Only under the latest answer: older suggestions are out of date. */}
+                    {index === messages.length - 1 && !loading && msg.followups?.length ? (
+                      <FollowupQuestions
+                        questions={msg.followups}
+                        disabled={pendingKey !== null}
+                        onAsk={(q) => void sendUserMessage(q, { key, conversationId })}
+                      />
+                    ) : null}
                   </div>
                 ),
               )
@@ -600,7 +637,7 @@ export function ChatPage() {
               <button
                 type="button"
                 onClick={stopAnswer}
-                className="absolute bottom-5 right-2 flex h-8 w-8 items-center justify-center rounded-full bg-primary text-white hover:bg-primary-light"
+                className="absolute bottom-5 right-2 flex h-8 w-8 items-center justify-center rounded-full bg-brand text-white hover:bg-brand-hover"
                 aria-label={t("chatStop")}
                 title={t("chatStop")}
               >
@@ -611,7 +648,7 @@ export function ChatPage() {
                 type="button"
                 disabled={inputDisabled || !input.trim()}
                 onClick={send}
-                className="absolute bottom-5 right-2 flex h-8 w-8 items-center justify-center rounded-full bg-primary text-white hover:bg-primary-light disabled:cursor-not-allowed disabled:opacity-50"
+                className="absolute bottom-5 right-2 flex h-8 w-8 items-center justify-center rounded-full bg-brand text-white hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-50"
                 aria-label={t("send")}
               >
                 <ArrowUp className="h-4 w-4" />

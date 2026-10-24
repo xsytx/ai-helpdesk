@@ -28,7 +28,7 @@ class Settings:
     llm_api_key: str = ''                 # нужен только для openai/gemini
     llm_timeout: float = 120.0            # секунд на один запрос к модели
     llm_num_ctx: int = 4096               # окно контекста Ollama
-    llm_num_predict: int = 350            # максимум токенов в ответе
+    llm_num_predict: int = 450            # максимум токенов в ответе (ответ + followups)
     llm_keep_alive: str = '30m'           # сколько держать модель в памяти
     # --- поиск ---
     top_k: int = 5                        # сколько кандидатов показываем модели

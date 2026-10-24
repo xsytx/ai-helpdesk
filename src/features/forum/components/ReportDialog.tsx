@@ -49,13 +49,13 @@ export function ReportDialog({
 
   // On <body>: the page area is its own layer (page transitions) and would trap it.
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-primary/30 p-4 sm:items-center">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-brand/30 dark:bg-black/60 p-4 sm:items-center">
       <div className="absolute inset-0" aria-hidden onClick={onClose} />
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="report-title"
-        className="relative z-10 w-full max-w-md rounded-2xl bg-white p-5 shadow-xl"
+        className="relative z-10 w-full max-w-md rounded-2xl bg-surface p-5 shadow-xl"
       >
         <div className="mb-3 flex items-center justify-between">
           <h2 id="report-title" className="text-lg font-bold text-primary">

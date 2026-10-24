@@ -240,6 +240,8 @@ type ChatMessage struct {
 	// "forum" (a forum answer; SourceThreadID is its question, nil once deleted).
 	SourceType     *string `json:"source_type,omitempty"`
 	SourceThreadID *int64  `json:"source_thread_id,omitempty"`
+	// Followups: questions the student may ask next (buttons under an AI answer).
+	Followups []string `json:"followups,omitempty"`
 	// Rating is the student's 👍 (1) / 👎 (-1) on an answer; nil = not rated.
 	Rating    *int16    `json:"rating,omitempty"`
 	CreatedAt time.Time `json:"created_at"`

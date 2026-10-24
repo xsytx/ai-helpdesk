@@ -108,7 +108,7 @@ export function CreateThreadDialog({
   // Rendered on <body> so the overlay covers the whole app, header included:
   // the page area is its own layer (for page transitions) and would trap it.
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-primary/30 p-4 sm:items-center">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-brand/30 dark:bg-black/60 p-4 sm:items-center">
       <div
         className="absolute inset-0"
         aria-hidden
@@ -119,7 +119,7 @@ export function CreateThreadDialog({
         aria-modal="true"
         aria-labelledby="create-thread-title"
         // Never taller than the screen: the fields scroll, the buttons stay at the bottom.
-        className="relative z-10 flex max-h-[calc(100dvh-2rem)] w-full max-w-lg flex-col rounded-2xl bg-white p-5 shadow-xl md:p-6"
+        className="relative z-10 flex max-h-[calc(100dvh-2rem)] w-full max-w-lg flex-col rounded-2xl bg-surface p-5 shadow-xl md:p-6"
       >
         <div className="mb-4 flex shrink-0 items-center justify-between">
           <h2 id="create-thread-title" className="text-lg font-bold text-primary">
@@ -164,7 +164,7 @@ export function CreateThreadDialog({
               placeholder={t("threadBodyPlaceholder")}
               rows={4}
               maxLength={2000}
-              className="w-full resize-y rounded-xl border border-border bg-white px-3.5 py-2.5 text-sm text-primary placeholder:text-grey focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20"
+              className="w-full resize-y rounded-xl border border-border bg-surface px-3.5 py-2.5 text-sm text-primary placeholder:text-grey focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20"
             />
           </div>
           <TagPicker id="thread-tags" tags={tags} onChange={setTags} />

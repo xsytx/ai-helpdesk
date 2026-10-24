@@ -34,7 +34,7 @@ Input: LANGUAGE, optional UNIVERSITY FACTS (trusted), a numbered list of FAQ CAN
 
 If CONVERSATION SO FAR is given, the STUDENT QUESTION may be a follow-up ("and how much is it?", "where is it?", "what about first-year students?"). Then it is about the same topic as the PREVIOUS STUDENT QUESTION: first work out the full question it means (for example "How do I get a dormitory room?" + "And how much is it?" means "How much does the dormitory cost?"), then choose the match and write the answer for that full question. A candidate about another topic is NOT a match for a follow-up, even if its words fit (the dormitory price is not the price of lunch). If the STUDENT QUESTION is complete on its own and about something new, ignore the conversation. Answer only the STUDENT QUESTION; do not repeat earlier answers.
 
-Return ONLY JSON: {"match": N, "answer": "..."}
+Return ONLY JSON: {"match": N, "answer": "...", "followups": ["...", "..."]}
 
 STEP 1 - choose "match":
 - N = number of the candidate that answers the SAME question the student asks (different wording, typos or another language are fine).
@@ -43,7 +43,9 @@ STEP 1 - choose "match":
 STEP 2 - write "answer" ONLY in the requested LANGUAGE, as plain text: no Markdown, no asterisks, no headings, no tables (short sentences or a simple "1." "2." list are fine):
 - match > 0: explain that candidate's answer in your own words. Keep every fact, number, name, place and condition from it and never contradict it. You may add one short, generally true clarification. Do not mention "candidate" or "FAQ".
 - match = 0: answer the question yourself from general knowledge and UNIVERSITY FACTS, like a helpful senior student. You may explain general concepts freely (GPA, credits, add/drop, retake, syllabus, dean, advisor, scholarships, study tips, and so on).
-- Never invent facts specific to SDU that are not in the input: phone numbers, e-mails, links, prices, dates, deadlines, room numbers, names of people, exact rules. If the student needs such a fact and you do not have it, say so honestly in one sentence and tell them where to ask (Student Service Center, their advisor or the Dean's Office), then give whatever general help you can."""
+- Never invent facts specific to SDU that are not in the input: phone numbers, e-mails, links, prices, dates, deadlines, room numbers, names of people, exact rules. If the student needs such a fact and you do not have it, say so honestly in one sentence and tell them where to ask (Student Service Center, their advisor or the Dean's Office), then give whatever general help you can.
+
+STEP 3 - "followups": 2 or 3 short questions (at most 8 words each) that this student is likely to ask next about the same topic, written in LANGUAGE the way a student would ask them. Prefer questions that the CANDIDATES or UNIVERSITY FACTS can answer. Do not repeat the STUDENT QUESTION or ask what your answer already says."""
 
 
 def source_of(record):
@@ -58,8 +60,40 @@ def source_of(record):
 def build_schema(n):
     return {'type': 'object',
             'properties': {'match': {'type': 'integer', 'enum': list(range(n + 1))},
-                           'answer': {'type': 'string'}},
-            'required': ['match', 'answer']}
+                           'answer': {'type': 'string'},
+                           'followups': {'type': 'array', 'items': {'type': 'string'}, 'maxItems': 3}},
+            'required': ['match', 'answer', 'followups']}
+
+
+FOLLOWUPS = 3
+FOLLOWUP_CHARS = 120
+
+
+def same_alphabet(language, text):
+    """Короткая строка на языке ответа (looks_like пропускает всё короткое). Казахский вопрос
+    может обойтись без особых букв, поэтому для kk годится любая кириллица."""
+    found = detect_language(text)
+    return found == language or (language == 'kk' and found == 'ru')
+
+
+def clean_followups(value, language, question):
+    """Предложенные следующие вопросы: короткие строки на языке ответа, без повтора вопроса.
+    Плохие просто отбрасываются — ответ из-за них не переспрашивается."""
+    if not isinstance(value, list):
+        return []
+    seen, out = {' '.join(question.casefold().split()).rstrip('?!. ')}, []
+    for item in value:
+        if not isinstance(item, str):
+            continue
+        text = ' '.join(item.split())
+        key = text.casefold().rstrip('?!. ')
+        if not text or len(text) > FOLLOWUP_CHARS or key in seen or not same_alphabet(language, text):
+            continue
+        seen.add(key)
+        out.append(text)
+        if len(out) == FOLLOWUPS:
+            break
+    return out
 
 
 HISTORY_TURNS = 6
@@ -95,9 +129,12 @@ def build_user_message(question, language, candidates, context, history=()):
     return '\n\n'.join(parts)
 
 
-def parse_output(raw, n_candidates, language):
-    """Проверяет формат ответа модели. ValueError — выход невалиден."""
-    data = parse_json_object(raw)
+def parse_output(raw, n_candidates, language, question=''):
+    """Проверяет формат ответа модели: (match, answer, followups). ValueError — выход невалиден."""
+    try:
+        data = parse_json_object(raw)
+    except ValueError:
+        data = salvage(raw)
     match, answer = data.get('match', 0), data.get('answer')
     if isinstance(match, str) and match.strip().isdigit():
         match = int(match.strip())
@@ -108,7 +145,18 @@ def parse_output(raw, n_candidates, language):
     answer = answer.strip()
     if not looks_like(language, answer):
         raise ValueError('answer is in the wrong language')
-    return match, answer
+    return match, answer, clean_followups(data.get('followups'), language, question)
+
+
+def salvage(raw):
+    """Ответ модели оборвался (лимит токенов) уже после поля "answer" — например, на списке
+    followups: match и законченный answer ещё годятся, переспрашивать модель не нужно."""
+    m = re.search(r'"match"\s*:\s*"?(\d+)', raw or '')
+    stream = AnswerTextStream()
+    text = stream.feed(raw or '')
+    if not m or not stream.done:
+        raise ValueError('No JSON object in model output')
+    return {'match': int(m.group(1)), 'answer': text}
 
 
 class AnswerTextStream:
@@ -216,13 +264,13 @@ class AnswerService:
             candidates = sorted(candidates + from_forum, key=lambda c: -c['score'])
             top_score = max([top_score or 0.0] + [c['score'] for c in from_forum])
 
-        base = {'status': 'fallback', 'answer': CANNOT_ANSWER[language], 'forum_answer': None,
+        base = {'status': 'fallback', 'answer': CANNOT_ANSWER[language], 'forum_answer': None, 'followups': [],
                 'ai_explanation': CANNOT_ANSWER[language], 'language': language, 'basis': 'none',
                 'reason': reason, 'source': None, 'source_type': None, 'retrieval_score': top_score}
         user_message = build_user_message(question, language, candidates, self.context, history)
         messages = [{'role': 'system', 'content': SYSTEM + ('\n/no_think' if 'qwen3' in getattr(self.client, 'model', '') else '')},
                     {'role': 'user', 'content': user_message}]
-        return {'language': language, 'history': history, 'candidates': candidates, 'top_score': top_score,
+        return {'question': question, 'language': language, 'history': history, 'candidates': candidates, 'top_score': top_score,
                 'reason': reason, 'base': base, 'messages': messages, 'schema': build_schema(len(candidates)),
                 'retrieval_ms': round((time.perf_counter() - started) * 1000)}
 
@@ -241,13 +289,14 @@ class AnswerService:
         if parsed is None:
             return self._degrade(job['base'], candidates, job['language'], 'invalid_model_output')
         base, reason = job['base'], job['reason']
-        match, text = parsed
+        match, text, followups = parsed
         if match:
             record = candidates[match - 1]
             return dict(base, status='answered', answer=text, ai_explanation=text,
                         forum_answer=record['answer'], basis='retrieved', reason=reason,
-                        **source_of(record), retrieval_score=record['score'])
-        return dict(base, status='answered', answer=text, ai_explanation=text, basis='general', reason=reason)
+                        **source_of(record), retrieval_score=record['score'], followups=followups)
+        return dict(base, status='answered', answer=text, ai_explanation=text, basis='general', reason=reason,
+                    followups=followups)
 
     def answer(self, question, language='auto', history=None, forum=None):
         job = self._prepare(question, language, history, forum)
@@ -258,7 +307,7 @@ class AnswerService:
             for attempt in range(2):
                 raw = self.client.chat_json(messages, job['schema'])
                 try:
-                    parsed = parse_output(raw, len(candidates), job['language'])
+                    parsed = parse_output(raw, len(candidates), job['language'], job['question'])
                     break
                 except ValueError as exc:
                     LOGGER.warning('Invalid model output (attempt %d): %s', attempt + 1, exc)
@@ -287,7 +336,7 @@ class AnswerService:
                     shown = True
                     yield 'delta', delta
             try:
-                parsed = parse_output(raw, len(candidates), job['language'])
+                parsed = parse_output(raw, len(candidates), job['language'], job['question'])
             except ValueError as exc:
                 LOGGER.warning('Invalid streamed model output: %s', exc)
                 if shown:
@@ -295,7 +344,7 @@ class AnswerService:
                 parsed = None
                 retry = self.client.chat_json(self._correction(job, exc), job['schema'])
                 try:
-                    parsed = parse_output(retry, len(candidates), job['language'])
+                    parsed = parse_output(retry, len(candidates), job['language'], job['question'])
                     yield 'delta', parsed[1]
                 except ValueError as exc2:
                     LOGGER.warning('Invalid model output (retry): %s', exc2)

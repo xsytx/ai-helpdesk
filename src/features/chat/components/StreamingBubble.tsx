@@ -57,7 +57,7 @@ export const StreamingBubble = memo(function StreamingBubble({ text, onGrow }: {
     <div className="mr-auto max-w-[90%] rounded-2xl rounded-bl-md bg-background-2 px-4 py-2.5 text-sm text-primary">
       <p className="whitespace-pre-wrap">
         {visible}
-        <span className="ml-0.5 inline-block h-4 w-1.5 translate-y-0.5 rounded-sm bg-primary/60 motion-safe:animate-pulse" aria-hidden />
+        <span className="ml-0.5 inline-block h-4 w-1.5 translate-y-0.5 rounded-sm bg-brand/60 motion-safe:animate-pulse" aria-hidden />
       </p>
     </div>
   );

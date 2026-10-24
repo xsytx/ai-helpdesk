@@ -182,7 +182,7 @@ function ConversationRow({
             setMode(mode === "idle" ? "menu" : "idle");
           }}
           className={cn(
-            "mr-1 shrink-0 rounded-lg p-1.5 text-label hover:bg-white hover:text-primary focus-visible:opacity-100",
+            "mr-1 shrink-0 rounded-lg p-1.5 text-label hover:bg-surface hover:text-primary focus-visible:opacity-100",
             // Shown on hover on a computer; always on touch screens.
             mode === "idle" && !active && "opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100",
           )}
@@ -244,7 +244,7 @@ function MenuButton({
       type="button"
       {...props}
       className={cn(
-        "inline-flex items-center gap-1 rounded-lg border border-border/60 bg-white px-2 py-1 text-xs font-medium text-primary hover:bg-background-2 disabled:opacity-60",
+        "inline-flex items-center gap-1 rounded-lg border border-border/60 bg-surface px-2 py-1 text-xs font-medium text-primary hover:bg-background-2 disabled:opacity-60",
         danger && "border-error/30 text-error hover:bg-error/5",
         className,
       )}

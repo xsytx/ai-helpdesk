@@ -39,7 +39,7 @@ export function LikeButton({
         "inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold transition-colors",
         // Liked is a solid pill so it never looks like the plain hover state.
         active
-          ? "bg-primary text-white hover:bg-primary-light"
+          ? "bg-brand text-white hover:bg-brand-hover"
           : "text-label hover:bg-background-2 hover:text-primary",
         disabled && "opacity-60",
       )}

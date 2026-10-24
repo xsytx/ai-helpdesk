@@ -51,7 +51,7 @@ export function PostMenu({
         </button>
       </DropdownMenu.Trigger>
       <DropdownMenu.Portal>
-        <DropdownMenu.Content className="z-50 min-w-[9rem] rounded-xl border border-border bg-white p-1 shadow-lg" sideOffset={4} align="end">
+        <DropdownMenu.Content className="z-50 min-w-[9rem] rounded-xl border border-border bg-surface p-1 shadow-lg" sideOffset={4} align="end">
           {canEdit ? (
             <DropdownMenu.Item className={cn(item, "text-primary")} onSelect={onEdit}>
               <Pencil className="h-4 w-4" />

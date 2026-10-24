@@ -108,7 +108,7 @@ class OllamaClient(_BaseClient):
     provider = 'ollama'
 
     def __init__(self, model='qwen3:4b', base_url='http://127.0.0.1:11434', timeout=120.0,
-                 num_ctx=4096, num_predict=350, keep_alive='30m', temperature=0.2, http=None):
+                 num_ctx=4096, num_predict=450, keep_alive='30m', temperature=0.2, http=None):
         super().__init__(model, base_url, timeout, http=http)
         self.num_ctx, self.num_predict, self.keep_alive, self.temperature = num_ctx, num_predict, keep_alive, temperature
         self._supports_think = True

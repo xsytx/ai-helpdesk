@@ -39,7 +39,7 @@ export function TopHelpers() {
             onClick={() => setPeriod(p.id)}
             className={cn(
               "flex-1 rounded-md px-2 py-1.5",
-              period === p.id ? "bg-white text-primary shadow-sm" : "text-label hover:text-primary",
+              period === p.id ? "bg-surface text-primary shadow-sm" : "text-label hover:text-primary",
             )}
           >
             {t(p.key)}

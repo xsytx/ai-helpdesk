@@ -118,6 +118,13 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   if the model picks one, `source_type: "forum"` + `source.thread_id`. The
   chat shows "Ответ сообщества" + "Открыть обсуждение" (saved as
   `chat_messages.source_type` / `source_thread_id`).
+- **Suggested next questions (`012_chat_followups.sql`).** The model returns
+  `followups` (2-3 short questions in the answer's language) in the same JSON
+  as the answer; `clean_followups` drops repeats and wrong alphabets, and a
+  reply cut off inside them still keeps the answer (`salvage`;
+  `LLM_NUM_PREDICT` is 450 for the extra room). Saved in
+  `chat_messages.followups`; shown as buttons under the latest answer only
+  (`FollowupQuestions` in `ChatPage`), one tap asks it.
 - **Follow-up questions.** `ChatAsk` sends the chat's last 6 messages as
   `history` to `/generate-answer`. `ai_ml` (`kb/generation.py`) searches the
   knowledge base with the question alone and with the previous question
@@ -227,14 +234,22 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
 - **Every public SQL read must hide held posts**: use `threadVisible` /
   `commentVisible` in `backend/internal/store/postgres.go`.
 - **Schema changes** are idempotent SQL applied on every start
-  (`001_init.sql` + `003_chat.sql` + `004_faq.sql` + `005_search.sql` + `006_chat_feedback.sql` + `007_forum_extras.sql` + `008_reputation.sql` + `009_profiles.sql` + `010_tags.sql` + `011_forum_answers.sql` in `Migrate`, `002_moderation.sql` in
+  (`001_init.sql` + `003_chat.sql` + `004_faq.sql` + `005_search.sql` + `006_chat_feedback.sql` + `007_forum_extras.sql` + `008_reputation.sql` + `009_profiles.sql` + `010_tags.sql` + `011_forum_answers.sql` + `012_chat_followups.sql` in `Migrate`, `002_moderation.sql` in
   `MigrateModeration`): `CREATE ... IF NOT EXISTS` /
   `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`.
 - **Store interface**: adding a method to `store.Store` also needs a stub on
   `chatTestStore` in `backend/internal/handlers/chat_test.go`.
 - **UI building blocks**: `shared/ui` (`Button`, `Card`, `Input`,
   `PasswordField`, `OtpInput`, `RollingNumber`), tokens like `text-primary`,
-  `bg-background-2`, `text-label`, `rounded-2xl`. Animations go through
+  `bg-background-2`, `text-label`, `rounded-2xl`.
+- **Light/dark theme.** Colours come only from the tokens in
+  `styles/globals.css`; `:root[data-theme="dark"]` redefines them (and the
+  amber/red/green/sky/violet shades in use). Use `bg-surface` (not
+  `bg-white`) for cards/inputs/dialogs, `bg-brand` (not `bg-primary`) for
+  filled buttons/bubbles with white text, `text-primary` for text; `dark:`
+  classes follow the theme. The choice (Settings → Оформление:
+  system/light/dark) is `ai_helpdesk_theme` in `shared/lib/theme.ts`;
+  `index.html` sets it before the first paint. Animations go through
   `shared/lib/motion.ts` and must respect `prefers-reduced-motion`.
 - **Links** use React Router `viewTransition` (page fade; the `main` area is
   `view-transition-name: page`, which makes it its own stacking context —
@@ -274,7 +289,7 @@ questions in the AI chat, 👍/👎, "ask on the forum" from an answer, admin
 "AI chat" insights → FAQ, "maybe already asked", solved answers,
 unanswered filter, reports.
 
-Also done: the bot answers from the forum (Stories 8-9: "community answer"
+Also done: suggested next questions in the chat; dark theme; the bot answers from the forum (Stories 8-9: "community answer"
 + AI explanation + link); choosable tags and multi-topic filters;
 streaming answers with a stop button; reputation, levels and top
 helpers; photos on questions and answers; avatars on the server; public

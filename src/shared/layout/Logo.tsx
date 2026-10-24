@@ -21,7 +21,8 @@ export function Logo({ className, showText = true, to = "/" }: LogoProps) {
         alt=""
         width={36}
         height={36}
-        className="h-9 w-9 shrink-0 rounded-sm object-contain"
+        // Navy on a dark page would vanish: a light tile behind it in the dark theme.
+        className="h-9 w-9 shrink-0 rounded-sm object-contain dark:rounded-lg dark:bg-white/90 dark:p-0.5"
         decoding="async"
       />
       {showText ? (

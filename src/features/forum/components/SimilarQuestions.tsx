@@ -33,7 +33,7 @@ export function SimilarQuestions({ title, onOpen }: { title: string; onOpen: () 
             <Link
               to={`/forum/${thread.id}`}
               onClick={onOpen}
-              className="flex items-baseline justify-between gap-2 rounded-lg px-2 py-1 text-sm text-primary hover:bg-white"
+              className="flex items-baseline justify-between gap-2 rounded-lg px-2 py-1 text-sm text-primary hover:bg-surface"
             >
               <span className="min-w-0 truncate font-medium">{thread.title}</span>
               <span className="flex shrink-0 items-center gap-1 text-xs text-label">

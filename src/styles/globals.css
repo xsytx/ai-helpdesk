@@ -1,8 +1,18 @@
 @import "tailwindcss";
 
+/* `dark:` classes follow the theme chosen in Settings (<html data-theme="dark">), not only the system. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 @theme {
+  /* Text colour (headings, body text) and links. */
   --color-primary: #1e2151;
   --color-primary-light: #3a3f8f;
+  /* Filled buttons, the student's chat bubbles, selected chips: white text on it. */
+  --color-brand: #1e2151;
+  --color-brand-hover: #3a3f8f;
+  /* Cards, inputs, dialogs; and the page behind them. */
+  --color-surface: #ffffff;
+  --color-page: #f4f6fb;
   --color-accent: #f59e0b;
   --color-background: #cee0ff;
   --color-background-2: #e6eefa;
@@ -64,7 +74,55 @@ body {
   min-height: 100dvh;
   font-family: var(--font-sans);
   color: var(--color-primary);
+  background: var(--color-page);
   -webkit-font-smoothing: antialiased;
+}
+
+/*
+ * Dark theme: <html data-theme="dark">, set from Settings or the system theme
+ * (shared/lib/theme.ts; index.html sets it before the page draws, so there is
+ * no white flash). Only the colour tokens change: text gets light, surfaces
+ * dark. The status colours (amber/red/green/sky/violet banners and badges)
+ * flip too: light backgrounds become dark, dark text becomes light.
+ */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --color-primary: #e4e6fb;
+  --color-primary-light: #aab0ff;
+  --color-brand: #4c53c6;
+  --color-brand-hover: #5d65dc;
+  --color-surface: #181b33;
+  --color-page: #0e1022;
+  --color-background: #0e1022;
+  --color-background-2: #252946;
+  --color-background-2-hover: #2d3256;
+  --color-grey: #6b7090;
+  --color-label: #a3a9c6;
+  --color-border: #363b62;
+  --color-error: #ff8f87;
+
+  --color-amber-50: #2b2210;
+  --color-amber-100: #3a2c10;
+  --color-amber-200: #5a4416;
+  --color-amber-500: #f5b544;
+  --color-amber-700: #f7c56a;
+  --color-amber-800: #f9d48a;
+  --color-amber-900: #fbe2ad;
+  --color-red-50: #31141a;
+  --color-red-100: #431a20;
+  --color-red-200: #63262d;
+  --color-red-600: #e5484d;
+  --color-red-800: #ff9e9e;
+  --color-red-900: #ffbcbc;
+  --color-green-50: #10291c;
+  --color-green-200: #24553a;
+  --color-green-300: #2f6b49;
+  --color-green-600: #4ade80;
+  --color-green-700: #6ee7a0;
+  --color-sky-50: #102634;
+  --color-sky-700: #7dd3fc;
+  --color-violet-50: #221a3d;
+  --color-violet-700: #c4b5fd;
 }
 
 #root {
@@ -96,6 +154,7 @@ body {
 /* First-run tour (driver.js popovers), matched to the app's cards and buttons. */
 .driver-popover.sdu-tour {
   max-width: 320px;
+  background: var(--color-surface);
   padding: 18px 18px 14px;
   border-radius: 16px;
   font-family: var(--font-sans);
@@ -130,12 +189,12 @@ body {
   text-shadow: none;
 }
 .sdu-tour .driver-popover-footer .driver-popover-next-btn {
-  border-color: var(--color-primary);
-  background: var(--color-primary);
+  border-color: var(--color-brand);
+  background: var(--color-brand);
   color: #fff;
 }
 .sdu-tour .driver-popover-footer .driver-popover-next-btn:hover {
-  background: var(--color-primary-light);
+  background: var(--color-brand-hover);
 }
 .sdu-tour .driver-popover-close-btn {
   color: var(--color-grey);

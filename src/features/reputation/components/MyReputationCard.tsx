@@ -22,7 +22,7 @@ export function MyReputationCard() {
       </div>
       <p className="mt-2 text-3xl font-bold text-primary">{plural(rep.points, "points")}</p>
       <div className="mt-3 h-2 overflow-hidden rounded-full bg-background-2" role="progressbar" aria-valuenow={Math.round(progress)} aria-valuemin={0} aria-valuemax={100}>
-        <div className="h-full rounded-full bg-primary transition-[width] duration-500" style={{ width: `${progress}%` }} />
+        <div className="h-full rounded-full bg-brand transition-[width] duration-500" style={{ width: `${progress}%` }} />
       </div>
       <p className="mt-1.5 text-xs text-label">
         {nextLevel

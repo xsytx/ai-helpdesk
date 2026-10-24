@@ -5,6 +5,15 @@
     <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SDU Helpdesk</title>
+    <script>
+      // Theme before the first paint, so a dark page never flashes white (see src/shared/lib/theme.ts).
+      (function () {
+        var choice = null;
+        try { choice = localStorage.getItem("ai_helpdesk_theme"); } catch (e) {}
+        var dark = choice === "dark" || (choice !== "light" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+        document.documentElement.dataset.theme = dark ? "dark" : "light";
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

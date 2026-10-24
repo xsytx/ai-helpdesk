@@ -40,6 +40,8 @@ type chatAskResp struct {
 	// SourceType: "faq" (knowledge base) or "forum" (community answer).
 	SourceType string            `json:"source_type,omitempty"`
 	Source     *chatSourcePublic `json:"source"`
+	// Followups: questions the student may ask next (buttons under the answer).
+	Followups []string `json:"followups,omitempty"`
 	// Conversation the question and answer were saved to.
 	Conversation *models.ChatConversation `json:"conversation,omitempty"`
 	// MessageID is the saved answer (for 👍/👎); 0 if saving it failed.
@@ -339,6 +341,7 @@ func buildChatAskResp(mlResp mlclient.GenerateResult) chatAskResp {
 		AIExplanation: mlResp.AIExplanation,
 		Language:      mlResp.Language,
 		Basis:         mlResp.Basis,
+		Followups:     mlResp.Followups,
 	}
 	if mlResp.SourceType != nil {
 		out.SourceType = *mlResp.SourceType

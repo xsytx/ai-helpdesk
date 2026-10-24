@@ -61,7 +61,7 @@ export function AnswerActions({
         className={cn(
           "inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold transition-colors",
           didNotHelp
-            ? "bg-primary text-white hover:bg-primary-light"
+            ? "bg-brand text-white hover:bg-brand-hover"
             : "text-label hover:bg-background-2 hover:text-primary",
         )}
       >

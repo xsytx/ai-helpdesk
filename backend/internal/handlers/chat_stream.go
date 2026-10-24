@@ -30,6 +30,9 @@ func assistantMessage(res mlclient.GenerateResult) models.ChatMessage {
 	if res.AIExplanation != "" {
 		m.AIExplanation = &res.AIExplanation
 	}
+	if len(res.Followups) > 0 {
+		m.Followups = res.Followups
+	}
 	if m.ForumAnswer != nil && res.SourceType != nil {
 		m.SourceType = res.SourceType
 		if *res.SourceType == "forum" && res.Source != nil {

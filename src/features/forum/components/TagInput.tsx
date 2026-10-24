@@ -28,8 +28,8 @@ export function TagPicker({ id, tags, onChange }: { id: string; tags: string[]; 
               className={cn(
                 "inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40",
                 selected
-                  ? "border-primary bg-primary text-white"
-                  : "border-border bg-white text-primary hover:bg-background-2",
+                  ? "border-brand bg-brand text-white"
+                  : "border-border bg-surface text-primary hover:bg-background-2",
               )}
             >
               {selected ? <Check className="h-3 w-3" aria-hidden /> : null}
@@ -50,7 +50,7 @@ export function TagChip({ tag, active = false }: { tag: string; active?: boolean
     <span
       className={
         active
-          ? "rounded-full bg-primary px-2.5 py-0.5 text-xs font-medium text-white"
+          ? "rounded-full bg-brand px-2.5 py-0.5 text-xs font-medium text-white"
           : "rounded-full bg-background-2 px-2.5 py-0.5 text-xs font-medium text-primary"
       }
     >

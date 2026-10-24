@@ -22,7 +22,7 @@ export function AskAnythingSection() {
   }
 
   return (
-    <Card className="border-none bg-white shadow-sm" data-tour="ask">
+    <Card className="border-none bg-surface shadow-sm" data-tour="ask">
       <h2 className="mb-4 text-xl font-bold text-primary">{t("askAnything")}</h2>
       <div className="relative">
         <textarea
@@ -30,7 +30,7 @@ export function AskAnythingSection() {
           onChange={(e) => setQuery(e.target.value)}
           placeholder={t("askPlaceholder")}
           rows={3}
-          className="min-h-[88px] w-full resize-y rounded-2xl border border-border bg-white px-4 py-3 pr-14 text-sm text-primary placeholder:text-grey focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 md:min-h-[72px]"
+          className="min-h-[88px] w-full resize-y rounded-2xl border border-border bg-surface px-4 py-3 pr-14 text-sm text-primary placeholder:text-grey focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 md:min-h-[72px]"
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {
               e.preventDefault();
@@ -41,7 +41,7 @@ export function AskAnythingSection() {
         <button
           type="button"
           onClick={() => submit(query)}
-          className="absolute bottom-3 right-3 flex h-9 w-9 items-center justify-center rounded-full bg-primary text-white hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+          className="absolute bottom-3 right-3 flex h-9 w-9 items-center justify-center rounded-full bg-brand text-white hover:bg-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
           aria-label={t("send")}
         >
           <ArrowUp className="h-4 w-4" />

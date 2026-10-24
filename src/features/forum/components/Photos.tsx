@@ -60,7 +60,7 @@ export function PhotoThumb({ src, onRemove, label }: { src: string; onRemove?: (
           type="button"
           onClick={onRemove}
           aria-label={t("photoRemove")}
-          className="absolute right-1 top-1 rounded-full bg-primary/80 p-0.5 text-white hover:bg-primary"
+          className="absolute right-1 top-1 rounded-full bg-brand/80 p-0.5 text-white hover:bg-brand"
         >
           <X className="h-3.5 w-3.5" />
         </button>

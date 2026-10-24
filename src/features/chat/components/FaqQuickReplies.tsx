@@ -43,7 +43,7 @@ export function FaqQuickReplies({ onSelect, disabled = false, hideTitle = false 
               onClick={() => setCategory(c)}
               className={cn(
                 "rounded-lg px-2.5 py-1 text-xs font-semibold transition-colors",
-                category === c ? "bg-primary text-white" : "text-label hover:bg-background-2 hover:text-primary",
+                category === c ? "bg-brand text-white" : "text-label hover:bg-background-2 hover:text-primary",
               )}
             >
               {c === "all" ? t("faqAllCategories") : t(FAQ_CATEGORY_KEY[c])}

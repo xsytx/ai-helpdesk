@@ -8,8 +8,47 @@ import { Button } from "@/shared/ui/Button";
 import { LanguageSwitcher } from "@/shared/layout/LanguageSwitcher";
 import { requestTour } from "@/features/onboarding/tour";
 import { isStaffRole } from "@/features/moderation/api";
-import { Compass, ShieldCheck } from "lucide-react";
+import { useTheme, type ThemeChoice } from "@/shared/lib/theme";
+import { cn } from "@/shared/lib/cn";
+import { Compass, Monitor, Moon, ShieldCheck, Sun } from "lucide-react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
+
+const THEMES: { value: ThemeChoice; icon: typeof Sun; label: "themeSystem" | "themeLight" | "themeDark" }[] = [
+  { value: "system", icon: Monitor, label: "themeSystem" },
+  { value: "light", icon: Sun, label: "themeLight" },
+  { value: "dark", icon: Moon, label: "themeDark" },
+];
+
+/** Light / dark / like the system. */
+function ThemePicker() {
+  const { t } = useLocale();
+  const [theme, setTheme] = useTheme();
+  return (
+    <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
+      <span id="theme-label" className="text-sm font-medium text-label">
+        {t("themeLabel")}
+      </span>
+      <div role="radiogroup" aria-labelledby="theme-label" className="inline-flex rounded-xl bg-background-2 p-1">
+        {THEMES.map(({ value, icon: Icon, label }) => (
+          <button
+            key={value}
+            type="button"
+            role="radio"
+            aria-checked={theme === value}
+            onClick={() => setTheme(value)}
+            className={cn(
+              "inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors",
+              theme === value ? "bg-surface text-primary shadow-sm" : "text-label hover:text-primary",
+            )}
+          >
+            <Icon className="h-3.5 w-3.5" aria-hidden />
+            {t(label)}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export function SettingsPage() {
   const { user, logout } = useAuth();
@@ -36,6 +75,7 @@ export function SettingsPage() {
           <span className="text-sm font-medium text-label">{t("languageLabel")}</span>
           <LanguageSwitcher />
         </div>
+        <ThemePicker />
         <Button
           variant="secondary"
           size="sm"

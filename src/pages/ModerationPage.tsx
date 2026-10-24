@@ -101,7 +101,7 @@ function ModerationCard({ item }: { item: ModerationItem }) {
             maxLength={500}
             placeholder={t("moderationNotePlaceholder")}
             aria-label={t("moderationNotePlaceholder")}
-            className="w-full rounded-xl border border-border bg-white px-3.5 py-2 text-sm text-primary placeholder:text-grey focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20"
+            className="w-full rounded-xl border border-border bg-surface px-3.5 py-2 text-sm text-primary placeholder:text-grey focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20"
           />
           {error ? (
             <p className="text-sm text-red-600" role="alert">
@@ -231,7 +231,7 @@ function ModerationSection() {
             onClick={() => setStatus(tab.status)}
             className={cn(
               "rounded-xl px-3.5 py-2 text-sm font-semibold transition-colors",
-              status === tab.status ? "bg-primary text-white" : "bg-white text-primary hover:bg-background-2",
+              status === tab.status ? "bg-brand text-white" : "bg-surface text-primary hover:bg-background-2",
             )}
           >
             {t(tab.key)}
@@ -248,7 +248,7 @@ function ModerationSection() {
               type="date"
               value={range[key] ?? ""}
               onChange={(e) => setRange((r) => ({ ...r, [key]: e.target.value || undefined }))}
-              className="h-9 rounded-xl border border-border bg-white px-3 text-sm text-primary focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20"
+              className="h-9 rounded-xl border border-border bg-surface px-3 text-sm text-primary focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20"
             />
           </label>
         ))}
@@ -261,7 +261,7 @@ function ModerationSection() {
               onClick={() => setSort(value)}
               className={cn(
                 "rounded-md px-3 py-1.5",
-                sort === value ? "bg-white text-primary shadow-sm" : "text-label hover:text-primary",
+                sort === value ? "bg-surface text-primary shadow-sm" : "text-label hover:text-primary",
               )}
             >
               {value === "new" ? t("moderationSortNew") : t("moderationSortOld")}

@@ -70,6 +70,8 @@ class AnswerResponse(BaseModel):
     source: dict | None
     source_type: str | None
     retrieval_score: float | None
+    # Вопросы, которые студент, вероятно, задаст дальше (кнопки под ответом).
+    followups: list[str] = []
 
 
 class ErrorResponse(BaseModel):

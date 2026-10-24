@@ -76,7 +76,7 @@ export function AnswerList({
               else itemRefs.current.delete(answer.id);
             }}
             className={cn(
-              "flex gap-3 rounded-xl border bg-white p-3",
+              "flex gap-3 rounded-xl border bg-surface p-3",
               isSolution ? "border-green-300 ring-1 ring-green-200" : "border-border/50",
             )}
           >

@@ -89,7 +89,7 @@ export function ForumPage() {
             placeholder={t("forumSearchPlaceholder")}
             aria-label={t("forumSearchPlaceholder")}
             maxLength={200}
-            className="h-10 w-full rounded-xl border border-border bg-white pl-9 pr-9 text-sm text-primary placeholder:text-grey focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 [&::-webkit-search-cancel-button]:hidden"
+            className="h-10 w-full rounded-xl border border-border bg-surface pl-9 pr-9 text-sm text-primary placeholder:text-grey focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 [&::-webkit-search-cancel-button]:hidden"
           />
           {input ? (
             <button
