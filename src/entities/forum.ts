@@ -47,6 +47,8 @@ export interface Answer {
   authorLevel?: ReputationLevel;
   authorPoints?: number;
   moderationStatus?: ModerationStatus;
+  /** A reply under another answer (that answer's id); answers have none. */
+  parentId?: string;
 }
 
 /** "unanswered": questions with no answer yet, newest first. */

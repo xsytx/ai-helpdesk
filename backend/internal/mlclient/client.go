@@ -31,6 +31,7 @@ type Source struct {
 	ThreadID *int64 `json:"thread_id,omitempty"`
 	Accepted bool   `json:"accepted,omitempty"`
 	Likes    int    `json:"likes,omitempty"`
+	Staff    bool   `json:"staff,omitempty"`
 }
 
 type GenerateResult struct {

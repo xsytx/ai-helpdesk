@@ -17,11 +17,11 @@ var chatSQL string
 // maxChatConversations caps the chat list; older ones still open by link.
 const maxChatConversations = 200
 
-const conversationColumns = "id, title, pinned, created_at, updated_at"
+const conversationColumns = "id, title, pinned, created_at, updated_at, share_token"
 
 func scanConversation(row pgx.Row) (models.ChatConversation, error) {
 	var c models.ChatConversation
-	err := row.Scan(&c.ID, &c.Title, &c.Pinned, &c.CreatedAt, &c.UpdatedAt)
+	err := row.Scan(&c.ID, &c.Title, &c.Pinned, &c.CreatedAt, &c.UpdatedAt, &c.ShareToken)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return c, ErrNotFound
 	}
@@ -82,7 +82,7 @@ func (s *PostgresStore) DeleteChatConversation(ctx context.Context, userID, id i
 }
 
 func (s *PostgresStore) DeleteStaleChatConversations(ctx context.Context, olderThan time.Time) (int64, error) {
-	tag, err := s.pool.Exec(ctx, `DELETE FROM chat_conversations WHERE NOT pinned AND updated_at < $1`, olderThan)
+	tag, err := s.pool.Exec(ctx, `DELETE FROM chat_conversations WHERE NOT pinned AND share_token IS NULL AND updated_at < $1`, olderThan)
 	if err != nil {
 		return 0, err
 	}
@@ -91,11 +91,11 @@ func (s *PostgresStore) DeleteStaleChatConversations(ctx context.Context, olderT
 
 // --- AI chat: messages ---
 
-const chatMessageColumns = "id, conversation_id, user_id, role, text, forum_answer, ai_explanation, basis, language, source_type, source_thread_id, followups, rating, created_at"
+const chatMessageColumns = "id, conversation_id, user_id, role, text, forum_answer, ai_explanation, basis, language, source_type, source_thread_id, followups, source_accepted, source_likes, source_staff, rating, created_at"
 
 func scanChatMessage(row pgx.Row) (models.ChatMessage, error) {
 	var m models.ChatMessage
-	err := row.Scan(&m.ID, &m.ConversationID, &m.UserID, &m.Role, &m.Text, &m.ForumAnswer, &m.AIExplanation, &m.Basis, &m.Language, &m.SourceType, &m.SourceThreadID, &m.Followups, &m.Rating, &m.CreatedAt)
+	err := row.Scan(&m.ID, &m.ConversationID, &m.UserID, &m.Role, &m.Text, &m.ForumAnswer, &m.AIExplanation, &m.Basis, &m.Language, &m.SourceType, &m.SourceThreadID, &m.Followups, &m.SourceAccepted, &m.SourceLikes, &m.SourceStaff, &m.Rating, &m.CreatedAt)
 	return m, err
 }
 
@@ -109,10 +109,10 @@ func (s *PostgresStore) CreateChatMessage(ctx context.Context, userID int64, msg
 		     WHERE id = $1 AND user_id = $2
 		     RETURNING id
 		 )
-		 INSERT INTO chat_messages (conversation_id, user_id, role, text, forum_answer, ai_explanation, basis, language, source_type, source_thread_id, followups)
-		 SELECT conv.id, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11 FROM conv
+		 INSERT INTO chat_messages (conversation_id, user_id, role, text, forum_answer, ai_explanation, basis, language, source_type, source_thread_id, followups, source_accepted, source_likes, source_staff)
+		 SELECT conv.id, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14 FROM conv
 		 RETURNING `+chatMessageColumns,
-		msg.ConversationID, userID, msg.Role, msg.Text, msg.ForumAnswer, msg.AIExplanation, msg.Basis, msg.Language, msg.SourceType, msg.SourceThreadID, msg.Followups,
+		msg.ConversationID, userID, msg.Role, msg.Text, msg.ForumAnswer, msg.AIExplanation, msg.Basis, msg.Language, msg.SourceType, msg.SourceThreadID, msg.Followups, msg.SourceAccepted, msg.SourceLikes, msg.SourceStaff,
 	))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return m, ErrNotFound

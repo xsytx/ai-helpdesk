@@ -1,3 +1,4 @@
+import { plainText } from "@/shared/ui/RichText";
 import type { Thread } from "@/entities/forum";
 import { useLocale } from "@/i18n/LocaleContext";
 import type { TranslationKey } from "@/i18n/translations";
@@ -19,7 +20,8 @@ export function ThreadCard({ thread, highlightWords = [] }: { thread: Thread; hi
   const { locale, plural, t } = useLocale();
   const time = formatRelativeTime(thread.createdAt, locale);
   const matchLabel = thread.searchMatch ? MATCH_LABEL[thread.searchMatch] : undefined;
-  const body = highlightWords.length > 0 ? snippetAround(thread.body, highlightWords) : thread.body;
+  const text = plainText(thread.body);
+  const body = highlightWords.length > 0 ? snippetAround(text, highlightWords) : text;
 
   return (
     <li>

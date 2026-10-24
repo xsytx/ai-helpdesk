@@ -117,7 +117,16 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   `KB_FORUM_FLOOR` 0.75, top `KB_FORUM_TOP_K` 2) next to the FAQ candidates;
   if the model picks one, `source_type: "forum"` + `source.thread_id`. The
   chat shows "Ответ сообщества" + "Открыть обсуждение" (saved as
-  `chat_messages.source_type` / `source_thread_id`).
+  `chat_messages.source_type` / `source_thread_id`) with trust badges:
+  accepted, by staff, likes (`source_accepted/likes/staff`,
+  `013_chat_trust_share.sql`).
+- **Copy and share a chat.** A copy button under each answer
+  (`shared/lib/clipboard.ts`). Chat list ⋯ → "Поделиться" creates a
+  read-only link `/shared/<token>` (`chat_conversations.share_token`;
+  `POST/DELETE /api/chat/conversations/{id}/share`, public
+  `GET /api/shared-chats/{token}` without user ids or ratings;
+  `SharedChatPage`, no login). Shared chats are not auto-deleted; turning
+  the link off makes the old link 404.
 - **Suggested next questions (`012_chat_followups.sql`).** The model returns
   `followups` (2-3 short questions in the answer's language) in the same JSON
   as the answer; `clean_followups` drops repeats and wrong alphabets, and a
@@ -159,6 +168,27 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   delete any post. Edits are moderated again: `409` = held post, `422` =
   edit breaks the rules. Editing a question sends its tags too (the backend
   replaces them).
+- **Replies to answers** (one level, `comments.parent_comment_id`).
+  "Ответить" under an answer or a reply opens a small `ReplyForm`
+  (`replyTo`) under that answer, starting with @author; a reply to a reply
+  is stored under the same answer (`CreateComment` flattens it). Replies are
+  not counted as answers (answer count, unanswered filter, no +1), but a
+  correct reply under a wrong answer can still win: replies can be liked and
+  marked as the solution (its answer goes on top, the reply is marked), and
+  the chat bot uses a reply that is accepted or has ≥ 1 like. The answer's author gets
+  `reply_to_comment` and no extra mention notice; a follower who is
+  @mentioned gets only `mention`.
+- **@mentions** (no other formatting: posts are plain text). Questions and
+  answers are typed in `PostEditor`: "@" + letters suggests people
+  (`GET /api/users/search?q=`); the box shows "@Name", and the saved text
+  has `@[Name](u<id>)` (the editor keeps name → id and converts both ways;
+  changing a picked name's letters turns it back into plain text).
+  `shared/ui/RichText` shows mentions as profile links (React elements,
+  never HTML); previews use `plainText`. `store/mentions.go` sends a
+  `mention` notification from the store's create/update functions (also when
+  a held post is approved; on edit only to newly mentioned people; max 10;
+  never yourself). Notification types are listed in the CHECK in
+  `001_init.sql` — it is re-created on every start, so widen it there.
 - **Search** (`backend/internal/store/search.go`, indexes in `005_search.sql`):
   every typed word is a prefix ("cante" → canteen) over title, text, visible
   answers and tags, plus a trigram near-match on title and text for typos and
@@ -234,7 +264,7 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
 - **Every public SQL read must hide held posts**: use `threadVisible` /
   `commentVisible` in `backend/internal/store/postgres.go`.
 - **Schema changes** are idempotent SQL applied on every start
-  (`001_init.sql` + `003_chat.sql` + `004_faq.sql` + `005_search.sql` + `006_chat_feedback.sql` + `007_forum_extras.sql` + `008_reputation.sql` + `009_profiles.sql` + `010_tags.sql` + `011_forum_answers.sql` + `012_chat_followups.sql` in `Migrate`, `002_moderation.sql` in
+  (`001_init.sql` + `003_chat.sql` + `004_faq.sql` + `005_search.sql` + `006_chat_feedback.sql` + `007_forum_extras.sql` + `008_reputation.sql` + `009_profiles.sql` + `010_tags.sql` + `011_forum_answers.sql` + `012_chat_followups.sql` + `013_chat_trust_share.sql` in `Migrate`, `002_moderation.sql` in
   `MigrateModeration`): `CREATE ... IF NOT EXISTS` /
   `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`.
 - **Store interface**: adding a method to `store.Store` also needs a stub on
@@ -248,7 +278,8 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   `bg-white`) for cards/inputs/dialogs, `bg-brand` (not `bg-primary`) for
   filled buttons/bubbles with white text, `text-primary` for text; `dark:`
   classes follow the theme. The choice (Settings → Оформление:
-  system/light/dark) is `ai_helpdesk_theme` in `shared/lib/theme.ts`;
+  system/light/dark; the header's sun/moon `ThemeToggle` switches light/dark)
+  is `ai_helpdesk_theme` in `shared/lib/theme.ts`;
   `index.html` sets it before the first paint. Animations go through
   `shared/lib/motion.ts` and must respect `prefers-reduced-motion`.
 - **Links** use React Router `viewTransition` (page fade; the `main` area is
@@ -289,7 +320,7 @@ questions in the AI chat, 👍/👎, "ask on the forum" from an answer, admin
 "AI chat" insights → FAQ, "maybe already asked", solved answers,
 unanswered filter, reports.
 
-Also done: suggested next questions in the chat; dark theme; the bot answers from the forum (Stories 8-9: "community answer"
+Also done: replies to answers; @mentions in posts; trust badges, copy and share links in the chat; header theme toggle; suggested next questions in the chat; dark theme; the bot answers from the forum (Stories 8-9: "community answer"
 + AI explanation + link); choosable tags and multi-topic filters;
 streaming answers with a stop button; reputation, levels and top
 helpers; photos on questions and answers; avatars on the server; public

@@ -85,6 +85,7 @@ function toAnswer(c: ApiComment, userId: string | undefined): Answer {
     moderationStatus: c.moderation_status,
     authorAvatar: c.author_avatar ?? "",
     attachments: c.attachments?.map((a) => ({ id: String(a.id), url: a.url })),
+    parentId: c.parent_comment_id ? String(c.parent_comment_id) : undefined,
     // A remembered like on an answer with no likes is stale (e.g. un-liked on
     // another device), so it doesn't count.
     likedByUserIds: userId && c.score > 0 && readLikes(userId).has(id) ? [userId] : [],
@@ -333,10 +334,13 @@ export function useCreateAnswer(threadId: string) {
       authorId: string;
       authorName: string;
       body: string;
+      /** A reply: the answer it goes under. */
+      parentId?: string;
     }): Promise<CreateAnswerResult> => {
       if (USE_MOCK_API) return { kind: "published", answer: repo.createAnswer({ ...input, threadId }) };
       const { data } = await apiClient.post<ApiComment>(`/threads/${threadId}/comments`, {
         body: input.body,
+        parent_comment_id: input.parentId ? Number(input.parentId) : undefined,
       });
       const notice = parseModerationNotice(data);
       if (notice) return { kind: "pending", notice };

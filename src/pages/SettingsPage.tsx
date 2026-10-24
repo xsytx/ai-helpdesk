@@ -22,7 +22,7 @@ const THEMES: { value: ThemeChoice; icon: typeof Sun; label: "themeSystem" | "th
 /** Light / dark / like the system. */
 function ThemePicker() {
   const { t } = useLocale();
-  const [theme, setTheme] = useTheme();
+  const { choice: theme, setChoice: setTheme } = useTheme();
   return (
     <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
       <span id="theme-label" className="text-sm font-medium text-label">

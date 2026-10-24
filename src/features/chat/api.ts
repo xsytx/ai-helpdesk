@@ -15,6 +15,9 @@ export interface ChatHistoryMessage {
   source_type?: string | null;
   source_thread_id?: number | null;
   followups?: string[] | null;
+  source_accepted?: boolean;
+  source_likes?: number;
+  source_staff?: boolean;
   rating?: ChatRating | null;
 }
 
@@ -31,7 +34,7 @@ export interface ChatAskResponse {
   basis: string;
   source_type?: string;
   /** For a forum answer: the question it answers (thread_id) and whether it is the accepted one. */
-  source?: { question: string; category: string; thread_id?: number; accepted?: boolean } | null;
+  source?: { question: string; category: string; thread_id?: number; accepted?: boolean; likes?: number; staff?: boolean } | null;
   /** Questions the student may ask next (buttons under the answer). */
   followups?: string[];
   conversation: ApiConversation;
@@ -45,6 +48,7 @@ interface ApiConversation {
   pinned: boolean;
   created_at: string;
   updated_at: string;
+  share_token?: string | null;
 }
 
 /** One of the student's separate chats with the assistant. */
@@ -55,10 +59,70 @@ export interface ChatConversation {
   createdAt: string;
   /** Time of the last message. */
   updatedAt: string;
+  /** The read-only link's token (/shared/<token>), if the chat is shared. */
+  shareToken?: string;
 }
 
 export function toConversation(c: ApiConversation): ChatConversation {
-  return { id: String(c.id), title: c.title, pinned: c.pinned, createdAt: c.created_at, updatedAt: c.updated_at };
+  return {
+    id: String(c.id),
+    title: c.title,
+    pinned: c.pinned,
+    createdAt: c.created_at,
+    updatedAt: c.updated_at,
+    shareToken: c.share_token ?? undefined,
+  };
+}
+
+/** The full address of a shared chat. */
+export function sharedChatUrl(token: string): string {
+  return `${window.location.origin}/shared/${token}`;
+}
+
+/** Turn a chat's read-only link on (returns the token) or off (null). */
+export function useShareConversation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, share }: { id: string; share: boolean }) => {
+      if (!share) {
+        await apiClient.delete(`/chat/conversations/${id}/share`);
+        return null;
+      }
+      const { data } = await apiClient.post<{ share_token: string }>(`/chat/conversations/${id}/share`);
+      return data.share_token;
+    },
+    onSuccess: (token, { id }) => {
+      qc.setQueryData<ConversationList>(chatKeys.conversations, (old) =>
+        old
+          ? { ...old, conversations: old.conversations.map((c) => (c.id === id ? { ...c, shareToken: token ?? undefined } : c)) }
+          : old,
+      );
+    },
+  });
+}
+
+export interface SharedChat {
+  title: string;
+  createdAt: string;
+  messages: UiChatMessage[];
+}
+
+/** A shared chat by its link (no login needed). */
+export function useSharedChat(token: string) {
+  return useQuery({
+    queryKey: ["chat", "shared", token],
+    retry: (count, err) => getErrorStatus(err) !== 404 && count < 1,
+    queryFn: async (): Promise<SharedChat> => {
+      const { data } = await apiClient.get<{
+        conversation: { title: string; created_at: string };
+        messages: Omit<ChatHistoryMessage, "id" | "conversation_id">[];
+      }>(`/shared-chats/${encodeURIComponent(token)}`);
+      const rows = data.messages.map((m, i) => ({ ...m, id: i + 1, conversation_id: 0 }));
+      // Read-only: no ids for rating, no follow-up buttons.
+      const messages = historyToUiMessages(rows).map((m) => ({ ...m, serverId: undefined, followups: undefined }));
+      return { title: data.conversation.title, createdAt: data.conversation.created_at, messages };
+    },
+  });
 }
 
 const CHAT_TIMEOUT_MS = 190_000;
@@ -270,6 +334,9 @@ export function historyToUiMessages(rows: ChatHistoryMessage[]): UiChatMessage[]
     sourceType: m.source_type ?? undefined,
     sourceThreadId: m.source_thread_id ? String(m.source_thread_id) : undefined,
     followups: m.followups ?? undefined,
+    sourceAccepted: m.source_accepted,
+    sourceLikes: m.source_likes,
+    sourceStaff: m.source_staff,
     status: m.role === "assistant" && m.basis === "none" ? "fallback" : "answered",
     serverId: m.role === "assistant" ? String(m.id) : undefined,
     rating: m.rating ?? undefined,
@@ -288,6 +355,10 @@ export interface UiChatMessage {
   sourceThreadId?: string;
   /** Questions the student may ask next, shown as buttons under the latest answer. */
   followups?: string[];
+  /** A community answer: accepted by the asker, its likes, written by staff. */
+  sourceAccepted?: boolean;
+  sourceLikes?: number;
+  sourceStaff?: boolean;
   status?: "answered" | "fallback";
   error?: boolean;
   retryQuestion?: string;
@@ -309,6 +380,9 @@ export function askResponseToUiMessage(res: ChatAskResponse): UiChatMessage {
     sourceType: res.source_type,
     sourceThreadId: res.source_type === "forum" && res.source?.thread_id ? String(res.source.thread_id) : undefined,
     followups: res.followups,
+    ...(res.source_type === "forum"
+      ? { sourceAccepted: res.source?.accepted, sourceLikes: res.source?.likes, sourceStaff: res.source?.staff }
+      : {}),
     status: res.status,
     serverId: res.message_id ? String(res.message_id) : undefined,
   };

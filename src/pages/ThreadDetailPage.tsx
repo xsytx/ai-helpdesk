@@ -6,6 +6,8 @@ import { useAuth } from "@/app/AuthContext";
 import { Bell, BellOff } from "lucide-react";
 import { DeleteConfirm, PostActionErrorText, PostMenu, usePostPermissions } from "@/features/forum/components/PostMenu";
 import { TagChip, TagPicker } from "@/features/forum/components/TagInput";
+import { PostEditor } from "@/features/forum/components/PostEditor";
+import { RichText } from "@/shared/ui/RichText";
 import { FORUM_TAGS } from "@/features/forum/tags";
 import { ReportDialog } from "@/features/forum/components/ReportDialog";
 import { PhotoEditor, PhotoGallery } from "@/features/forum/components/Photos";
@@ -173,13 +175,11 @@ function ThreadCardFull({ thread }: { thread: Thread }) {
                 onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))}
                 className="h-11 w-full rounded-xl border border-border px-3.5 text-base font-bold text-primary focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20"
               />
-              <textarea
-                aria-label={t("threadDetails")}
+              <PostEditor
+                ariaLabel={t("threadDetails")}
                 value={draft.body}
                 rows={5}
-                maxLength={2000}
-                onChange={(e) => setDraft((d) => ({ ...d, body: e.target.value }))}
-                className="w-full resize-y rounded-xl border border-border px-3.5 py-2.5 text-sm text-primary focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20"
+                onChange={(body) => setDraft((d) => ({ ...d, body }))}
               />
               <TagPicker id={`edit-tags-${thread.id}`} tags={draft.tags} onChange={(tags) => setDraft((d) => ({ ...d, tags }))} />
               <PhotoEditor
@@ -203,7 +203,7 @@ function ThreadCardFull({ thread }: { thread: Thread }) {
           ) : (
             <>
               <h1 className="mt-1 text-xl font-bold text-primary">{thread.title}</h1>
-              <p className="mt-2 whitespace-pre-wrap text-sm text-primary/90">{thread.body}</p>
+              <RichText text={thread.body} className="mt-2 text-sm text-primary/90" />
               <PhotoGallery photos={thread.attachments ?? []} />
               {tags.length > 0 ? (
                 <div className="mt-3 flex flex-wrap gap-1.5">

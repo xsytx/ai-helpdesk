@@ -4,6 +4,7 @@ import { UserAvatar } from "@/features/profile/components/UserAvatar";
 import { isStaffRole, usePendingModerationCount } from "@/features/moderation/api";
 import { NotificationBell } from "@/features/notifications/components/NotificationBell";
 import { LanguageSwitcher } from "./LanguageSwitcher";
+import { ThemeToggle } from "./ThemeToggle";
 import { Logo } from "./Logo";
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useMoveLegacyAvatar } from "@/features/profile/api";
@@ -92,6 +93,7 @@ export function AppShell() {
           <div className="hidden flex-1 md:block" />
           <div className="flex items-center gap-2">
             <LanguageSwitcher />
+            <ThemeToggle />
             <NotificationBell />
             {user ? (
               <Link viewTransition to={`/users/${user.id}`} aria-label={t("myProfile")} title={t("myProfile")} className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40">

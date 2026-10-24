@@ -1,13 +1,16 @@
 import {
+  sharedChatUrl,
   useChatConversations,
   useDeleteConversation,
+  useShareConversation,
   useUpdateConversation,
   type ChatConversation,
 } from "@/features/chat/api";
+import { copyText } from "@/shared/lib/clipboard";
 import { useLocale } from "@/i18n/LocaleContext";
 import type { TranslationKey } from "@/i18n/translations";
 import { cn } from "@/shared/lib/cn";
-import { Check, MoreHorizontal, Pencil, Pin, PinOff, Trash2, X } from "lucide-react";
+import { Check, Copy, Link2, Link2Off, MoreHorizontal, Pencil, Pin, PinOff, Share2, Trash2, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
@@ -70,7 +73,7 @@ export function ConversationList({ activeId, onNavigate }: { activeId?: string; 
   );
 }
 
-type RowMode = "idle" | "menu" | "rename" | "confirmDelete";
+type RowMode = "idle" | "menu" | "rename" | "confirmDelete" | "share";
 
 function ConversationRow({
   conv,
@@ -171,6 +174,7 @@ function ConversationRow({
           )}
         >
           {conv.pinned ? <Pin className="h-3 w-3 shrink-0 text-label" aria-hidden /> : null}
+          {conv.shareToken ? <Link2 className="h-3 w-3 shrink-0 text-label" aria-label={t("chatShared")} /> : null}
           <span className="truncate">{label}</span>
         </Link>
         <button
@@ -209,12 +213,18 @@ function ConversationRow({
             {conv.pinned ? <PinOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}
             {conv.pinned ? t("chatUnpin") : t("chatPin")}
           </MenuButton>
+          <MenuButton onClick={() => setMode("share")}>
+            <Share2 className="h-3.5 w-3.5" />
+            {t("chatShare")}
+          </MenuButton>
           <MenuButton danger onClick={() => setMode("confirmDelete")}>
             <Trash2 className="h-3.5 w-3.5" />
             {t("chatDelete")}
           </MenuButton>
         </div>
       ) : null}
+
+      {mode === "share" ? <SharePanel conv={conv} onClose={() => setMode("idle")} /> : null}
 
       {mode === "confirmDelete" ? (
         <div className="space-y-2 px-2 pb-2 pt-1" role="alertdialog" aria-label={t("chatDeleteConfirm")}>
@@ -231,6 +241,51 @@ function ConversationRow({
 
       {failed ? <p className="px-3 pb-1 text-xs text-error">{t("chatActionFailed")}</p> : null}
     </li>
+  );
+}
+
+/** Read-only link of a chat: create, copy, turn off. */
+function SharePanel({ conv, onClose }: { conv: ChatConversation; onClose: () => void }) {
+  const { t } = useLocale();
+  const share = useShareConversation();
+  const [copied, setCopied] = useState(false);
+  const url = conv.shareToken ? sharedChatUrl(conv.shareToken) : "";
+
+  return (
+    <div className="space-y-2 px-2 pb-2 pt-1">
+      <p className="text-xs text-label">{t("chatShareInfo")}</p>
+      {url ? (
+        <>
+          <input
+            readOnly
+            value={url}
+            aria-label={t("chatShareLink")}
+            onFocus={(e) => e.currentTarget.select()}
+            className="w-full rounded-lg border border-border bg-surface px-2 py-1 text-xs text-primary"
+          />
+          <div className="flex flex-wrap gap-1">
+            <MenuButton onClick={() => void copyText(url).then(setCopied)}>
+              {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+              {copied ? t("chatCopied") : t("chatCopyLink")}
+            </MenuButton>
+            <MenuButton danger disabled={share.isPending} onClick={() => share.mutate({ id: conv.id, share: false })}>
+              <Link2Off className="h-3.5 w-3.5" />
+              {t("chatUnshare")}
+            </MenuButton>
+            <MenuButton onClick={onClose}>{t("close")}</MenuButton>
+          </div>
+        </>
+      ) : (
+        <div className="flex flex-wrap gap-1">
+          <MenuButton disabled={share.isPending} onClick={() => share.mutate({ id: conv.id, share: true })}>
+            <Link2 className="h-3.5 w-3.5" />
+            {t("chatCreateLink")}
+          </MenuButton>
+          <MenuButton onClick={onClose}>{t("cancel")}</MenuButton>
+        </div>
+      )}
+      {share.isError ? <p className="text-xs text-error">{t("chatActionFailed")}</p> : null}
+    </div>
   );
 }
 

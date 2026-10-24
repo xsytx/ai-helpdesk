@@ -29,6 +29,7 @@ export const router = createBrowserRouter([
     errorElement: <ErrorPage />,
     children: [
       { path: "/login", element: <LoginPage /> },
+      { path: "/shared/:token", element: lazyPage(() => import("@/pages/SharedChatPage"), "SharedChatPage") },
       { path: "/signup", element: lazyPage(() => import("@/pages/SignUpPage"), "SignUpPage") },
       {
         path: "/forgot-password",

@@ -152,6 +152,16 @@ func (s *chatTestStore) ListFeed(context.Context, string, []string, int, int) ([
 func (s *chatTestStore) UpdateProfile(context.Context, int64, string, string, string) (models.User, error) {
 	return models.User{}, store.ErrNotFound
 }
+func (s *chatTestStore) ShareChatConversation(context.Context, int64, int64) (string, error) {
+	return "", store.ErrNotFound
+}
+func (s *chatTestStore) UnshareChatConversation(context.Context, int64, int64) error { return nil }
+func (s *chatTestStore) SharedChat(context.Context, string) (models.ChatConversation, []models.ChatMessage, error) {
+	return models.ChatConversation{}, nil, store.ErrNotFound
+}
+func (s *chatTestStore) SearchUsers(context.Context, string, int) ([]models.UserSuggestion, error) {
+	return nil, nil
+}
 func (s *chatTestStore) ForumAnswers(context.Context, int) ([]models.ForumAnswer, error) {
 	return nil, nil
 }

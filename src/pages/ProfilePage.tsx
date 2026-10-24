@@ -1,3 +1,4 @@
+import { plainText } from "@/shared/ui/RichText";
 import { useAuth } from "@/app/AuthContext";
 import { useUserQuestions } from "@/features/forum/api";
 import { ThreadList } from "@/features/forum/components/ThreadList";
@@ -140,7 +141,7 @@ function AnswersTab({ userId }: { userId: string }) {
                 </span>
               ) : null}
             </p>
-            <p className="mt-1 line-clamp-2 text-sm text-primary/90">{a.body}</p>
+            <p className="mt-1 line-clamp-2 text-sm text-primary/90">{plainText(a.body)}</p>
             <p className="mt-1 inline-flex items-center gap-1 text-xs text-label">
               <ThumbsUp className="h-3.5 w-3.5" aria-hidden />
               {a.likes}

@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"campus-forum/internal/models"
 )
@@ -142,4 +143,24 @@ func (h *Handlers) ListUserComments(w http.ResponseWriter, r *http.Request) {
 		"page_size": pageSize,
 		"total":     total,
 	})
+}
+
+// SearchUsers suggests people to @mention: ?q= is the start of a word of
+// their name (at least one letter). Logged-in users only.
+func (h *Handlers) SearchUsers(w http.ResponseWriter, r *http.Request) {
+	if _, ok := h.userID(r); !ok {
+		writeError(w, http.StatusUnauthorized, "not authenticated")
+		return
+	}
+	q := strings.TrimSpace(r.URL.Query().Get("q"))
+	if q == "" || utf8.RuneCountInString(q) > 40 {
+		writeJSON(w, http.StatusOK, map[string]any{"users": []any{}})
+		return
+	}
+	users, err := h.Store.SearchUsers(r.Context(), q, 6)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "could not search users")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"users": users})
 }

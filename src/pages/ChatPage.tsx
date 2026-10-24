@@ -16,6 +16,7 @@ import {
   type UiChatMessage,
 } from "@/features/chat/api";
 import { AnswerActions } from "@/features/chat/components/AnswerActions";
+import { AssistantContent } from "@/features/chat/components/AssistantContent";
 import { StreamingBubble } from "@/features/chat/components/StreamingBubble";
 import { ConversationList } from "@/features/chat/components/ConversationList";
 import { CreateThreadDialog } from "@/features/forum/components/CreateThreadDialog";
@@ -28,94 +29,10 @@ import { getErrorStatus } from "@/shared/api/client";
 import { Button } from "@/shared/ui/Button";
 import { Card } from "@/shared/ui/Card";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowUp, ChevronDown, CornerDownRight, History, Loader2, Plus, Square, Users, X, Zap } from "lucide-react";
+import { ArrowUp, ChevronDown, CornerDownRight, History, Loader2, Plus, Square, X, Zap } from "lucide-react";
 import { createPortal } from "react-dom";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useCallback, useEffect, useRef, useState } from "react";
-
-function showsKnowledgeBase(msg: UiChatMessage): boolean {
-  if (msg.status === "fallback") return false;
-  const basis = msg.basis ?? "";
-  return (basis === "retrieved" || basis === "context") && Boolean(msg.forumAnswer);
-}
-
-function AssistantContent({
-  msg,
-  t,
-}: {
-  msg: UiChatMessage & { onRetry?: () => void };
-  t: (k: string) => string;
-}) {
-  if (msg.error) {
-    return (
-      <div className="space-y-2">
-        <p className="text-error">{msg.text}</p>
-        {msg.retryQuestion ? (
-          <button
-            type="button"
-            className="text-sm font-medium text-primary underline-offset-2 hover:underline"
-            onClick={() => msg.onRetry?.()}
-          >
-            {t("chatRetry")}
-          </button>
-        ) : null}
-      </div>
-    );
-  }
-
-  if (msg.basis === "stopped") {
-    return (
-      <div className="space-y-1">
-        <p className="whitespace-pre-wrap">{msg.text}</p>
-        <p className="text-xs italic text-label">{t("chatStoppedNote")}</p>
-      </div>
-    );
-  }
-
-  if (msg.basis === "faq") {
-    return (
-      <div className="space-y-1">
-        <p className="flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-label">
-          <Zap className="h-3 w-3 text-accent" aria-hidden />
-          {t("chatFaqInstant")}
-        </p>
-        <p className="whitespace-pre-wrap">{msg.text}</p>
-      </div>
-    );
-  }
-
-  if (showsKnowledgeBase(msg)) {
-    const fromForum = msg.sourceType === "forum";
-    return (
-      <div className="space-y-3">
-        <div>
-          <p className="mb-1 flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-label">
-            {fromForum ? <Users className="h-3 w-3 text-accent" aria-hidden /> : null}
-            {t(fromForum ? "chatCommunityAnswer" : "chatKbAnswer")}
-          </p>
-          <p className="whitespace-pre-wrap">{msg.forumAnswer}</p>
-          {fromForum && msg.sourceThreadId ? (
-            <Link
-              viewTransition
-              to={`/forum/${msg.sourceThreadId}`}
-              className="mt-1 inline-flex items-center gap-0.5 text-xs font-medium text-primary-light hover:underline"
-            >
-              {t("chatOpenDiscussion")} →
-            </Link>
-          ) : null}
-        </div>
-        {msg.aiExplanation ? (
-          <div>
-            <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-label">{t("chatAiExplanation")}</p>
-            <p className="whitespace-pre-wrap">{msg.aiExplanation}</p>
-          </div>
-        ) : null}
-      </div>
-    );
-  }
-
-  return <p className="whitespace-pre-wrap">{msg.text}</p>;
-}
 
 type UiChatMessageWithRetry = UiChatMessage & { onRetry?: () => void };
 
@@ -557,7 +474,7 @@ export function ChatPage() {
                         msg.error ? "border border-error/30 bg-surface" : "bg-background-2",
                       )}
                     >
-                      <AssistantContent msg={msg} t={translate} />
+                      <AssistantContent msg={msg} />
                     </div>
                     {msg.error ? null : (
                       <AnswerActions

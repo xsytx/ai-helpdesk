@@ -108,6 +108,12 @@ type Store interface {
 
 	// ListFAQs: in the admins' order (sort_order, then id).
 	ListFAQs(ctx context.Context) ([]models.FAQ, error)
+	// SearchUsers: people to @mention whose name (a word of it) starts with q.
+	SearchUsers(ctx context.Context, q string, limit int) ([]models.UserSuggestion, error)
+	// Read-only chat links.
+	ShareChatConversation(ctx context.Context, userID, id int64) (string, error)
+	UnshareChatConversation(ctx context.Context, userID, id int64) error
+	SharedChat(ctx context.Context, token string) (models.ChatConversation, []models.ChatMessage, error)
 	// ForumAnswers: published questions with a trustworthy answer, for the AI chat.
 	ForumAnswers(ctx context.Context, limit int) ([]models.ForumAnswer, error)
 	GetFAQ(ctx context.Context, id int64) (models.FAQ, error)

@@ -34,6 +34,13 @@ func TestChatUsesForumAnswers(t *testing.T) {
 	plain := e.newThread(asker, "Is the gym free?", "Asking for a friend")
 	e.newAnswer(helper, plain, "I think so") // no like, not accepted, not staff: not trusted
 	e.newThread(asker, "Nobody answered this", "Question without answers")
+	// A wrong answer corrected in a liked reply: the reply is what the bot gets.
+	corrected := e.newThread(asker, "Is there a microwave in the canteen?", "Want to warm up my lunch")
+	wrong := e.newAnswer(helper, corrected, "No, there is none")
+	_, fix := e.call(admin, http.MethodPost, fmt.Sprintf("/api/threads/%d/comments", corrected),
+		map[string]any{"body": "There are two, next to the cashier.", "parent_comment_id": wrong})
+	e.waitStatus("comment", num(fix["id"]), "ok")
+	e.call(liker, http.MethodPost, fmt.Sprintf("/api/comments/%d/vote", num(fix["id"])), map[string]any{"value": 1})
 
 	// The fake model checks what it was given and picks the dorm question.
 	var got []mlclient.ForumCandidate
@@ -71,6 +78,9 @@ func TestChatUsesForumAnswers(t *testing.T) {
 	}
 	if a := answers[staff]; a.Answer != "Block A, room 101." || !a.Staff {
 		t.Fatalf("staff answer: %+v", a)
+	}
+	if a := answers[corrected]; a.Answer != "There are two, next to the cashier." {
+		t.Fatalf("a liked reply under an unliked answer: %+v", a)
 	}
 	if _, ok := answers[plain]; ok {
 		t.Fatalf("an answer without likes/acceptance must not be offered: %+v", got)

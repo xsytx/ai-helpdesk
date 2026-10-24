@@ -27,6 +27,8 @@ type chatSourcePublic struct {
 	// A forum answer: the question it answers and whether it is the accepted one.
 	ThreadID *int64 `json:"thread_id,omitempty"`
 	Accepted bool   `json:"accepted,omitempty"`
+	Likes    int    `json:"likes,omitempty"`
+	Staff    bool   `json:"staff,omitempty"`
 }
 
 type chatAskResp struct {
@@ -354,6 +356,8 @@ func buildChatAskResp(mlResp mlclient.GenerateResult) chatAskResp {
 		if out.SourceType == "forum" {
 			out.Source.ThreadID = mlResp.Source.ThreadID
 			out.Source.Accepted = mlResp.Source.Accepted
+			out.Source.Likes = mlResp.Source.Likes
+			out.Source.Staff = mlResp.Source.Staff
 		}
 	}
 	return out

@@ -17,22 +17,35 @@ function savedChoice(): ThemeChoice {
   return saved === "light" || saved === "dark" ? saved : "system";
 }
 
-function apply(choice: ThemeChoice) {
-  const dark = choice === "dark" || (choice === "system" && darkQuery().matches);
-  document.documentElement.dataset.theme = dark ? "dark" : "light";
+function resolve(choice: ThemeChoice): "light" | "dark" {
+  return choice === "dark" || (choice === "system" && darkQuery().matches) ? "dark" : "light";
 }
 
-const ThemeContext = createContext<[ThemeChoice, (choice: ThemeChoice) => void]>(["system", () => {}]);
+interface ThemeState {
+  /** What the student chose (Settings). */
+  choice: ThemeChoice;
+  /** What is on screen now. */
+  resolved: "light" | "dark";
+  setChoice: (choice: ThemeChoice) => void;
+}
+
+const ThemeContext = createContext<ThemeState>({ choice: "system", resolved: "light", setChoice: () => {} });
 
 /** Applies the theme for the whole app and follows the system and other tabs. */
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [choice, setChoice] = useState<ThemeChoice>(savedChoice);
+  const [resolved, setResolved] = useState(() => resolve(choice));
 
   useEffect(() => {
-    apply(choice);
+    const apply = () => {
+      const theme = resolve(choice);
+      document.documentElement.dataset.theme = theme;
+      setResolved(theme);
+    };
+    apply();
     if (choice !== "system") return;
     const query = darkQuery();
-    const onChange = () => apply("system");
+    const onChange = apply;
     query.addEventListener("change", onChange);
     return () => query.removeEventListener("change", onChange);
   }, [choice]);
@@ -51,10 +64,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     else safeStorage.set(THEME_KEY, next);
     setChoice(next);
   };
-  return createElement(ThemeContext.Provider, { value: [choice, update] }, children);
+  return createElement(ThemeContext.Provider, { value: { choice, resolved, setChoice: update } }, children);
 }
 
-/** The current choice and a setter. */
+/** The theme choice, what is on screen, and a setter. */
 export function useTheme() {
   return useContext(ThemeContext);
 }

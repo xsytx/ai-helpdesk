@@ -80,7 +80,10 @@ func (s *PostgresStore) Migrate(ctx context.Context) error {
 	if _, err := s.pool.Exec(ctx, forumAnswersSQL); err != nil {
 		return err
 	}
-	_, err := s.pool.Exec(ctx, chatFollowupsSQL)
+	if _, err := s.pool.Exec(ctx, chatFollowupsSQL); err != nil {
+		return err
+	}
+	_, err := s.pool.Exec(ctx, chatTrustShareSQL)
 	return err
 }
 
@@ -325,7 +328,8 @@ const threadSelect = `
 	       ) p), ARRAY[]::text[]) AS preview_photos
 	FROM threads t
 	JOIN users u ON u.id = t.user_id
-	LEFT JOIN (SELECT thread_id, COUNT(*) AS cnt FROM comments c WHERE ` + commentVisible + ` GROUP BY thread_id) cc
+	LEFT JOIN (SELECT thread_id, COUNT(*) AS cnt FROM comments c
+	           WHERE ` + commentVisible + ` AND c.parent_comment_id IS NULL GROUP BY thread_id) cc
 	       ON cc.thread_id = t.id
 	LEFT JOIN (
 		SELECT tt.thread_id, array_agg(tg.name ORDER BY tg.name) AS tags
@@ -376,7 +380,7 @@ func (s *PostgresStore) ListFeed(ctx context.Context, sort string, tags []string
 	where := threadVisible
 	// "unanswered": questions nobody has answered yet (visible answers only), newest first.
 	if sort == "unanswered" {
-		where += ` AND NOT EXISTS (SELECT 1 FROM comments c WHERE c.thread_id = t.id AND ` + commentVisible + `)`
+		where += ` AND NOT EXISTS (SELECT 1 FROM comments c WHERE c.thread_id = t.id AND c.parent_comment_id IS NULL AND ` + commentVisible + `)`
 	}
 	where += ` AND (COALESCE(cardinality($1::text[]), 0) = 0 OR EXISTS (
 		SELECT 1 FROM thread_tags tt JOIN tags tg ON tg.id = tt.tag_id
@@ -456,6 +460,7 @@ func (s *PostgresStore) CreateThread(ctx context.Context, userID int64, in Threa
 	if err := s.SubscribeThread(ctx, userID, id); err != nil {
 		log.Printf("could not auto-subscribe user %d to thread %d: %v", userID, id, err)
 	}
+	s.notifyMentions(ctx, userID, id, nil, in.Body, "", 0)
 	return s.GetThread(ctx, id)
 }
 
@@ -475,17 +480,24 @@ func (s *PostgresStore) GetThread(ctx context.Context, id int64) (models.Thread,
 }
 
 func (s *PostgresStore) UpdateThread(ctx context.Context, id, userID int64, in ThreadInput) (models.Thread, error) {
-	const q = `UPDATE threads SET title = $1, body = $2 WHERE id = $3 AND user_id = $4`
-	tag, err := s.pool.Exec(ctx, q, in.Title, in.Body, id, userID)
+	// The old text comes back too: only people newly mentioned are notified.
+	const q = `
+		UPDATE threads t SET title = $1, body = $2
+		FROM (SELECT body FROM threads WHERE id = $3 FOR UPDATE) old
+		WHERE t.id = $3 AND t.user_id = $4
+		RETURNING old.body`
+	var previous string
+	err := s.pool.QueryRow(ctx, q, in.Title, in.Body, id, userID).Scan(&previous)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return models.Thread{}, s.ownershipErr(ctx, "threads", id)
+	}
 	if err != nil {
 		return models.Thread{}, err
-	}
-	if tag.RowsAffected() == 0 {
-		return models.Thread{}, s.ownershipErr(ctx, "threads", id)
 	}
 	if err := s.setThreadTags(ctx, id, in.Tags); err != nil {
 		return models.Thread{}, err
 	}
+	s.notifyMentions(ctx, userID, id, nil, in.Body, previous, 0)
 	return s.GetThread(ctx, id)
 }
 
@@ -567,7 +579,9 @@ func (s *PostgresStore) CreateComment(ctx context.Context, threadID, userID int6
 	// otherwise the reply tree could straddle two threads.
 	if parentCommentID != nil {
 		var parentThreadID int64
-		err := s.pool.QueryRow(ctx, `SELECT thread_id FROM comments WHERE id = $1`, *parentCommentID).Scan(&parentThreadID)
+		var grandParentID *int64
+		err := s.pool.QueryRow(ctx, `SELECT thread_id, parent_comment_id FROM comments WHERE id = $1`, *parentCommentID).
+			Scan(&parentThreadID, &grandParentID)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return models.Comment{}, ErrNotFound
 		}
@@ -576,6 +590,10 @@ func (s *PostgresStore) CreateComment(ctx context.Context, threadID, userID int6
 		}
 		if parentThreadID != threadID {
 			return models.Comment{}, ErrInvalidTarget
+		}
+		// Replies are one level deep: a reply to a reply goes under the same answer.
+		if grandParentID != nil {
+			parentCommentID = grandParentID
 		}
 	}
 
@@ -625,17 +643,19 @@ func (s *PostgresStore) CreateComment(ctx context.Context, threadID, userID int6
 			log.Printf("could not create reply notification for comment %d: %v", id, serr)
 		}
 	}
+	// People @mentioned in it get "mentioned you" instead (notifyMentions below).
 	if _, nerr := s.pool.Exec(ctx,
 		`INSERT INTO notifications (user_id, actor_id, type, thread_id, comment_id)
 		 SELECT s.user_id, $2, 'comment_on_thread', $1, $3
 		 FROM subscriptions s
-		 WHERE s.thread_id = $1 AND s.user_id <> $2 AND s.user_id <> $4
+		 WHERE s.thread_id = $1 AND s.user_id <> $2 AND s.user_id <> $4 AND NOT (s.user_id = ANY($5::bigint[]))
 		 ON CONFLICT (user_id, thread_id, type) WHERE read_at IS NULL
 		 DO UPDATE SET actor_id = EXCLUDED.actor_id, comment_id = EXCLUDED.comment_id, created_at = now()`,
-		threadID, userID, id, parentAuthorID,
+		threadID, userID, id, parentAuthorID, append([]int64{}, MentionedUserIDs(body)...),
 	); nerr != nil {
 		log.Printf("could not create subscriber notifications for comment %d on thread %d: %v", id, threadID, nerr)
 	}
+	s.notifyMentions(ctx, userID, threadID, &id, body, "", parentAuthorID)
 
 	c, err := scanComment(s.pool.QueryRow(ctx, commentSelect+` WHERE c.id = $1`, id))
 	if err != nil {
@@ -653,14 +673,22 @@ func (s *PostgresStore) getCommentByID(ctx context.Context, id int64) (models.Co
 }
 
 func (s *PostgresStore) UpdateComment(ctx context.Context, id, userID int64, body string) (models.Comment, error) {
-	const q = `UPDATE comments SET body = $1 WHERE id = $2 AND user_id = $3`
-	tag, err := s.pool.Exec(ctx, q, body, id, userID)
+	// The old text comes back too: only people newly mentioned are notified.
+	const q = `
+		UPDATE comments c SET body = $1
+		FROM (SELECT body FROM comments WHERE id = $2 FOR UPDATE) old
+		WHERE c.id = $2 AND c.user_id = $3
+		RETURNING old.body, c.thread_id`
+	var previous string
+	var threadID int64
+	err := s.pool.QueryRow(ctx, q, body, id, userID).Scan(&previous, &threadID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return models.Comment{}, s.ownershipErr(ctx, "comments", id)
+	}
 	if err != nil {
 		return models.Comment{}, err
 	}
-	if tag.RowsAffected() == 0 {
-		return models.Comment{}, s.ownershipErr(ctx, "comments", id)
-	}
+	s.notifyMentions(ctx, userID, threadID, &id, body, previous, 0)
 	return s.getCommentByID(ctx, id)
 }
 

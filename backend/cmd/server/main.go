@@ -224,6 +224,7 @@ func main() {
 	mux.Handle("GET /api/threads/{id}", optionalAuthMw(http.HandlerFunc(h.GetThread)))
 	mux.HandleFunc("GET /api/threads/similar", h.SimilarThreads)
 	mux.HandleFunc("GET /api/leaderboard", h.Leaderboard)
+	mux.Handle("GET /api/users/search", authMw(http.HandlerFunc(h.SearchUsers)))
 	mux.HandleFunc("GET /api/users/{id}", h.GetUserProfile)
 	mux.HandleFunc("GET /api/users/{id}/threads", h.ListUserThreads)
 	mux.HandleFunc("GET /api/users/{id}/comments", h.ListUserComments)
@@ -266,6 +267,9 @@ func main() {
 	mux.Handle("GET /api/chat/conversations/{id}/messages", authMw(http.HandlerFunc(h.GetChatConversationMessages)))
 	mux.Handle("PATCH /api/chat/conversations/{id}", authMw(writeLimiter(http.HandlerFunc(h.UpdateChatConversation))))
 	mux.Handle("DELETE /api/chat/conversations/{id}", authMw(writeLimiter(http.HandlerFunc(h.DeleteChatConversation))))
+	mux.Handle("POST /api/chat/conversations/{id}/share", authMw(writeLimiter(http.HandlerFunc(h.ShareChatConversation))))
+	mux.Handle("DELETE /api/chat/conversations/{id}/share", authMw(writeLimiter(http.HandlerFunc(h.UnshareChatConversation))))
+	mux.HandleFunc("GET /api/shared-chats/{token}", h.GetSharedChat)
 	mux.Handle("POST /api/chat/ask", authMw(chatLimiter.Wrap(http.HandlerFunc(h.ChatAsk))))
 	// The same, streamed: the answer appears while the model writes it.
 	mux.Handle("POST /api/chat/ask/stream", authMw(chatLimiter.Wrap(http.HandlerFunc(h.ChatAskStream))))

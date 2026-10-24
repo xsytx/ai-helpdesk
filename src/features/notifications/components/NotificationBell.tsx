@@ -84,7 +84,9 @@ export function NotificationBell() {
 
 function NotificationItem({ n, onOpen }: { n: AppNotification; onOpen: () => void }) {
   const { t, locale } = useLocale();
-  const text = t(n.type === "reply_to_comment" ? "notifReplyToComment" : "notifCommentOnThread")
+  const text = t(
+    n.type === "mention" ? "notifMention" : n.type === "reply_to_comment" ? "notifReplyToComment" : "notifCommentOnThread",
+  )
     .replace("{name}", n.actorName)
     .replace("{title}", n.threadTitle);
   return (

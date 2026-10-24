@@ -130,7 +130,7 @@ CREATE TABLE IF NOT EXISTS notifications (
 -- recreated instead — cheap, and safe to run on every startup.
 ALTER TABLE notifications DROP CONSTRAINT IF EXISTS notifications_type_check;
 ALTER TABLE notifications ADD CONSTRAINT notifications_type_check
-    CHECK (type IN ('comment_on_thread', 'reply_to_comment'));
+    CHECK (type IN ('comment_on_thread', 'reply_to_comment', 'mention'));
 
 CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, read_at);
 

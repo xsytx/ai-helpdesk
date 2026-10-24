@@ -57,7 +57,7 @@ func LevelFor(points int) (level string, next int) {
 const (
 	repAnswers = `SELECT c.user_id, count(*) AS n
 		FROM comments c JOIN threads t ON t.id = c.thread_id
-		WHERE ` + commentVisible + ` AND ` + threadVisible + ` AND c.created_at >= $1
+		WHERE ` + commentVisible + ` AND ` + threadVisible + ` AND c.parent_comment_id IS NULL AND c.created_at >= $1
 		GROUP BY c.user_id`
 	repLikes = `SELECT c.user_id, count(*) AS n
 		FROM votes v JOIN comments c ON v.target_type = 'comment' AND c.id = v.target_id

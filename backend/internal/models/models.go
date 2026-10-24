@@ -223,6 +223,8 @@ type ChatConversation struct {
 	Pinned    bool      `json:"pinned"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"` // time of the last message
+	// ShareToken is the read-only link (/shared/<token>); nil = not shared.
+	ShareToken *string `json:"share_token,omitempty"`
 }
 
 // ChatMessage is one message in a chat conversation.
@@ -240,11 +242,22 @@ type ChatMessage struct {
 	// "forum" (a forum answer; SourceThreadID is its question, nil once deleted).
 	SourceType     *string `json:"source_type,omitempty"`
 	SourceThreadID *int64  `json:"source_thread_id,omitempty"`
+	// How far the community answer can be trusted (when the bot used it).
+	SourceAccepted bool `json:"source_accepted,omitempty"`
+	SourceLikes    int  `json:"source_likes,omitempty"`
+	SourceStaff    bool `json:"source_staff,omitempty"`
 	// Followups: questions the student may ask next (buttons under an AI answer).
 	Followups []string `json:"followups,omitempty"`
 	// Rating is the student's 👍 (1) / 👎 (-1) on an answer; nil = not rated.
 	Rating    *int16    `json:"rating,omitempty"`
 	CreatedAt time.Time `json:"created_at"`
+}
+
+// UserSuggestion is a person offered after "@" in a post.
+type UserSuggestion struct {
+	ID          int64  `json:"id"`
+	DisplayName string `json:"display_name"`
+	Avatar      string `json:"avatar"`
 }
 
 // ForumAnswer is a published question with its best answer, offered to the

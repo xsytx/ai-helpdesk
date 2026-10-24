@@ -10,6 +10,7 @@ import { SimilarQuestions } from "./SimilarQuestions";
 import { PhotoPicker } from "./Photos";
 import { uploadPhoto } from "@/features/forum/api";
 import { TagPicker } from "./TagInput";
+import { PostEditor } from "./PostEditor";
 import { FormEvent, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
@@ -157,15 +158,7 @@ export function CreateThreadDialog({
             <label htmlFor="thread-body" className="text-sm font-medium text-label">
               {t("threadDetails")}
             </label>
-            <textarea
-              id="thread-body"
-              value={body}
-              onChange={(e) => setBody(e.target.value)}
-              placeholder={t("threadBodyPlaceholder")}
-              rows={4}
-              maxLength={2000}
-              className="w-full resize-y rounded-xl border border-border bg-surface px-3.5 py-2.5 text-sm text-primary placeholder:text-grey focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20"
-            />
+            <PostEditor id="thread-body" value={body} onChange={setBody} placeholder={t("threadBodyPlaceholder")} />
           </div>
           <TagPicker id="thread-tags" tags={tags} onChange={setTags} />
           <PhotoPicker files={photos} onChange={setPhotos} />
