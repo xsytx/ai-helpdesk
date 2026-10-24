@@ -85,12 +85,43 @@ func (h *Handlers) sendVerificationEmail(ctx context.Context, userID int64, emai
 	if err := h.Store.CreateEmailVerification(ctx, userID, code, time.Now().Add(15*time.Minute)); err != nil {
 		return ""
 	}
-	_ = h.Mailer.Send(email, "Your SDU Helpdesk verification code",
+	h.sendEmail(email, "Your SDU Helpdesk verification code",
 		fmt.Sprintf("Welcome to SDU Helpdesk! Your verification code is:\n\n%s\n\nEnter it on the site to verify your email. This code expires in 15 minutes.", code))
 	if h.Mailer.IsStub() {
 		return code
 	}
 	return ""
+}
+
+// sendEmail delivers an email in the background: through a real mail
+// server it takes seconds (or fails), and nobody should wait on a page for
+// it — the code is already saved, so it works as soon as the email arrives.
+// Sending in the background also makes "forgot password" answer equally
+// fast for registered and unknown addresses. Failures are logged. The dev
+// stub (no SMTP) is instant and stays in line, so its log and the code it
+// hands back stay in order.
+func (h *Handlers) sendEmail(to, subject, body string) {
+	if h.Mailer.IsStub() {
+		_ = h.Mailer.Send(to, subject, body)
+		return
+	}
+	go func() {
+		started := time.Now()
+		if err := h.Mailer.Send(to, subject, body); err != nil {
+			log.Printf("email %q to %s failed after %s: %v", subject, maskEmail(to), time.Since(started).Round(time.Millisecond), err)
+			return
+		}
+		log.Printf("email %q to %s sent in %s", subject, maskEmail(to), time.Since(started).Round(time.Millisecond))
+	}()
+}
+
+// maskEmail keeps logs useful without full addresses: "a***@sdu.edu.kz".
+func maskEmail(email string) string {
+	at := strings.LastIndex(email, "@")
+	if at < 1 {
+		return "***"
+	}
+	return email[:1] + "***" + email[at:]
 }
 
 // isAllowedEmailDomain checks email against h.AllowedEmailDomains
@@ -311,7 +342,7 @@ func (h *Handlers) ForgotPassword(w http.ResponseWriter, r *http.Request) {
 		code, cerr := randomVerificationCode()
 		if cerr == nil {
 			if err := h.Store.CreatePasswordReset(r.Context(), u.ID, code, time.Now().Add(15*time.Minute)); err == nil {
-				_ = h.Mailer.Send(email, "Your SDU Helpdesk password reset code",
+				h.sendEmail(email, "Your SDU Helpdesk password reset code",
 					fmt.Sprintf("Your password reset code is:\n\n%s\n\nEnter it on the site to set a new password. This code expires in 15 minutes.\n\nIf you didn't ask to reset your password, you can ignore this email.", code))
 				if h.Mailer.IsStub() {
 					resp["dev_reset_code"] = code

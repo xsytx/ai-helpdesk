@@ -8,8 +8,10 @@
 package mailer
 
 import (
+	"crypto/tls"
 	"fmt"
 	"log"
+	"net"
 	"net/mail"
 	"net/smtp"
 	"os"
@@ -67,11 +69,11 @@ type smtpMailer struct {
 	host, port, user, pass, from string
 }
 
+// sendTimeout bounds one email from connecting to the last byte, so a slow
+// or unreachable mail server can't keep a sender waiting forever.
+const sendTimeout = 30 * time.Second
+
 func (m *smtpMailer) Send(to, subject, body string) error {
-	var auth smtp.Auth
-	if m.user != "" {
-		auth = smtp.PlainAuth("", m.user, m.pass, m.host)
-	}
 	// SMTP_FROM may include a display name ("SDU Helpdesk <x@y.z>"); the
 	// envelope sender has to be the bare address.
 	envelopeFrom := m.from
@@ -81,7 +83,48 @@ func (m *smtpMailer) Send(to, subject, body string) error {
 	// Date and MIME-Version keep strict providers (Gmail) from flagging the mail.
 	msg := fmt.Sprintf("From: %s\r\nTo: %s\r\nSubject: %s\r\nDate: %s\r\nMIME-Version: 1.0\r\nContent-Type: text/plain; charset=utf-8\r\n\r\n%s",
 		m.from, to, subject, time.Now().Format(time.RFC1123Z), body)
-	return smtp.SendMail(m.host+":"+m.port, auth, envelopeFrom, []string{to}, []byte(msg))
+
+	// Like smtp.SendMail (STARTTLS when offered, then auth), but with a deadline.
+	conn, err := net.DialTimeout("tcp", net.JoinHostPort(m.host, m.port), 10*time.Second)
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+	if err := conn.SetDeadline(time.Now().Add(sendTimeout)); err != nil {
+		return err
+	}
+	c, err := smtp.NewClient(conn, m.host)
+	if err != nil {
+		return err
+	}
+	defer c.Close()
+	if ok, _ := c.Extension("STARTTLS"); ok {
+		if err := c.StartTLS(&tls.Config{ServerName: m.host}); err != nil {
+			return err
+		}
+	}
+	if m.user != "" {
+		if err := c.Auth(smtp.PlainAuth("", m.user, m.pass, m.host)); err != nil {
+			return err
+		}
+	}
+	if err := c.Mail(envelopeFrom); err != nil {
+		return err
+	}
+	if err := c.Rcpt(to); err != nil {
+		return err
+	}
+	wc, err := c.Data()
+	if err != nil {
+		return err
+	}
+	if _, err := wc.Write([]byte(msg)); err != nil {
+		return err
+	}
+	if err := wc.Close(); err != nil {
+		return err
+	}
+	return c.Quit()
 }
 
 func (*smtpMailer) IsStub() bool { return false }

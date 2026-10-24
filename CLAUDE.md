@@ -74,6 +74,12 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   follows changes from other tabs (`storage` event) and ignores late `/api/me`
   answers for a login that changed. To be logged in as two accounts at once
   use two origins (`localhost:3000` and `127.0.0.1:3000`) or incognito.
+- **Emails** (codes, password reset, follower notices) are sent in the
+  background (`sendEmail` in `handlers/auth.go`): the code is saved first,
+  the page moves on at once, and each email has a 30 s limit
+  (`mailer.go`). Result lines in `docker compose logs app`: `email "…" to
+  a***@… sent in 2.1s` or `… failed after …`. The dev stub (no `SMTP_HOST`)
+  stays in line and hands the code back as `dev_verification_code`.
 - **Moderation (asynchronous, Story 10).** `backend/internal/handlers/moderation_queue.go`:
   1. instant word filter (`ai_ml` `/moderate` with `mode: "fast"`, no LLM);
      obvious swearing → never published, `202` + notice, queued;
