@@ -30,6 +30,12 @@ func assistantMessage(res mlclient.GenerateResult) models.ChatMessage {
 	if res.AIExplanation != "" {
 		m.AIExplanation = &res.AIExplanation
 	}
+	if m.ForumAnswer != nil && res.SourceType != nil {
+		m.SourceType = res.SourceType
+		if *res.SourceType == "forum" && res.Source != nil {
+			m.SourceThreadID = res.Source.ThreadID
+		}
+	}
 	return m
 }
 
@@ -90,7 +96,7 @@ func (h *Handlers) ChatAskStream(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	history := h.chatHistory(r.Context(), uid, conv)
+	background := h.chatBackground(r.Context(), uid, conv)
 	var partial strings.Builder
 	started := false
 	// begin creates the chat (if new) and saves the question, then opens the
@@ -118,7 +124,7 @@ func (h *Handlers) ChatAskStream(w http.ResponseWriter, r *http.Request) {
 
 	startedAt := time.Now()
 	var beginErr error
-	result, err := h.ML.GenerateAnswerStream(r.Context(), question, history, func(ev mlclient.StreamEvent) {
+	result, err := h.ML.GenerateAnswerStream(r.Context(), question, background, func(ev mlclient.StreamEvent) {
 		if beginErr != nil {
 			return
 		}

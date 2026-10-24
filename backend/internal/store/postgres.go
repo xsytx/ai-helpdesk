@@ -74,7 +74,10 @@ func (s *PostgresStore) Migrate(ctx context.Context) error {
 	if _, err := s.pool.Exec(ctx, profilesSQL); err != nil {
 		return err
 	}
-	_, err := s.pool.Exec(ctx, tagsSQL)
+	if _, err := s.pool.Exec(ctx, tagsSQL); err != nil {
+		return err
+	}
+	_, err := s.pool.Exec(ctx, forumAnswersSQL)
 	return err
 }
 

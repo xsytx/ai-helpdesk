@@ -1,0 +1,48 @@
+package store
+
+import (
+	"context"
+	_ "embed"
+
+	"campus-forum/internal/models"
+)
+
+//go:embed migrations/011_forum_answers.sql
+var forumAnswersSQL string
+
+// ForumAnswers returns published questions that have a trustworthy answer,
+// for the AI chat to use (Stories 8-9): the accepted answer, otherwise the
+// most-liked answer with at least one like or an answer by staff. Only posts
+// the moderation published ('ok', not still 'checking'). Accepted answers
+// come first, then by likes, then the newest questions; at most limit.
+func (s *PostgresStore) ForumAnswers(ctx context.Context, limit int) ([]models.ForumAnswer, error) {
+	rows, err := s.pool.Query(ctx, `
+		SELECT t.id, t.title, left(t.body, 400), left(best.body, 1500), best.accepted, best.score, best.staff
+		FROM threads t
+		JOIN LATERAL (
+			SELECT c.body, c.score,
+			       COALESCE(c.id = t.accepted_comment_id, false) AS accepted,
+			       u.role IN ('admin', 'moderator') AS staff
+			FROM comments c JOIN users u ON u.id = c.user_id
+			WHERE c.thread_id = t.id AND c.moderation_status = 'ok'
+			  AND (c.id = t.accepted_comment_id OR c.score >= 1 OR u.role IN ('admin', 'moderator'))
+			ORDER BY 3 DESC, c.score DESC, 4 DESC, c.created_at
+			LIMIT 1
+		) best ON true
+		WHERE t.moderation_status = 'ok'
+		ORDER BY best.accepted DESC, best.score DESC, t.created_at DESC
+		LIMIT $1`, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := make([]models.ForumAnswer, 0)
+	for rows.Next() {
+		var a models.ForumAnswer
+		if err := rows.Scan(&a.ThreadID, &a.Title, &a.Body, &a.Answer, &a.Accepted, &a.Likes, &a.Staff); err != nil {
+			return nil, err
+		}
+		out = append(out, a)
+	}
+	return out, rows.Err()
+}

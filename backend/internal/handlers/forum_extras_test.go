@@ -53,6 +53,8 @@ func newForumEnv(t *testing.T) *modEnv {
 	mux.Handle("POST /api/reports/{id}/resolve", authMw(http.HandlerFunc(e.h.ResolveReport)))
 	mux.Handle("GET /api/moderation/queue", authMw(http.HandlerFunc(e.h.ListModerationQueue)))
 	mux.Handle("POST /api/moderation/queue/{id}/approve", authMw(http.HandlerFunc(e.h.ApproveModeration)))
+	mux.Handle("POST /api/chat/ask/stream", authMw(http.HandlerFunc(e.h.ChatAskStream)))
+	mux.Handle("GET /api/chat/conversations/{id}/messages", authMw(http.HandlerFunc(e.h.GetChatConversationMessages)))
 	e.srv.Close()
 	e.srv = httptest.NewServer(mux)
 	t.Cleanup(e.srv.Close)

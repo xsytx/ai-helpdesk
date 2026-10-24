@@ -30,12 +30,8 @@ type StreamEvent struct {
 // An error before the first event is returned like GenerateAnswer's
 // (ErrUnavailable, ErrBadRequest, ...); once events have arrived, a broken
 // stream is ErrUnavailable and an "error" event is ErrUnavailable/ErrUpstream.
-func (c *Client) GenerateAnswerStream(ctx context.Context, question string, history []HistoryItem, onEvent func(StreamEvent)) (GenerateResult, error) {
-	payload := map[string]any{"question": question}
-	if len(history) > 0 {
-		payload["history"] = history
-	}
-	body, err := json.Marshal(payload)
+func (c *Client) GenerateAnswerStream(ctx context.Context, question string, bg Background, onEvent func(StreamEvent)) (GenerateResult, error) {
+	body, err := askBody(question, bg)
 	if err != nil {
 		return GenerateResult{}, err
 	}

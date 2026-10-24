@@ -152,6 +152,9 @@ func (s *chatTestStore) ListFeed(context.Context, string, []string, int, int) ([
 func (s *chatTestStore) UpdateProfile(context.Context, int64, string, string, string) (models.User, error) {
 	return models.User{}, store.ErrNotFound
 }
+func (s *chatTestStore) ForumAnswers(context.Context, int) ([]models.ForumAnswer, error) {
+	return nil, nil
+}
 func (s *chatTestStore) TrendingTags(context.Context, int) ([]models.Tag, error) { return nil, nil }
 func (s *chatTestStore) ListThreadsByTag(context.Context, string, int, int) ([]models.Thread, int, error) {
 	return nil, 0, nil

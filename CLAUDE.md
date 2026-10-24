@@ -92,7 +92,7 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   and staff. Interrupted checks resume at startup. Staff posts are moderated too.
 - **AI chat.** `POST /api/chat/ask` (auth + rate limit, one question in
   flight per user) → `ai_ml` `/generate-answer` → answer with `forum_answer`
-  (from the FAQ knowledge base) and `ai_explanation`. Separate conversations
+  (from the FAQ knowledge base or the forum, below) and `ai_explanation`. Separate conversations
   (Story 11, `003_chat.sql`): `/chat` is a new chat; its first answered
   question creates the conversation (title = the question) and the page moves
   to `/chat/:id`. Rename/pin/delete in the list (`ConversationList`; a side
@@ -109,6 +109,15 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   connection (generation stops) and the backend saves the text so far with
   basis `stopped`. nginx buffering is off via `X-Accel-Buffering: no`.
   `/api/chat/ask` (non-streamed) still exists.
+- **Bot answers from the forum (Stories 8-9, `011_forum_answers.sql`,
+  `store/forum_answers.go`, `ai_ml/kb/forum.py`).** With every question the
+  backend sends `forum` = up to 200 published questions with their best
+  answer (accepted, else most-liked with ≥ 1 like, or by staff; `ok` posts
+  only). `ai_ml` ranks them (title + start of the text) by meaning (E5, vectors cached in memory,
+  `KB_FORUM_FLOOR` 0.75, top `KB_FORUM_TOP_K` 2) next to the FAQ candidates;
+  if the model picks one, `source_type: "forum"` + `source.thread_id`. The
+  chat shows "Ответ сообщества" + "Открыть обсуждение" (saved as
+  `chat_messages.source_type` / `source_thread_id`).
 - **Follow-up questions.** `ChatAsk` sends the chat's last 6 messages as
   `history` to `/generate-answer`. `ai_ml` (`kb/generation.py`) searches the
   knowledge base with the question alone and with the previous question
@@ -218,7 +227,7 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
 - **Every public SQL read must hide held posts**: use `threadVisible` /
   `commentVisible` in `backend/internal/store/postgres.go`.
 - **Schema changes** are idempotent SQL applied on every start
-  (`001_init.sql` + `003_chat.sql` + `004_faq.sql` + `005_search.sql` + `006_chat_feedback.sql` + `007_forum_extras.sql` + `008_reputation.sql` + `009_profiles.sql` + `010_tags.sql` in `Migrate`, `002_moderation.sql` in
+  (`001_init.sql` + `003_chat.sql` + `004_faq.sql` + `005_search.sql` + `006_chat_feedback.sql` + `007_forum_extras.sql` + `008_reputation.sql` + `009_profiles.sql` + `010_tags.sql` + `011_forum_answers.sql` in `Migrate`, `002_moderation.sql` in
   `MigrateModeration`): `CREATE ... IF NOT EXISTS` /
   `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`.
 - **Store interface**: adding a method to `store.Store` also needs a stub on
@@ -265,7 +274,9 @@ questions in the AI chat, 👍/👎, "ask on the forum" from an answer, admin
 "AI chat" insights → FAQ, "maybe already asked", solved answers,
 unanswered filter, reports.
 
-Also done: streaming answers with a stop button; reputation, levels and top
+Also done: the bot answers from the forum (Stories 8-9: "community answer"
++ AI explanation + link); choosable tags and multi-topic filters;
+streaming answers with a stop button; reputation, levels and top
 helpers; photos on questions and answers; avatars on the server; public
 profile pages.
 

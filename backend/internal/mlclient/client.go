@@ -27,6 +27,10 @@ type Source struct {
 	Category   string `json:"category"`
 	Language   string `json:"language"`
 	SourceRow  string `json:"source_row"`
+	// A forum answer (source_type "forum"): its question and how it was rated.
+	ThreadID *int64 `json:"thread_id,omitempty"`
+	Accepted bool   `json:"accepted,omitempty"`
+	Likes    int    `json:"likes,omitempty"`
 }
 
 type GenerateResult struct {
@@ -95,15 +99,40 @@ type HistoryItem struct {
 	Text string `json:"text"`
 }
 
-// GenerateAnswer posts {"question": question, "history": [...]} — language
-// is omitted so the ML service auto-detects it; history (oldest first) is
-// left out when empty.
-func (c *Client) GenerateAnswer(ctx context.Context, question string, history ...HistoryItem) (GenerateResult, error) {
+// ForumCandidate is a published forum question with its best answer, which
+// the model may use as the "community answer" (Stories 8-9).
+type ForumCandidate struct {
+	ThreadID int64  `json:"thread_id"`
+	Title    string `json:"title"`
+	Body     string `json:"body"`
+	Answer   string `json:"answer"`
+	Accepted bool   `json:"accepted"`
+	Likes    int    `json:"likes"`
+	Staff    bool   `json:"staff"`
+}
+
+// Background is what the model gets besides the question.
+type Background struct {
+	History []HistoryItem    // earlier messages of the chat, oldest first
+	Forum   []ForumCandidate // answered forum questions it may use
+}
+
+// askBody is {"question": …, "history": […], "forum": […]} — language is
+// omitted so the ML service auto-detects it; empty lists are left out.
+func askBody(question string, bg Background) ([]byte, error) {
 	payload := map[string]any{"question": question}
-	if len(history) > 0 {
-		payload["history"] = history
+	if len(bg.History) > 0 {
+		payload["history"] = bg.History
 	}
-	body, err := json.Marshal(payload)
+	if len(bg.Forum) > 0 {
+		payload["forum"] = bg.Forum
+	}
+	return json.Marshal(payload)
+}
+
+// GenerateAnswer asks the model for an answer to question.
+func (c *Client) GenerateAnswer(ctx context.Context, question string, bg Background) (GenerateResult, error) {
+	body, err := askBody(question, bg)
 	if err != nil {
 		return GenerateResult{}, err
 	}

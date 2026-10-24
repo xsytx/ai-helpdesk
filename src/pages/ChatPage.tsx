@@ -28,7 +28,7 @@ import { getErrorStatus } from "@/shared/api/client";
 import { Button } from "@/shared/ui/Button";
 import { Card } from "@/shared/ui/Card";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowUp, ChevronDown, History, Loader2, Plus, Square, X, Zap } from "lucide-react";
+import { ArrowUp, ChevronDown, History, Loader2, Plus, Square, Users, X, Zap } from "lucide-react";
 import { createPortal } from "react-dom";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -85,11 +85,24 @@ function AssistantContent({
   }
 
   if (showsKnowledgeBase(msg)) {
+    const fromForum = msg.sourceType === "forum";
     return (
       <div className="space-y-3">
         <div>
-          <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-label">{t("chatKbAnswer")}</p>
+          <p className="mb-1 flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-label">
+            {fromForum ? <Users className="h-3 w-3 text-accent" aria-hidden /> : null}
+            {t(fromForum ? "chatCommunityAnswer" : "chatKbAnswer")}
+          </p>
           <p className="whitespace-pre-wrap">{msg.forumAnswer}</p>
+          {fromForum && msg.sourceThreadId ? (
+            <Link
+              viewTransition
+              to={`/forum/${msg.sourceThreadId}`}
+              className="mt-1 inline-flex items-center gap-0.5 text-xs font-medium text-primary-light hover:underline"
+            >
+              {t("chatOpenDiscussion")} →
+            </Link>
+          ) : null}
         </div>
         {msg.aiExplanation ? (
           <div>

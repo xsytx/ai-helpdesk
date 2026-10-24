@@ -24,6 +24,9 @@ type chatAskReq struct {
 type chatSourcePublic struct {
 	Question string `json:"question"`
 	Category string `json:"category"`
+	// A forum answer: the question it answers and whether it is the accepted one.
+	ThreadID *int64 `json:"thread_id,omitempty"`
+	Accepted bool   `json:"accepted,omitempty"`
 }
 
 type chatAskResp struct {
@@ -34,7 +37,9 @@ type chatAskResp struct {
 	AIExplanation string            `json:"ai_explanation,omitempty"`
 	Language      string            `json:"language"`
 	Basis         string            `json:"basis"`
-	Source        *chatSourcePublic `json:"source"`
+	// SourceType: "faq" (knowledge base) or "forum" (community answer).
+	SourceType string            `json:"source_type,omitempty"`
+	Source     *chatSourcePublic `json:"source"`
 	// Conversation the question and answer were saved to.
 	Conversation *models.ChatConversation `json:"conversation,omitempty"`
 	// MessageID is the saved answer (for 👍/👎); 0 if saving it failed.
@@ -44,6 +49,29 @@ type chatAskResp struct {
 // chatHistoryMessages is how much of the conversation the model gets with
 // a question, so it understands follow-ups ("and how much is it?").
 const chatHistoryMessages = 6
+
+// chatForumCandidates is how many answered forum questions are offered to
+// the model with each question; it picks the closest ones by meaning.
+const chatForumCandidates = 200
+
+// chatBackground is what the model gets with a question: the chat so far
+// and the forum's answered questions (Stories 8-9). A failed forum read
+// only means the model answers without the forum.
+func (h *Handlers) chatBackground(ctx context.Context, uid int64, conv *models.ChatConversation) mlclient.Background {
+	bg := mlclient.Background{History: h.chatHistory(ctx, uid, conv)}
+	answers, err := h.Store.ForumAnswers(ctx, chatForumCandidates)
+	if err != nil {
+		log.Printf("forum answers for the model: %v", err)
+		return bg
+	}
+	for _, a := range answers {
+		bg.Forum = append(bg.Forum, mlclient.ForumCandidate{
+			ThreadID: a.ThreadID, Title: a.Title, Body: a.Body, Answer: a.Answer,
+			Accepted: a.Accepted, Likes: a.Likes, Staff: a.Staff,
+		})
+	}
+	return bg
+}
 
 // chatHistory returns the last messages of conv for the model, oldest first.
 func (h *Handlers) chatHistory(ctx context.Context, uid int64, conv *models.ChatConversation) []mlclient.HistoryItem {
@@ -155,7 +183,7 @@ func (h *Handlers) ChatAsk(w http.ResponseWriter, r *http.Request) {
 	}
 
 	started := time.Now()
-	mlResp, err := h.ML.GenerateAnswer(r.Context(), question, h.chatHistory(r.Context(), uid, conv)...)
+	mlResp, err := h.ML.GenerateAnswer(r.Context(), question, h.chatBackground(r.Context(), uid, conv))
 	elapsed := time.Since(started)
 	if err != nil {
 		log.Printf("chat ask ml error (user=%d, duration=%s): %v", uid, elapsed, err)
@@ -165,13 +193,7 @@ func (h *Handlers) ChatAsk(w http.ResponseWriter, r *http.Request) {
 	log.Printf("chat ask ok (user=%d, request_id=%s, duration=%s, basis=%s, status=%s)",
 		uid, mlResp.RequestID, elapsed, mlResp.Basis, mlResp.Status)
 
-	assistant := models.ChatMessage{Role: "assistant", Text: mlResp.Answer, Basis: &mlResp.Basis, Language: &mlResp.Language}
-	if mlResp.ForumAnswer != nil && *mlResp.ForumAnswer != "" {
-		assistant.ForumAnswer = mlResp.ForumAnswer
-	}
-	if mlResp.AIExplanation != "" {
-		assistant.AIExplanation = &mlResp.AIExplanation
-	}
+	assistant := assistantMessage(mlResp)
 	// Save with a context that survives a closed browser tab: the model already spent
 	// the time to answer, the answer should still land in the student's history.
 	conv, messageID, err := h.saveChatTurn(context.WithoutCancel(r.Context()), uid, conv, question, assistant)
@@ -318,10 +340,17 @@ func buildChatAskResp(mlResp mlclient.GenerateResult) chatAskResp {
 		Language:      mlResp.Language,
 		Basis:         mlResp.Basis,
 	}
+	if mlResp.SourceType != nil {
+		out.SourceType = *mlResp.SourceType
+	}
 	if mlResp.Source != nil {
 		out.Source = &chatSourcePublic{
 			Question: mlResp.Source.Question,
 			Category: mlResp.Source.Category,
+		}
+		if out.SourceType == "forum" {
+			out.Source.ThreadID = mlResp.Source.ThreadID
+			out.Source.Accepted = mlResp.Source.Accepted
 		}
 	}
 	return out

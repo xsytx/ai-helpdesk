@@ -108,6 +108,8 @@ type Store interface {
 
 	// ListFAQs: in the admins' order (sort_order, then id).
 	ListFAQs(ctx context.Context) ([]models.FAQ, error)
+	// ForumAnswers: published questions with a trustworthy answer, for the AI chat.
+	ForumAnswers(ctx context.Context, limit int) ([]models.ForumAnswer, error)
 	GetFAQ(ctx context.Context, id int64) (models.FAQ, error)
 	// CreateFAQ adds the entry at the end of the list. ErrConflict if the
 	// English question already exists.

@@ -11,6 +11,9 @@ export interface ChatHistoryMessage {
   ai_explanation?: string | null;
   basis?: string | null;
   language?: string | null;
+  /** Where forum_answer came from: "faq" or "forum" (then source_thread_id is the question). */
+  source_type?: string | null;
+  source_thread_id?: number | null;
   rating?: ChatRating | null;
 }
 
@@ -25,7 +28,9 @@ export interface ChatAskResponse {
   ai_explanation?: string;
   language: string;
   basis: string;
-  source?: { question: string; category: string } | null;
+  source_type?: string;
+  /** For a forum answer: the question it answers (thread_id) and whether it is the accepted one. */
+  source?: { question: string; category: string; thread_id?: number; accepted?: boolean } | null;
   conversation: ApiConversation;
   /** The saved answer, for 👍/👎 (missing if saving it failed). */
   message_id?: number;
@@ -259,6 +264,8 @@ export function historyToUiMessages(rows: ChatHistoryMessage[]): UiChatMessage[]
     forumAnswer: m.forum_answer ?? undefined,
     aiExplanation: m.ai_explanation ?? undefined,
     basis: m.basis ?? undefined,
+    sourceType: m.source_type ?? undefined,
+    sourceThreadId: m.source_thread_id ? String(m.source_thread_id) : undefined,
     status: m.role === "assistant" && m.basis === "none" ? "fallback" : "answered",
     serverId: m.role === "assistant" ? String(m.id) : undefined,
     rating: m.rating ?? undefined,
@@ -272,6 +279,9 @@ export interface UiChatMessage {
   forumAnswer?: string;
   aiExplanation?: string;
   basis?: string;
+  /** "forum": forumAnswer is a community answer from the question sourceThreadId. */
+  sourceType?: string;
+  sourceThreadId?: string;
   status?: "answered" | "fallback";
   error?: boolean;
   retryQuestion?: string;
@@ -290,6 +300,8 @@ export function askResponseToUiMessage(res: ChatAskResponse): UiChatMessage {
     forumAnswer: res.forum_answer ?? undefined,
     aiExplanation: res.ai_explanation,
     basis: res.basis,
+    sourceType: res.source_type,
+    sourceThreadId: res.source_type === "forum" && res.source?.thread_id ? String(res.source.thread_id) : undefined,
     status: res.status,
     serverId: res.message_id ? String(res.message_id) : undefined,
   };

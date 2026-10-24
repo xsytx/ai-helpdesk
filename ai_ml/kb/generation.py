@@ -1,9 +1,10 @@
 """RAG-генерация: LLM сама решает, подходит ли найденный ответ базы, и пишет итоговый ответ.
 
 Алгоритм:
-  1. retriever берёт top-k похожих вопросов из базы (без жёсткого порога);
+  1. retriever берёт top-k похожих вопросов из базы (без жёсткого порога), forum_search —
+     самые похожие вопросы форума с лучшим ответом (их присылает backend, Stories 8-9);
   2. ОДИН вызов LLM: «какой кандидат (если есть) отвечает на вопрос студента?» + «напиши ответ»;
-     * match>0  -> forum_answer = ответ базы дословно, ai_explanation = пересказ/пояснение LLM;
+     * match>0  -> forum_answer = ответ базы/форума дословно, ai_explanation = пересказ/пояснение LLM;
      * match=0  -> LLM отвечает сама по общим знаниям, не выдумывая факты об SDU;
   3. если LLM недоступна — отдаём ответ базы напрямую (если он очень похож), иначе честное сообщение.
 """
@@ -43,6 +44,15 @@ STEP 2 - write "answer" ONLY in the requested LANGUAGE, as plain text: no Markdo
 - match > 0: explain that candidate's answer in your own words. Keep every fact, number, name, place and condition from it and never contradict it. You may add one short, generally true clarification. Do not mention "candidate" or "FAQ".
 - match = 0: answer the question yourself from general knowledge and UNIVERSITY FACTS, like a helpful senior student. You may explain general concepts freely (GPA, credits, add/drop, retake, syllabus, dean, advisor, scholarships, study tips, and so on).
 - Never invent facts specific to SDU that are not in the input: phone numbers, e-mails, links, prices, dates, deadlines, room numbers, names of people, exact rules. If the student needs such a fact and you do not have it, say so honestly in one sentence and tell them where to ask (Student Service Center, their advisor or the Dean's Office), then give whatever general help you can."""
+
+
+def source_of(record):
+    """Поля source/source_type ответа для выбранного кандидата: FAQ или вопрос форума."""
+    if record.get('kind') == 'forum':
+        return {'source': {k: record.get(k) for k in ('id', 'question', 'thread_id', 'accepted', 'likes')},
+                'source_type': 'forum'}
+    return {'source': {k: record.get(k) for k in ('id', 'question', 'category', 'language', 'source_row')},
+            'source_type': 'faq'}
 
 
 def build_schema(n):
@@ -148,8 +158,8 @@ class AnswerTextStream:
 
 
 class AnswerService:
-    def __init__(self, retriever, client, university_context='', source_only_min=0.90):
-        self.retriever, self.client = retriever, client
+    def __init__(self, retriever, client, university_context='', source_only_min=0.90, forum_search=None):
+        self.retriever, self.client, self.forum_search = retriever, client, forum_search
         self.context, self.source_only_min = university_context, source_only_min
 
     def _retrieve(self, question, history):
@@ -171,7 +181,18 @@ class AnswerService:
         scores = [x for x in (found['top_score'], with_context['top_score']) if x is not None]
         return {'candidates': merged[:limit], 'top_score': max(scores) if scores else None}
 
-    def _prepare(self, question, language, history):
+    def _forum(self, question, history, forum):
+        """Подходящие ответы форума; сломавшийся поиск по форуму не мешает ответить по базе."""
+        if not forum or self.forum_search is None:
+            return []
+        previous = next((h['text'] for h in reversed(history) if h['role'] == 'user'), None)
+        try:
+            return self.forum_search.search(question, forum, previous)
+        except Exception:
+            LOGGER.exception('Forum search failed; answering without the forum')
+            return []
+
+    def _prepare(self, question, language, history, forum=None):
         """Общая подготовка: язык, кандидаты из базы, промпт. Возвращает словарь «задания»."""
         if not isinstance(question, str) or not question.strip() or len(question) > 2000:
             raise ValueError('Provide a question of 1 to 2000 characters.')
@@ -190,6 +211,10 @@ class AnswerService:
             LOGGER.exception('Retrieval failed; answering without the knowledge base')
             found, reason = {'candidates': [], 'top_score': None}, 'retrieval_unavailable'
         candidates, top_score = found['candidates'], found['top_score']
+        from_forum = self._forum(question, history, forum)
+        if from_forum:
+            candidates = sorted(candidates + from_forum, key=lambda c: -c['score'])
+            top_score = max([top_score or 0.0] + [c['score'] for c in from_forum])
 
         base = {'status': 'fallback', 'answer': CANNOT_ANSWER[language], 'forum_answer': None,
                 'ai_explanation': CANNOT_ANSWER[language], 'language': language, 'basis': 'none',
@@ -221,12 +246,11 @@ class AnswerService:
             record = candidates[match - 1]
             return dict(base, status='answered', answer=text, ai_explanation=text,
                         forum_answer=record['answer'], basis='retrieved', reason=reason,
-                        source={k: record.get(k) for k in ('id', 'question', 'category', 'language', 'source_row')},
-                        source_type='faq', retrieval_score=record['score'])
+                        **source_of(record), retrieval_score=record['score'])
         return dict(base, status='answered', answer=text, ai_explanation=text, basis='general', reason=reason)
 
-    def answer(self, question, language='auto', history=None):
-        job = self._prepare(question, language, history)
+    def answer(self, question, language='auto', history=None, forum=None):
+        job = self._prepare(question, language, history, forum)
         candidates, messages = job['candidates'], job['messages']
         parsed = None
         llm_started = time.perf_counter()
@@ -244,13 +268,13 @@ class AnswerService:
             return self._degrade(job['base'], candidates, job['language'], exc.code)
         return self._result(job, parsed, round((time.perf_counter() - llm_started) * 1000))
 
-    def answer_stream(self, question, language='auto', history=None):
+    def answer_stream(self, question, language='auto', history=None, forum=None):
         """Как answer(), но события по мере генерации:
           ('delta', текст)  — следующий кусок ответа;
           ('reset', None)   — показанный текст не годится (неверный формат/язык), начать заново;
           ('done', result)  — итог, тот же словарь, что у answer().
         Закрытие генератора (студент нажал «стоп») закрывает и поток от модели."""
-        job = self._prepare(question, language, history)
+        job = self._prepare(question, language, history, forum)
         candidates = job['candidates']
         llm_started = time.perf_counter()
         shown = False
@@ -287,13 +311,12 @@ class AnswerService:
         yield 'done', result
 
     def _degrade(self, base, candidates, language, code):
-        """LLM не помогла: очень похожий ответ базы лучше, чем ничего."""
-        best = candidates[0] if candidates else None
+        """LLM не помогла: очень похожий ответ базы или форума лучше, чем ничего."""
+        best = max(candidates, key=lambda c: c['score']) if candidates else None
         if best and best['score'] >= self.source_only_min:
             return dict(base, status='answered', answer=best['answer'], ai_explanation='',
                         forum_answer=best['answer'], basis='retrieved', reason='source_only_' + code,
-                        source={k: best.get(k) for k in ('id', 'question', 'category', 'language', 'source_row')},
-                        source_type='faq', retrieval_score=best['score'])
+                        **source_of(best), retrieval_score=best['score'])
         text = UNAVAILABLE[language] if code in {'llm_unavailable', 'llm_timeout', 'llm_overloaded', 'llm_model_missing', 'llm_auth'} \
             else CANNOT_ANSWER[language]
         return dict(base, answer=text, ai_explanation=text, reason=code)

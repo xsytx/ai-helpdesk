@@ -33,6 +33,8 @@ class Settings:
     # --- поиск ---
     top_k: int = 5                        # сколько кандидатов показываем модели
     candidate_floor: float = 0.82         # ниже этого кандидата в список не берём
+    forum_top_k: int = 2                  # сколько ответов форума показываем модели вместе с FAQ
+    forum_floor: float = 0.75             # ниже — вопрос форума не кандидат (между языками сходство ниже)
     source_only_min: float = 0.90         # если LLM упала: отдать ответ базы напрямую от этого score
     device: str = 'cpu'
     batch_size: int = 16
@@ -57,6 +59,8 @@ class Settings:
             llm_keep_alive=os.getenv('LLM_KEEP_ALIVE', d.llm_keep_alive).strip() or d.llm_keep_alive,
             top_k=_int('KB_TOP_K', d.top_k),
             candidate_floor=_float('KB_CANDIDATE_FLOOR', d.candidate_floor),
+            forum_top_k=_int('KB_FORUM_TOP_K', d.forum_top_k),
+            forum_floor=_float('KB_FORUM_FLOOR', d.forum_floor),
             source_only_min=_float('KB_SOURCE_ONLY_MIN', d.source_only_min),
             device=os.getenv('KB_DEVICE', d.device).strip() or d.device,
             batch_size=_int('KB_BATCH_SIZE', d.batch_size),

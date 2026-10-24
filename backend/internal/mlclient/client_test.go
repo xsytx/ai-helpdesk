@@ -35,7 +35,7 @@ func TestGenerateAnswerSuccess(t *testing.T) {
 	defer srv.Close()
 
 	c := New(srv.URL, 5*time.Second)
-	out, err := c.GenerateAnswer(context.Background(), "GPA?")
+	out, err := c.GenerateAnswer(context.Background(), "GPA?", Background{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -55,7 +55,7 @@ func TestGenerateAnswerFallback(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	out, err := New(srv.URL, 5*time.Second).GenerateAnswer(context.Background(), "q")
+	out, err := New(srv.URL, 5*time.Second).GenerateAnswer(context.Background(), "q", Background{})
 	if err != nil || out.Status != "fallback" {
 		t.Fatalf("err=%v out=%+v", err, out)
 	}
@@ -70,7 +70,7 @@ func TestGenerateAnswer503(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	_, err := New(srv.URL, 5*time.Second).GenerateAnswer(context.Background(), "q")
+	_, err := New(srv.URL, 5*time.Second).GenerateAnswer(context.Background(), "q", Background{})
 	if !strings.Contains(err.Error(), "unavailable") {
 		t.Fatalf("expected unavailable, got %v", err)
 	}
@@ -82,7 +82,7 @@ func TestGenerateAnswer422(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	_, err := New(srv.URL, 5*time.Second).GenerateAnswer(context.Background(), "q")
+	_, err := New(srv.URL, 5*time.Second).GenerateAnswer(context.Background(), "q", Background{})
 	if err != ErrBadRequest {
 		t.Fatalf("got %v", err)
 	}
@@ -94,7 +94,7 @@ func TestGenerateAnswerInvalidJSON(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	_, err := New(srv.URL, 5*time.Second).GenerateAnswer(context.Background(), "q")
+	_, err := New(srv.URL, 5*time.Second).GenerateAnswer(context.Background(), "q", Background{})
 	if err != ErrInvalidBody {
 		t.Fatalf("got %v", err)
 	}
@@ -108,7 +108,7 @@ func TestGenerateAnswerTimeout(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
 	defer cancel()
-	_, err := New(srv.URL, time.Second).GenerateAnswer(ctx, "q")
+	_, err := New(srv.URL, time.Second).GenerateAnswer(ctx, "q", Background{})
 	if err == nil {
 		t.Fatal("expected error")
 	}

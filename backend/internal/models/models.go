@@ -236,9 +236,25 @@ type ChatMessage struct {
 	AIExplanation  *string   `json:"ai_explanation,omitempty"`
 	Basis          *string   `json:"basis,omitempty"`
 	Language       *string   `json:"language,omitempty"`
+	// SourceType is where forum_answer came from: "faq" (knowledge base) or
+	// "forum" (a forum answer; SourceThreadID is its question, nil once deleted).
+	SourceType     *string `json:"source_type,omitempty"`
+	SourceThreadID *int64  `json:"source_thread_id,omitempty"`
 	// Rating is the student's 👍 (1) / 👎 (-1) on an answer; nil = not rated.
 	Rating    *int16    `json:"rating,omitempty"`
 	CreatedAt time.Time `json:"created_at"`
+}
+
+// ForumAnswer is a published question with its best answer, offered to the
+// AI chat as a possible "community answer" (store.ForumAnswers).
+type ForumAnswer struct {
+	ThreadID int64
+	Title    string
+	Body     string
+	Answer   string
+	Accepted bool
+	Likes    int
+	Staff    bool
 }
 
 // ChatInsight is one line in the admin panel's "AI chat" lists: a question

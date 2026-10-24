@@ -28,6 +28,18 @@ class HistoryItem(BaseModel):
     text: str = Field(max_length=4000)
 
 
+class ForumItem(BaseModel):
+    """Опубликованный вопрос форума с лучшим ответом (присылает backend, Stories 8-9)."""
+    model_config = ConfigDict(extra='forbid', strict=True)
+    thread_id: int
+    title: str = Field(max_length=500)
+    body: str = Field(default='', max_length=4000)
+    answer: str = Field(max_length=10000)
+    accepted: bool = False
+    likes: int = 0
+    staff: bool = False
+
+
 class AnswerRequest(BaseModel):
     model_config = ConfigDict(extra='forbid', strict=True)
     question: str = Field(min_length=1, max_length=2000)
@@ -35,6 +47,8 @@ class AnswerRequest(BaseModel):
     language: Literal['auto', 'ru', 'kk', 'en'] = 'auto'
     # Предыдущие сообщения этого чата (старые первыми): помогают понять уточняющий вопрос.
     history: list[HistoryItem] = Field(default_factory=list, max_length=20)
+    # Отвеченные вопросы форума: бот может взять лучший ответ как «ответ сообщества».
+    forum: list[ForumItem] = Field(default_factory=list, max_length=500)
 
     @field_validator('question')
     @classmethod
@@ -94,9 +108,20 @@ class ModerationError(BaseModel):
     error: str
 
 
+def background(payload):
+    """history/forum для сервиса — только непустые (сервис их не требует)."""
+    out = {}
+    if payload.history:
+        out['history'] = [h.model_dump() for h in payload.history]
+    if payload.forum:
+        out['forum'] = [f.model_dump() for f in payload.forum]
+    return out
+
+
 def build_runtime(settings):
     """Тяжёлая часть: эмбеддер, индекс, клиент LLM. Вызывается один раз при старте."""
     from .embedding import E5
+    from .forum import ForumSearch
     from .generation import AnswerService
     from .index import VectorIndex
     from .llm import make_client
@@ -105,7 +130,8 @@ def build_runtime(settings):
     index = VectorIndex.load(resolve_path(settings.index_dir))
     encoder = E5(settings.device, settings.batch_size)
     retriever = Retriever(encoder, index, settings.top_k, settings.candidate_floor)
-    service = AnswerService(retriever, client, settings.read_context(), settings.source_only_min)
+    forum = ForumSearch(encoder, settings.forum_top_k, settings.forum_floor)
+    service = AnswerService(retriever, client, settings.read_context(), settings.source_only_min, forum)
     return service, ModerationService(client), client, len(index)
 
 
@@ -167,11 +193,7 @@ def create_app(service=None, journal=None, moderator=None, llm_client=None, sett
             result, status = failure('service_busy'), 503
         else:
             try:
-                if payload.history:
-                    raw = app.state.service.answer(payload.question, payload.language,
-                                                   history=[h.model_dump() for h in payload.history])
-                else:
-                    raw = app.state.service.answer(payload.question, payload.language)
+                raw = app.state.service.answer(payload.question, payload.language, **background(payload))
                 result = AnswerResponse(request_id=request_id, **raw).model_dump()
                 status = 200
             except LLMError as exc:
@@ -205,7 +227,7 @@ def create_app(service=None, journal=None, moderator=None, llm_client=None, sett
             LOGGER.error('Request journal unavailable: %s', request_id)
             return JSONResponse({'request_id': request_id, 'status': 'error', 'error': 'logging_unavailable'},
                                 status_code=503)
-        history = [h.model_dump() for h in payload.history]
+        extra = background(payload)
         loop = asyncio.get_running_loop()
         queue: asyncio.Queue = asyncio.Queue()
         cancelled = threading.Event()
@@ -223,7 +245,7 @@ def create_app(service=None, journal=None, moderator=None, llm_client=None, sett
                     emit({'type': 'error', 'error': 'service_busy'})
                     return
                 have_slot = True
-                stream = app.state.service.answer_stream(payload.question, payload.language, history=history)
+                stream = app.state.service.answer_stream(payload.question, payload.language, **extra)
                 for kind, value in stream:
                     if cancelled.is_set():
                         break
