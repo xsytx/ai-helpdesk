@@ -17,6 +17,34 @@ type User struct {
 	// Avatar: "" (initials), a preset id ("avatar3") or an uploaded photo's URL.
 	Avatar    string    `json:"avatar"`
 	CreatedAt time.Time `json:"created_at"`
+	// Restrictions set by staff (see Banned/Muted): an end (nil = none) and a reason.
+	BanUntil   *time.Time `json:"-"`
+	BanReason  string     `json:"-"`
+	MutedAt    *time.Time `json:"-"`
+	MuteUntil  *time.Time `json:"-"`
+	MuteReason string     `json:"-"`
+}
+
+// Banned: a ban is in force (can't log in or use the site).
+func (u User) Banned(now time.Time) bool {
+	return u.BannedAt != nil && (u.BanUntil == nil || u.BanUntil.After(now))
+}
+
+// Muted: may read and use the AI chat, but not post or edit.
+func (u User) Muted(now time.Time) bool {
+	return u.MutedAt != nil && (u.MuteUntil == nil || u.MuteUntil.After(now))
+}
+
+// RestrictedUser is a line in the admin panel's list of muted/banned users.
+type RestrictedUser struct {
+	UserID      int64      `json:"user_id"`
+	DisplayName string     `json:"display_name"`
+	Email       string     `json:"email"`
+	Avatar      string     `json:"avatar"`
+	Kind        string     `json:"kind"` // "mute" or "ban"
+	Since       time.Time  `json:"since"`
+	Until       *time.Time `json:"until,omitempty"` // nil = no end
+	Reason      string     `json:"reason"`
 }
 
 // IsModerator reports whether the user can take moderation actions

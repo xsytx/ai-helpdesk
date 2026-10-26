@@ -164,6 +164,8 @@ export interface ThreadDetail {
   answers: Answer[];
   /** The viewer follows the thread (gets notifications about new answers). */
   subscribed?: boolean;
+  /** The viewer saved it (Profile → Saved). */
+  saved?: boolean;
 }
 
 async function fetchThreadDetail(id: string, userId: string | undefined): Promise<ThreadDetail> {
@@ -176,6 +178,7 @@ async function fetchThreadDetail(id: string, userId: string | undefined): Promis
     thread: ApiThread;
     comments: ApiComment[];
     subscribed?: boolean;
+    saved?: boolean;
     reputation?: Record<string, { points: number; level: ReputationLevel }>;
   }>(`/threads/${id}`);
   // Everyone's level, for the badge next to their name.
@@ -188,6 +191,7 @@ async function fetchThreadDetail(id: string, userId: string | undefined): Promis
     thread: { ...thread, ...level(thread.authorId) },
     answers: sortAnswers(data.comments.map((c) => ({ ...toAnswer(c, userId), ...level(String(c.user_id)) }))),
     subscribed: data.subscribed ?? false,
+    saved: data.saved ?? false,
   };
 }
 
@@ -273,6 +277,40 @@ export function useAnswers(threadId: string) {
 }
 
 /** Whether the viewer follows the thread; undefined while unknown. */
+export function useThreadSaved(threadId: string) {
+  return useThreadDetail(threadId, (d) => d.saved);
+}
+
+/** Save / unsave a question (shown at once, put back if it fails). */
+export function useSaveThread(threadId: string) {
+  const qc = useQueryClient();
+  const key = forumKeys.thread(threadId);
+  const set = (saved: boolean) => qc.setQueryData<ThreadDetail>(key, (d) => (d ? { ...d, saved } : d));
+  return useMutation({
+    mutationFn: async (save: boolean) => {
+      if (save) await apiClient.put(`/threads/${threadId}/save`);
+      else await apiClient.delete(`/threads/${threadId}/save`);
+    },
+    onMutate: (save) => set(save),
+    onError: (_err, save) => set(!save),
+    onSettled: () => void qc.invalidateQueries({ queryKey: savedKey }),
+  });
+}
+
+const savedKey = ["me", "saved"] as const;
+
+/** The viewer's saved questions, last saved first. */
+export function useSavedThreads(enabled: boolean) {
+  return useQuery({
+    queryKey: savedKey,
+    enabled: enabled && !USE_MOCK_API,
+    queryFn: async () => {
+      const { data } = await apiClient.get<{ threads: ApiThread[] }>("/me/saved");
+      return data.threads.map(toThread);
+    },
+  });
+}
+
 export function useThreadSubscribed(threadId: string) {
   return useThreadDetail(threadId, (d) => d.subscribed);
 }

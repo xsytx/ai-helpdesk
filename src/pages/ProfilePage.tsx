@@ -1,3 +1,6 @@
+import { useSavedThreads } from "@/features/forum/api";
+import { isStaffRole } from "@/features/moderation/api";
+import { RestrictionPanel } from "@/features/moderation/components/Restrictions";
 import { plainText } from "@/shared/ui/RichText";
 import { useAuth } from "@/app/AuthContext";
 import { useUserQuestions } from "@/features/forum/api";
@@ -23,7 +26,7 @@ export function ProfilePage() {
   const { t, locale } = useLocale();
   const { user } = useAuth();
   const profile = useUserProfile(userId);
-  const [tab, setTab] = useState<"answers" | "questions">("answers");
+  const [tab, setTab] = useState<"answers" | "questions" | "saved">("answers");
 
   if (profile.isPending) return <p className="text-sm text-label">{t("loading")}</p>;
   if (profile.isError) {
@@ -90,6 +93,8 @@ export function ProfilePage() {
             [
               ["answers", t("profileAnswersTab"), p.reputation.answers],
               ["questions", t("profileQuestionsTab"), p.questions],
+              // Only you see your saved questions.
+              ...(isMe ? ([["saved", t("profileSavedTab"), undefined]] as const) : []),
             ] as const
           ).map(([id, label, count]) => (
             <button
@@ -103,14 +108,28 @@ export function ProfilePage() {
                 tab === id ? "border-primary text-primary" : "border-transparent text-label hover:text-primary",
               )}
             >
-              {label} ({count})
+              {label}
+              {count === undefined ? "" : ` (${count})`}
             </button>
           ))}
         </div>
-        {tab === "answers" ? <AnswersTab userId={p.id} /> : <QuestionsTab userId={p.id} />}
+        {tab === "answers" ? <AnswersTab userId={p.id} /> : tab === "saved" && isMe ? <SavedTab /> : <QuestionsTab userId={p.id} />}
       </Card>
+      {isStaffRole(user?.role) && !isMe && !p.staff ? (
+        <Card>
+          <RestrictionPanel userId={p.id} />
+        </Card>
+      ) : null}
     </div>
   );
+}
+
+function SavedTab() {
+  const { t } = useLocale();
+  const { data: threads = [], isPending } = useSavedThreads(true);
+  if (isPending) return <p className="text-sm text-label">{t("loading")}</p>;
+  if (threads.length === 0) return <p className="py-4 text-center text-sm text-label">{t("profileNoSaved")}</p>;
+  return <ThreadList threads={threads} />;
 }
 
 function QuestionsTab({ userId }: { userId: string }) {

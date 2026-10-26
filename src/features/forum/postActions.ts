@@ -1,3 +1,4 @@
+import { restrictionFrom } from "@/features/moderation/restrictions";
 import type { Answer, Thread } from "@/entities/forum";
 import { apiClient, getErrorStatus } from "@/shared/api/client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -11,7 +12,7 @@ import { forumKeys } from "./api";
  * post is held by moderation and can't be edited (409); "blocked" = the new
  * text breaks the rules and wasn't saved (422); "forbidden" = not yours (403).
  */
-export type PostActionError = "underReview" | "blocked" | "forbidden" | "failed";
+export type PostActionError = "underReview" | "blocked" | "forbidden" | "restricted" | "failed";
 
 export function postActionError(err: unknown): PostActionError {
   switch (getErrorStatus(err)) {
@@ -20,7 +21,7 @@ export function postActionError(err: unknown): PostActionError {
     case 422:
       return "blocked";
     case 403:
-      return "forbidden";
+      return restrictionFrom(err) ? "restricted" : "forbidden";
     default:
       return "failed";
   }

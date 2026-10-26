@@ -1,3 +1,4 @@
+import { restrictionFrom, restrictionText, takeBan } from "@/features/moderation/restrictions";
 import { useAuth } from "@/app/AuthContext";
 import {
   loginRequest,
@@ -17,7 +18,7 @@ import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 
 export function LoginPage() {
   const { isAuthenticated, login } = useAuth();
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const navigate = useNavigate();
   const location = useLocation();
   const notice = (location.state as { notice?: string } | null)?.notice;
@@ -26,7 +27,11 @@ export function LoginPage() {
   const [password, setPassword] = useState("");
   const [emailError, setEmailError] = useState<string>();
   const [passwordError, setPasswordError] = useState<string>();
-  const [formError, setFormError] = useState<string>();
+  // Logged out because of a ban: say why and until when.
+  const [formError, setFormError] = useState<string | undefined>(() => {
+    const ban = takeBan();
+    return ban ? restrictionText(ban, t, locale) : undefined;
+  });
   const [loading, setLoading] = useState(false);
 
   if (isAuthenticated) {
@@ -62,7 +67,10 @@ export function LoginPage() {
     } catch (err) {
       const status = getErrorStatus(err);
       if (status === 401) setPasswordError(t("invalidCredentials"));
-      else if (status === 403) setFormError(t("accountSuspended"));
+      else if (status === 403) {
+        const ban = restrictionFrom(err);
+        setFormError(ban ? restrictionText(ban, t, locale) : t("accountSuspended"));
+      }
       else if (status === 429) setFormError(t("tooManyRequests"));
       else setFormError(t("serverUnavailable"));
     } finally {

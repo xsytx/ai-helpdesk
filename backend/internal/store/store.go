@@ -108,6 +108,14 @@ type Store interface {
 
 	// ListFAQs: in the admins' order (sort_order, then id).
 	ListFAQs(ctx context.Context) ([]models.FAQ, error)
+	// Saved questions.
+	SetThreadSaved(ctx context.Context, userID, threadID int64, saved bool) error
+	IsThreadSaved(ctx context.Context, userID, threadID int64) (bool, error)
+	ListSavedThreads(ctx context.Context, userID int64, limit int) ([]models.Thread, error)
+	// Mute ("mute") and ban ("ban") with an end (nil = none) and a reason.
+	RestrictUser(ctx context.Context, id int64, kind string, until *time.Time, reason string) error
+	LiftRestriction(ctx context.Context, id int64, kind string) error
+	ListRestrictedUsers(ctx context.Context) ([]models.RestrictedUser, error)
 	// PostRevisions: earlier versions of a question ("thread") or answer ("comment"), newest first.
 	PostRevisions(ctx context.Context, kind string, id int64) ([]models.PostRevision, error)
 	// SearchUsers: people to @mention whose name (a word of it) starts with q.

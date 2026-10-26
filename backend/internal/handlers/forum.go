@@ -92,7 +92,7 @@ func (h *Handlers) CreateThread(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusUnauthorized, "not authenticated")
 		return
 	}
-	if !h.requireNotBanned(w, r, uid) || !h.requireVerified(w, r, uid) {
+	if !h.requireCanPost(w, r, uid) || !h.requireVerified(w, r, uid) {
 		return
 	}
 	var req threadReq
@@ -129,6 +129,9 @@ func (h *Handlers) UpdateThread(w http.ResponseWriter, r *http.Request) {
 	uid, ok := h.userID(r)
 	if !ok {
 		writeError(w, http.StatusUnauthorized, "not authenticated")
+		return
+	}
+	if !h.requireCanPost(w, r, uid) {
 		return
 	}
 	id, err := pathInt64(r, "id")
@@ -231,9 +234,10 @@ func (h *Handlers) GetThread(w http.ResponseWriter, r *http.Request) {
 	for i := range comments {
 		comments[i].BodyHTML = markdown.Render(comments[i].Body)
 	}
-	var subscribed bool
+	var subscribed, saved bool
 	if uid, ok := h.userID(r); ok {
 		subscribed, _ = h.Store.IsSubscribed(r.Context(), uid, id)
+		saved, _ = h.Store.IsThreadSaved(r.Context(), uid, id)
 	}
 	// Photos in answers.
 	if photos, err := h.Store.AnswerAttachments(r.Context(), id); err == nil {
@@ -256,6 +260,7 @@ func (h *Handlers) GetThread(w http.ResponseWriter, r *http.Request) {
 		"thread":     t,
 		"comments":   comments,
 		"subscribed": subscribed,
+		"saved":      saved,
 		"reputation": reputation,
 	})
 }
@@ -275,7 +280,7 @@ func (h *Handlers) CreateComment(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusUnauthorized, "not authenticated")
 		return
 	}
-	if !h.requireNotBanned(w, r, uid) || !h.requireVerified(w, r, uid) {
+	if !h.requireCanPost(w, r, uid) || !h.requireVerified(w, r, uid) {
 		return
 	}
 	threadID, err := pathInt64(r, "id")
@@ -319,6 +324,9 @@ func (h *Handlers) UpdateComment(w http.ResponseWriter, r *http.Request) {
 	uid, ok := h.userID(r)
 	if !ok {
 		writeError(w, http.StatusUnauthorized, "not authenticated")
+		return
+	}
+	if !h.requireCanPost(w, r, uid) {
 		return
 	}
 	id, err := pathInt64(r, "id")

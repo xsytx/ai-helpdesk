@@ -111,6 +111,9 @@ func (h *Handlers) UploadAttachment(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusUnauthorized, "not authenticated")
 		return
 	}
+	if !h.requireCanPost(w, r, uid) {
+		return
+	}
 	threadID, err := pathInt64(r, "id")
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "invalid thread id")
@@ -138,6 +141,9 @@ func (h *Handlers) UploadAnswerAttachment(w http.ResponseWriter, r *http.Request
 	uid, ok := h.userID(r)
 	if !ok {
 		writeError(w, http.StatusUnauthorized, "not authenticated")
+		return
+	}
+	if !h.requireCanPost(w, r, uid) {
 		return
 	}
 	commentID, err := pathInt64(r, "id")

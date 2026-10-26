@@ -3,8 +3,10 @@ package handlers
 import (
 	"net/http"
 	"strings"
+	"time"
 	"unicode/utf8"
 
+	"campus-forum/internal/models"
 	"campus-forum/internal/store"
 )
 
@@ -39,8 +41,37 @@ func (h *Handlers) requireNotBanned(w http.ResponseWriter, r *http.Request, uid 
 		writeError(w, http.StatusUnauthorized, "not authenticated")
 		return false
 	}
-	if u.BannedAt != nil {
-		writeError(w, http.StatusForbidden, "your account has been suspended")
+	if u.Banned(time.Now()) {
+		writeBanned(w, u)
+		return false
+	}
+	return true
+}
+
+// writeBanned answers 403 for a banned account, with when it ends and why.
+func writeBanned(w http.ResponseWriter, u models.User) {
+	writeJSON(w, http.StatusForbidden, map[string]any{
+		"error": "your account has been suspended", "code": "banned", "until": u.BanUntil, "reason": u.BanReason,
+	})
+}
+
+// requireCanPost writes a 403 and returns false if uid is banned or muted
+// (a muted user may read and use the AI chat, but not post or edit).
+func (h *Handlers) requireCanPost(w http.ResponseWriter, r *http.Request, uid int64) bool {
+	u, err := h.Store.GetUserByID(r.Context(), uid)
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, "not authenticated")
+		return false
+	}
+	now := time.Now()
+	if u.Banned(now) {
+		writeBanned(w, u)
+		return false
+	}
+	if u.Muted(now) {
+		writeJSON(w, http.StatusForbidden, map[string]any{
+			"error": "you can't post right now", "code": "muted", "until": u.MuteUntil, "reason": u.MuteReason,
+		})
 		return false
 	}
 	return true

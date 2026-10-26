@@ -1,9 +1,9 @@
 import { AnswerList } from "@/features/forum/components/AnswerList";
 import { HiddenPostNotice } from "@/features/moderation/components/HiddenPostNotice";
 import { ReplyForm } from "@/features/forum/components/ReplyForm";
-import { useAnswers, useFollowThread, useThread, useThreadSubscribed } from "@/features/forum/api";
+import { useAnswers, useFollowThread, useSaveThread, useThread, useThreadSaved, useThreadSubscribed } from "@/features/forum/api";
 import { useAuth } from "@/app/AuthContext";
-import { Bell, BellOff } from "lucide-react";
+import { Bell, BellOff, Bookmark } from "lucide-react";
 import { DeleteConfirm, PostActionErrorText, PostMenu, usePostPermissions } from "@/features/forum/components/PostMenu";
 import { TagChip, TagPicker } from "@/features/forum/components/TagInput";
 import { PostEditor } from "@/features/forum/components/PostEditor";
@@ -155,6 +155,7 @@ function ThreadCardFull({ thread }: { thread: Thread }) {
               <EditedMark kind="thread" id={thread.id} editedAt={thread.editedAt} canSeeHistory={canDelete} />
             </p>
             <div className="flex items-center gap-1">
+              <SaveButton threadId={thread.id} />
               <FollowButton threadId={thread.id} />
               {mode === "view" ? (
                 <PostMenu
@@ -231,6 +232,31 @@ function ThreadCardFull({ thread }: { thread: Thread }) {
         </div>
       </div>
     </Card>
+  );
+}
+
+/** Save the question for later (Profile → Saved). */
+function SaveButton({ threadId }: { threadId: string }) {
+  const { t } = useLocale();
+  const { user } = useAuth();
+  const saved = useThreadSaved(threadId).data;
+  const save = useSaveThread(threadId);
+  if (!user || saved === undefined) return null;
+  return (
+    <button
+      type="button"
+      aria-pressed={saved}
+      onClick={() => save.mutate(!saved)}
+      title={saved ? t("unsaveThread") : t("saveThread")}
+      aria-label={saved ? t("unsaveThread") : t("saveThread")}
+      className={
+        saved
+          ? "inline-flex items-center rounded-lg bg-background-2 p-1.5 text-primary hover:bg-background-2-hover"
+          : "inline-flex items-center rounded-lg border border-border/70 p-1.5 text-label hover:bg-background-2 hover:text-primary"
+      }
+    >
+      <Bookmark className={saved ? "h-3.5 w-3.5 fill-current" : "h-3.5 w-3.5"} />
+    </button>
   );
 }
 

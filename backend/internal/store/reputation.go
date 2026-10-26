@@ -121,7 +121,7 @@ func (s *PostgresStore) TopHelpers(ctx context.Context, since time.Time, limit i
 	rows, err := s.pool.Query(ctx, `
 		SELECT r.user_id, u.display_name, u.avatar, r.answers, r.likes, r.solutions, r.points
 		FROM (`+repTotals+`) r JOIN users u ON u.id = r.user_id
-		WHERE u.banned_at IS NULL AND r.points > 0
+		WHERE ` + notBanned + ` AND r.points > 0
 		ORDER BY r.points DESC, r.solutions DESC, u.display_name
 		LIMIT $2`, since, limit)
 	if err != nil {

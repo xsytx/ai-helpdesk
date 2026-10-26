@@ -1,3 +1,5 @@
+import { restrictionFrom, type Restriction } from "@/features/moderation/restrictions";
+import { MutedNotice } from "@/features/moderation/components/Restrictions";
 import { useAuth } from "@/app/AuthContext";
 import { useCreateThread } from "@/features/forum/api";
 import { ModerationNoticeCard } from "@/features/moderation/components/ModerationNoticeCard";
@@ -36,6 +38,8 @@ export function CreateThreadDialog({
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string>();
   const [notice, setNotice] = useState<ModerationNotice>();
+  // Muted (or banned) since the page loaded: the server says so when posting.
+  const [restricted, setRestricted] = useState<Restriction>();
 
   useEffect(() => {
     if (!open) {
@@ -101,8 +105,10 @@ export function CreateThreadDialog({
       }
       onClose();
       navigate(`/forum/${result.thread.id}`, { viewTransition: true });
-    } catch {
-      setError(t("threadCreateFailed"));
+    } catch (err) {
+      const r = restrictionFrom(err);
+      if (r) setRestricted(r);
+      else setError(t("threadCreateFailed"));
     }
   }
 
@@ -145,6 +151,7 @@ export function CreateThreadDialog({
         ) : (
         <form className="flex min-h-0 flex-1 flex-col" onSubmit={handleSubmit}>
           <div className="-mx-1 min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-1 pb-1">
+          <MutedNotice restriction={restricted} />
           <Input
             label={t("threadTitle")}
             name="title"

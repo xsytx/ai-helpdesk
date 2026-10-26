@@ -110,6 +110,7 @@ const ERROR_KEY: Record<PostActionError, TranslationKey> = {
   underReview: "postUnderReviewNoEdit",
   blocked: "postEditBlocked",
   forbidden: "postActionFailed",
+  restricted: "postActionRestricted",
   failed: "postActionFailed",
 };
 

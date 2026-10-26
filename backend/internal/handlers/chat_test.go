@@ -159,6 +159,16 @@ func (s *chatTestStore) UnshareChatConversation(context.Context, int64, int64) e
 func (s *chatTestStore) SharedChat(context.Context, string) (models.ChatConversation, []models.ChatMessage, error) {
 	return models.ChatConversation{}, nil, store.ErrNotFound
 }
+func (s *chatTestStore) SetThreadSaved(context.Context, int64, int64, bool) error { return nil }
+func (s *chatTestStore) IsThreadSaved(context.Context, int64, int64) (bool, error) { return false, nil }
+func (s *chatTestStore) ListSavedThreads(context.Context, int64, int) ([]models.Thread, error) {
+	return nil, nil
+}
+func (s *chatTestStore) RestrictUser(context.Context, int64, string, *time.Time, string) error { return nil }
+func (s *chatTestStore) LiftRestriction(context.Context, int64, string) error            { return nil }
+func (s *chatTestStore) ListRestrictedUsers(context.Context) ([]models.RestrictedUser, error) {
+	return nil, nil
+}
 func (s *chatTestStore) PostRevisions(context.Context, string, int64) ([]models.PostRevision, error) {
 	return nil, nil
 }

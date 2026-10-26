@@ -42,13 +42,21 @@ type userPublic struct {
 	Bio           string `json:"bio"`
 	EmailVerified bool   `json:"email_verified"`
 	Avatar        string `json:"avatar"`
+	// A mute in force: can't post until MuteUntil (nil = no end), and why.
+	Muted      bool       `json:"muted,omitempty"`
+	MuteUntil  *time.Time `json:"mute_until,omitempty"`
+	MuteReason string     `json:"mute_reason,omitempty"`
 }
 
 func toUserPublic(u models.User) userPublic {
-	return userPublic{
+	out := userPublic{
 		ID: u.ID, Email: u.Email, DisplayName: u.DisplayName, Role: u.Role,
 		Major: u.Major, Bio: u.Bio, EmailVerified: u.EmailVerifiedAt != nil, Avatar: u.Avatar,
 	}
+	if u.Muted(time.Now()) {
+		out.Muted, out.MuteUntil, out.MuteReason = true, u.MuteUntil, u.MuteReason
+	}
+	return out
 }
 
 // randomVerificationCode returns a cryptographically random 6-digit code
@@ -233,8 +241,8 @@ func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusUnauthorized, "invalid email or password")
 		return
 	}
-	if u.BannedAt != nil {
-		writeError(w, http.StatusForbidden, "your account has been suspended")
+	if u.Banned(time.Now()) {
+		writeBanned(w, u)
 		return
 	}
 	token, err := auth.IssueToken(h.JWTSecret, u.ID, u.Email, 7*24*time.Hour)
@@ -254,6 +262,10 @@ func (h *Handlers) Me(w http.ResponseWriter, r *http.Request) {
 	u, err := h.Store.GetUserByID(r.Context(), uid)
 	if err != nil {
 		writeError(w, http.StatusNotFound, "user not found")
+		return
+	}
+	if u.Banned(time.Now()) {
+		writeBanned(w, u)
 		return
 	}
 	writeJSON(w, http.StatusOK, toUserPublic(u))

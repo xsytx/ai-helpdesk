@@ -86,7 +86,10 @@ func (s *PostgresStore) Migrate(ctx context.Context) error {
 	if _, err := s.pool.Exec(ctx, chatTrustShareSQL); err != nil {
 		return err
 	}
-	_, err := s.pool.Exec(ctx, editsSQL)
+	if _, err := s.pool.Exec(ctx, editsSQL); err != nil {
+		return err
+	}
+	_, err := s.pool.Exec(ctx, savedRestrictSQL)
 	return err
 }
 
@@ -102,11 +105,12 @@ func isPgErrorCode(err error, code string) bool {
 
 // --- Users ---
 
-const userColumns = "id, email, display_name, role, banned_at, email_verified_at, major, bio, avatar, created_at"
+const userColumns = "id, email, display_name, role, banned_at, email_verified_at, major, bio, avatar, created_at, ban_until, ban_reason, muted_at, mute_until, mute_reason"
 
 func scanUser(row pgx.Row) (models.User, error) {
 	var u models.User
-	err := row.Scan(&u.ID, &u.Email, &u.DisplayName, &u.Role, &u.BannedAt, &u.EmailVerifiedAt, &u.Major, &u.Bio, &u.Avatar, &u.CreatedAt)
+	err := row.Scan(&u.ID, &u.Email, &u.DisplayName, &u.Role, &u.BannedAt, &u.EmailVerifiedAt, &u.Major, &u.Bio, &u.Avatar, &u.CreatedAt,
+		&u.BanUntil, &u.BanReason, &u.MutedAt, &u.MuteUntil, &u.MuteReason)
 	return u, err
 }
 
@@ -135,7 +139,8 @@ func (s *PostgresStore) GetUserByEmail(ctx context.Context, email string) (model
 	q := `SELECT password_hash, salt, ` + userColumns + ` FROM users WHERE email = $1`
 	var u models.User
 	err := s.pool.QueryRow(ctx, q, email).Scan(&u.PasswordHash, &u.Salt,
-		&u.ID, &u.Email, &u.DisplayName, &u.Role, &u.BannedAt, &u.EmailVerifiedAt, &u.Major, &u.Bio, &u.Avatar, &u.CreatedAt)
+		&u.ID, &u.Email, &u.DisplayName, &u.Role, &u.BannedAt, &u.EmailVerifiedAt, &u.Major, &u.Bio, &u.Avatar, &u.CreatedAt,
+		&u.BanUntil, &u.BanReason, &u.MutedAt, &u.MuteUntil, &u.MuteReason)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return models.User{}, ErrNotFound
 	}
@@ -149,7 +154,8 @@ func (s *PostgresStore) GetUserByID(ctx context.Context, id int64) (models.User,
 	q := `SELECT password_hash, salt, ` + userColumns + ` FROM users WHERE id = $1`
 	var u models.User
 	err := s.pool.QueryRow(ctx, q, id).Scan(&u.PasswordHash, &u.Salt,
-		&u.ID, &u.Email, &u.DisplayName, &u.Role, &u.BannedAt, &u.EmailVerifiedAt, &u.Major, &u.Bio, &u.Avatar, &u.CreatedAt)
+		&u.ID, &u.Email, &u.DisplayName, &u.Role, &u.BannedAt, &u.EmailVerifiedAt, &u.Major, &u.Bio, &u.Avatar, &u.CreatedAt,
+		&u.BanUntil, &u.BanReason, &u.MutedAt, &u.MuteUntil, &u.MuteReason)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return models.User{}, ErrNotFound
 	}
@@ -178,7 +184,8 @@ func (s *PostgresStore) UpdateProfile(ctx context.Context, userID int64, display
 
 // SetUserBanned toggles whether a user can log in.
 func (s *PostgresStore) SetUserBanned(ctx context.Context, id int64, banned bool) error {
-	const q = `UPDATE users SET banned_at = CASE WHEN $2 THEN COALESCE(banned_at, now()) ELSE NULL END WHERE id = $1`
+	const q = `UPDATE users SET banned_at = CASE WHEN $2 THEN COALESCE(banned_at, now()) ELSE NULL END,
+		ban_until = NULL, ban_reason = CASE WHEN $2 THEN ban_reason ELSE '' END WHERE id = $1`
 	tag, err := s.pool.Exec(ctx, q, id, banned)
 	if err != nil {
 		return err

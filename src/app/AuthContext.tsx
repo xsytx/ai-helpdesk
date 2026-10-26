@@ -1,3 +1,4 @@
+import { rememberBan, restrictionFrom } from "@/features/moderation/restrictions";
 import type { User } from "@/entities/user";
 import { fetchMe, toUser } from "@/features/auth/api";
 import { getAuthToken, getErrorStatus, setAuthToken, TOKEN_KEY } from "@/shared/api/client";
@@ -89,7 +90,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .catch((err) => {
         if (getAuthToken() !== token) return;
         const status = getErrorStatus(err);
-        if (status === 401 || status === 404) logout();
+        const ban = restrictionFrom(err);
+        if (ban) rememberBan(ban);
+        if (status === 401 || status === 404 || ban) logout();
       });
   }, [logout, queryClient]);
 

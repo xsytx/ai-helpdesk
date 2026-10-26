@@ -73,7 +73,7 @@ func (s *PostgresStore) SearchUsers(ctx context.Context, q string, limit int) ([
 	pattern := strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`).Replace(q)
 	rows, err := s.pool.Query(ctx, `
 		SELECT id, display_name, avatar FROM users
-		WHERE banned_at IS NULL AND (display_name ILIKE $1 || '%' OR display_name ILIKE '% ' || $1 || '%')
+		WHERE (banned_at IS NULL OR ban_until <= now()) AND (display_name ILIKE $1 || '%' OR display_name ILIKE '% ' || $1 || '%')
 		ORDER BY (display_name ILIKE $1 || '%') DESC, display_name, id
 		LIMIT $2`, pattern, limit)
 	if err != nil {

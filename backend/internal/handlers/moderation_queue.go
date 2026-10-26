@@ -419,7 +419,7 @@ func (h *Handlers) ApproveModeration(w http.ResponseWriter, r *http.Request) {
 	if author, err := h.Store.GetUserByID(ctx, item.UserID); err != nil {
 		writeStoreErr(w, err, "could not load the author")
 		return
-	} else if author.BannedAt != nil {
+	} else if author.Banned(time.Now()) {
 		writeError(w, http.StatusConflict, "the author's account is suspended - reject this post instead")
 		return
 	}

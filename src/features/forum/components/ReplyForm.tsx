@@ -1,3 +1,5 @@
+import { restrictionFrom, type Restriction } from "@/features/moderation/restrictions";
+import { MutedNotice } from "@/features/moderation/components/Restrictions";
 import { PostEditor } from "./PostEditor";
 import { useAuth } from "@/app/AuthContext";
 import { MAX_ANSWER_PHOTOS, uploadAnswerPhoto, useCreateAnswer, forumKeys } from "@/features/forum/api";
@@ -41,6 +43,7 @@ export function ReplyForm({
   const [body, setBody] = useState(startText);
   const [error, setError] = useState<string>();
   const [notice, setNotice] = useState<ModerationNotice>();
+  const [restricted, setRestricted] = useState<Restriction>();
   const [photos, setPhotos] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
   const qc = useQueryClient();
@@ -80,14 +83,17 @@ export function ReplyForm({
         void qc.invalidateQueries({ queryKey: forumKeys.thread(threadId) });
       }
       setPhotos([]);
-    } catch {
-      setError(t("answerPostFailed"));
+    } catch (err) {
+      const r = restrictionFrom(err);
+      if (r) setRestricted(r);
+      else setError(t("answerPostFailed"));
     }
   }
 
   if (replyTo) {
     return (
       <form onSubmit={handleSubmit} className="mt-2 space-y-2">
+        <MutedNotice restriction={restricted} />
         <PostEditor
           ariaLabel={t("replyTo").replace("{name}", replyTo.authorName)}
           value={body}
@@ -116,6 +122,7 @@ export function ReplyForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-2">
+      <MutedNotice restriction={restricted} />
       <label htmlFor="reply-body" className="text-sm font-medium text-label">
         {t("yourAnswer")}
       </label>

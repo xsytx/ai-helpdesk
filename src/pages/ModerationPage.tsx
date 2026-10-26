@@ -1,3 +1,4 @@
+import { RestrictionsSection } from "@/features/moderation/components/Restrictions";
 import { useAuth } from "@/app/AuthContext";
 import {
   isStaffRole,
@@ -150,6 +151,7 @@ const SECTIONS = [
   { id: "reports", key: "adminSectionReports" },
   { id: "faq", key: "adminSectionFaq" },
   { id: "chat", key: "adminSectionChat" },
+  { id: "restrictions", key: "adminSectionRestrictions" },
 ] as const;
 
 type SectionId = (typeof SECTIONS)[number]["id"];
@@ -197,6 +199,8 @@ export function ModerationPage() {
         <FaqEditor initialDraft={faqDraft} onDraftUsed={() => setFaqDraft(undefined)} />
       ) : section === "reports" ? (
         <ReportsSection />
+      ) : section === "restrictions" ? (
+        <RestrictionsSection />
       ) : section === "chat" ? (
         <ChatInsightsSection
           onMakeFaq={(draft) => {

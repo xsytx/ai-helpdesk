@@ -12,6 +12,9 @@ export interface ApiUser {
   bio: string;
   email_verified: boolean;
   avatar?: string;
+  muted?: boolean;
+  mute_until?: string;
+  mute_reason?: string;
 }
 
 interface AuthResponse {
@@ -30,6 +33,7 @@ export function toUser(u: ApiUser): User {
     role,
     emailVerified: u.email_verified,
     avatar: u.avatar ?? "",
+    mute: u.muted ? { kind: "mute", until: u.mute_until, reason: u.mute_reason ?? "" } : undefined,
   };
 }
 

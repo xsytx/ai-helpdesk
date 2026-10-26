@@ -145,6 +145,22 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   or got 👎). Admin panel → "AI chat" (`/admin?section=chat`,
   `GET /api/admin/chat-insights?kind=disliked|unanswered|frequent`, no
   student names): "Make it an FAQ" opens the FAQ editor prefilled.
+- **Saved questions (`015_saved_restrict.sql`, `saved_threads`).** The
+  bookmark next to "Следить" (`PUT/DELETE /api/threads/{id}/save`; the
+  question page gets `saved`); your own profile has a "Сохранённые" tab
+  (`GET /api/me/saved`), visible only to you.
+- **Mute and ban (staff, `015_saved_restrict.sql`).** On a student's
+  profile (`RestrictionPanel`) or admin panel → "Ограничения"
+  (`/admin?section=restrictions`): mute = can read and use the AI chat but
+  can't post/edit/upload; ban = can't log in or use the site. Each has a
+  required reason and an end (1/3/7/30 days or none:
+  `users.mute_until`/`ban_until` NULL), ends on its own
+  (`User.Muted/Banned(now)`), and staff can't be restricted
+  (`/api/admin/users/{id}/restriction`, `/api/admin/restrictions`). Refusals
+  are 403 `{code: "muted"|"banned", until, reason}` (`requireCanPost`);
+  `/api/me` refuses a banned account, so the website logs out and the login
+  page shows the reason (`features/moderation/restrictions.ts`); a muted
+  student sees it above the forms (`MutedNotice`, `user.mute`).
 - **Follow a question.** "Следить" on the question page
   (`POST/DELETE /api/threads/{id}/subscribe`); followers get a notification
   for each new answer (asking or answering follows automatically).
@@ -275,7 +291,7 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
 - **Every public SQL read must hide held posts**: use `threadVisible` /
   `commentVisible` in `backend/internal/store/postgres.go`.
 - **Schema changes** are idempotent SQL applied on every start
-  (`001_init.sql` + `003_chat.sql` + `004_faq.sql` + `005_search.sql` + `006_chat_feedback.sql` + `007_forum_extras.sql` + `008_reputation.sql` + `009_profiles.sql` + `010_tags.sql` + `011_forum_answers.sql` + `012_chat_followups.sql` + `013_chat_trust_share.sql` + `014_edits.sql` in `Migrate`, `002_moderation.sql` in
+  (`001_init.sql` + `003_chat.sql` + `004_faq.sql` + `005_search.sql` + `006_chat_feedback.sql` + `007_forum_extras.sql` + `008_reputation.sql` + `009_profiles.sql` + `010_tags.sql` + `011_forum_answers.sql` + `012_chat_followups.sql` + `013_chat_trust_share.sql` + `014_edits.sql` + `015_saved_restrict.sql` in `Migrate`, `002_moderation.sql` in
   `MigrateModeration`): `CREATE ... IF NOT EXISTS` /
   `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`.
 - **Store interface**: adding a method to `store.Store` also needs a stub on
@@ -333,7 +349,7 @@ questions in the AI chat, 👍/👎, "ask on the forum" from an answer, admin
 "AI chat" insights → FAQ, "maybe already asked", solved answers,
 unanswered filter, reports.
 
-Also done: like/solution notifications and edited-post history; replies to answers; @mentions in posts; trust badges, copy and share links in the chat; header theme toggle; suggested next questions in the chat; dark theme; the bot answers from the forum (Stories 8-9: "community answer"
+Also done: saved questions; mute/ban with reason and end date; like/solution notifications and edited-post history; replies to answers; @mentions in posts; trust badges, copy and share links in the chat; header theme toggle; suggested next questions in the chat; dark theme; the bot answers from the forum (Stories 8-9: "community answer"
 + AI explanation + link); choosable tags and multi-topic filters;
 streaming answers with a stop button; reputation, levels and top
 helpers; photos on questions and answers; avatars on the server; public

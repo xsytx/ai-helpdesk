@@ -37,6 +37,13 @@ export class HttpStatusError extends Error {
   }
 }
 
+/** The JSON body of a failed request (e.g. {code, until, reason} for a restriction). */
+export function getErrorData(err: unknown): Record<string, unknown> | undefined {
+  if (!isAxiosError(err)) return undefined;
+  const data = err.response?.data;
+  return data && typeof data === "object" ? (data as Record<string, unknown>) : undefined;
+}
+
 /** HTTP status of a failed request, or undefined for network/non-HTTP errors. */
 export function getErrorStatus(err: unknown): number | undefined {
   if (err instanceof HttpStatusError) return err.status;
