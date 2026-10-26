@@ -32,6 +32,7 @@ class ForumItem(BaseModel):
     """Опубликованный вопрос форума с лучшим ответом (присылает backend, Stories 8-9)."""
     model_config = ConfigDict(extra='forbid', strict=True)
     thread_id: int
+    comment_id: int | None = None
     title: str = Field(max_length=500)
     body: str = Field(default='', max_length=4000)
     answer: str = Field(max_length=10000)

@@ -37,6 +37,7 @@ func assistantMessage(res mlclient.GenerateResult) models.ChatMessage {
 		m.SourceType = res.SourceType
 		if *res.SourceType == "forum" && res.Source != nil {
 			m.SourceThreadID = res.Source.ThreadID
+			m.SourceCommentID = res.Source.CommentID
 			m.SourceAccepted, m.SourceLikes, m.SourceStaff = res.Source.Accepted, res.Source.Likes, res.Source.Staff
 		}
 	}

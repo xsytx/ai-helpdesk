@@ -14,6 +14,7 @@ export interface ChatHistoryMessage {
   /** Where forum_answer came from: "faq" or "forum" (then source_thread_id is the question). */
   source_type?: string | null;
   source_thread_id?: number | null;
+  source_comment_id?: number | null;
   followups?: string[] | null;
   source_accepted?: boolean;
   source_likes?: number;
@@ -34,7 +35,7 @@ export interface ChatAskResponse {
   basis: string;
   source_type?: string;
   /** For a forum answer: the question it answers (thread_id) and whether it is the accepted one. */
-  source?: { question: string; category: string; thread_id?: number; accepted?: boolean; likes?: number; staff?: boolean } | null;
+  source?: { question: string; category: string; thread_id?: number; comment_id?: number; accepted?: boolean; likes?: number; staff?: boolean } | null;
   /** Questions the student may ask next (buttons under the answer). */
   followups?: string[];
   conversation: ApiConversation;
@@ -333,6 +334,7 @@ export function historyToUiMessages(rows: ChatHistoryMessage[]): UiChatMessage[]
     basis: m.basis ?? undefined,
     sourceType: m.source_type ?? undefined,
     sourceThreadId: m.source_thread_id ? String(m.source_thread_id) : undefined,
+    sourceCommentId: m.source_comment_id ? String(m.source_comment_id) : undefined,
     followups: m.followups ?? undefined,
     sourceAccepted: m.source_accepted,
     sourceLikes: m.source_likes,
@@ -353,6 +355,8 @@ export interface UiChatMessage {
   /** "forum": forumAnswer is a community answer from the question sourceThreadId. */
   sourceType?: string;
   sourceThreadId?: string;
+  /** The forum answer or reply it came from (the link opens and blinks it). */
+  sourceCommentId?: string;
   /** Questions the student may ask next, shown as buttons under the latest answer. */
   followups?: string[];
   /** A community answer: accepted by the asker, its likes, written by staff. */
@@ -379,6 +383,7 @@ export function askResponseToUiMessage(res: ChatAskResponse): UiChatMessage {
     basis: res.basis,
     sourceType: res.source_type,
     sourceThreadId: res.source_type === "forum" && res.source?.thread_id ? String(res.source.thread_id) : undefined,
+    sourceCommentId: res.source_type === "forum" && res.source?.comment_id ? String(res.source.comment_id) : undefined,
     followups: res.followups,
     ...(res.source_type === "forum"
       ? { sourceAccepted: res.source?.accepted, sourceLikes: res.source?.likes, sourceStaff: res.source?.staff }

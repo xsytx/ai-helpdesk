@@ -51,7 +51,7 @@ STEP 3 - "followups": 2 or 3 short questions (at most 8 words each) that this st
 def source_of(record):
     """Поля source/source_type ответа для выбранного кандидата: FAQ или вопрос форума."""
     if record.get('kind') == 'forum':
-        return {'source': {k: record.get(k) for k in ('id', 'question', 'thread_id', 'accepted', 'likes', 'staff')},
+        return {'source': {k: record.get(k) for k in ('id', 'question', 'thread_id', 'comment_id', 'accepted', 'likes', 'staff')},
                 'source_type': 'forum'}
     return {'source': {k: record.get(k) for k in ('id', 'question', 'category', 'language', 'source_row')},
             'source_type': 'faq'}

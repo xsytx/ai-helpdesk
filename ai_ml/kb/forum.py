@@ -55,7 +55,8 @@ class ForumSearch:
             item = items[int(i)]
             found.append({'id': f'forum-{item["thread_id"]}', 'kind': 'forum', 'question': titles[int(i)],
                           'answer': item['answer'].strip(), 'score': float(scores[i]),
-                          'thread_id': item['thread_id'], 'accepted': bool(item.get('accepted')),
+                          'thread_id': item['thread_id'], 'comment_id': item.get('comment_id'),
+                          'accepted': bool(item.get('accepted')),
                           'likes': int(item.get('likes') or 0), 'staff': bool(item.get('staff')),
                           'category': '', 'language': '', 'source_row': ''})
         return found

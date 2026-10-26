@@ -57,6 +57,7 @@ type sharedMessage struct {
 	Basis          *string   `json:"basis,omitempty"`
 	SourceType     *string   `json:"source_type,omitempty"`
 	SourceThreadID *int64    `json:"source_thread_id,omitempty"`
+	SourceComment  *int64    `json:"source_comment_id,omitempty"`
 	SourceAccepted bool      `json:"source_accepted,omitempty"`
 	SourceLikes    int       `json:"source_likes,omitempty"`
 	SourceStaff    bool      `json:"source_staff,omitempty"`
@@ -88,7 +89,7 @@ func (h *Handlers) GetSharedChat(w http.ResponseWriter, r *http.Request) {
 func publicMessage(m models.ChatMessage) sharedMessage {
 	return sharedMessage{
 		Role: m.Role, Text: m.Text, ForumAnswer: m.ForumAnswer, AIExplanation: m.AIExplanation, Basis: m.Basis,
-		SourceType: m.SourceType, SourceThreadID: m.SourceThreadID,
+		SourceType: m.SourceType, SourceThreadID: m.SourceThreadID, SourceComment: m.SourceCommentID,
 		SourceAccepted: m.SourceAccepted, SourceLikes: m.SourceLikes, SourceStaff: m.SourceStaff,
 		CreatedAt: m.CreatedAt,
 	}

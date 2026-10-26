@@ -60,7 +60,7 @@ func TestChatUsesForumAnswers(t *testing.T) {
 		line(map[string]any{"type": "done", "request_id": "rid", "status": "answered", "answer": "Use the portal in August.",
 			"forum_answer": "Apply on the student portal in August.", "ai_explanation": "Use the portal in August.",
 			"language": "en", "basis": "retrieved", "source_type": "forum",
-			"source": map[string]any{"id": fmt.Sprintf("forum-%d", accepted), "question": "How to get a dorm room?", "thread_id": accepted, "accepted": true}})
+			"source": map[string]any{"id": fmt.Sprintf("forum-%d", accepted), "question": "How to get a dorm room?", "thread_id": accepted, "comment_id": best, "accepted": true}})
 	}))
 	t.Cleanup(ml.Close)
 	e.h.ML = mlclient.New(ml.URL, 5*time.Second)
@@ -70,7 +70,7 @@ func TestChatUsesForumAnswers(t *testing.T) {
 	for _, c := range got {
 		answers[c.ThreadID] = c
 	}
-	if a := answers[accepted]; a.Answer != "Apply on the student portal in August." || !a.Accepted || a.Body == "" {
+	if a := answers[accepted]; a.Answer != "Apply on the student portal in August." || !a.Accepted || a.Body == "" || a.CommentID != best {
 		t.Fatalf("accepted answer: %+v", a)
 	}
 	if a := answers[liked]; a.Answer != "From 8 to 18." || a.Likes != 1 {
@@ -102,7 +102,8 @@ func TestChatUsesForumAnswers(t *testing.T) {
 	_, msgs := e.call(asker, http.MethodGet, fmt.Sprintf("/api/chat/conversations/%d/messages", num(conv["id"])), nil)
 	list := msgs["messages"].([]any)
 	saved := list[len(list)-1].(map[string]any)
-	if saved["source_type"] != "forum" || num(saved["source_thread_id"]) != accepted || saved["forum_answer"] != "Apply on the student portal in August." {
+	if saved["source_type"] != "forum" || num(saved["source_thread_id"]) != accepted || num(saved["source_comment_id"]) != best ||
+		saved["forum_answer"] != "Apply on the student portal in August." {
 		t.Fatalf("saved answer: %v", saved)
 	}
 }

@@ -92,7 +92,10 @@ func (s *PostgresStore) Migrate(ctx context.Context) error {
 	if _, err := s.pool.Exec(ctx, savedRestrictSQL); err != nil {
 		return err
 	}
-	_, err := s.pool.Exec(ctx, notificationEventsSQL)
+	if _, err := s.pool.Exec(ctx, notificationEventsSQL); err != nil {
+		return err
+	}
+	_, err := s.pool.Exec(ctx, chatSourceCommentSQL)
 	return err
 }
 

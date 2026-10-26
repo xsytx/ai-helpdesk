@@ -28,10 +28,11 @@ type Source struct {
 	Language   string `json:"language"`
 	SourceRow  string `json:"source_row"`
 	// A forum answer (source_type "forum"): its question and how it was rated.
-	ThreadID *int64 `json:"thread_id,omitempty"`
-	Accepted bool   `json:"accepted,omitempty"`
-	Likes    int    `json:"likes,omitempty"`
-	Staff    bool   `json:"staff,omitempty"`
+	ThreadID  *int64 `json:"thread_id,omitempty"`
+	CommentID *int64 `json:"comment_id,omitempty"`
+	Accepted  bool   `json:"accepted,omitempty"`
+	Likes     int    `json:"likes,omitempty"`
+	Staff     bool   `json:"staff,omitempty"`
 }
 
 type GenerateResult struct {
@@ -105,7 +106,8 @@ type HistoryItem struct {
 // ForumCandidate is a published forum question with its best answer, which
 // the model may use as the "community answer" (Stories 8-9).
 type ForumCandidate struct {
-	ThreadID int64  `json:"thread_id"`
+	ThreadID  int64 `json:"thread_id"`
+	CommentID int64 `json:"comment_id"`
 	Title    string `json:"title"`
 	Body     string `json:"body"`
 	Answer   string `json:"answer"`

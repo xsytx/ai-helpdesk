@@ -25,10 +25,11 @@ type chatSourcePublic struct {
 	Question string `json:"question"`
 	Category string `json:"category"`
 	// A forum answer: the question it answers and whether it is the accepted one.
-	ThreadID *int64 `json:"thread_id,omitempty"`
-	Accepted bool   `json:"accepted,omitempty"`
-	Likes    int    `json:"likes,omitempty"`
-	Staff    bool   `json:"staff,omitempty"`
+	ThreadID  *int64 `json:"thread_id,omitempty"`
+	CommentID *int64 `json:"comment_id,omitempty"`
+	Accepted  bool   `json:"accepted,omitempty"`
+	Likes     int    `json:"likes,omitempty"`
+	Staff     bool   `json:"staff,omitempty"`
 }
 
 type chatAskResp struct {
@@ -70,7 +71,7 @@ func (h *Handlers) chatBackground(ctx context.Context, uid int64, conv *models.C
 	}
 	for _, a := range answers {
 		bg.Forum = append(bg.Forum, mlclient.ForumCandidate{
-			ThreadID: a.ThreadID, Title: a.Title, Body: a.Body, Answer: a.Answer,
+			ThreadID: a.ThreadID, CommentID: a.CommentID, Title: a.Title, Body: a.Body, Answer: a.Answer,
 			Accepted: a.Accepted, Likes: a.Likes, Staff: a.Staff,
 		})
 	}
@@ -355,6 +356,7 @@ func buildChatAskResp(mlResp mlclient.GenerateResult) chatAskResp {
 		}
 		if out.SourceType == "forum" {
 			out.Source.ThreadID = mlResp.Source.ThreadID
+			out.Source.CommentID = mlResp.Source.CommentID
 			out.Source.Accepted = mlResp.Source.Accepted
 			out.Source.Likes = mlResp.Source.Likes
 			out.Source.Staff = mlResp.Source.Staff

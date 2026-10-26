@@ -119,7 +119,9 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   chat shows "Ответ сообщества" + "Открыть обсуждение" (saved as
   `chat_messages.source_type` / `source_thread_id`) with trust badges:
   accepted, by staff, likes (`source_accepted/likes/staff`,
-  `013_chat_trust_share.sql`).
+  `013_chat_trust_share.sql`). The answer/reply used travels as
+  `comment_id` (`source_comment_id`, `017_chat_source_comment.sql`), so
+  "Открыть обсуждение" opens `/forum/<id>#answer-<comment>` and it blinks.
 - **Copy and share a chat.** A copy button under each answer
   (`shared/lib/clipboard.ts`). Chat list ⋯ → "Поделиться" creates a
   read-only link `/shared/<token>` (`chat_conversations.share_token`;
@@ -300,7 +302,7 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
 - **Every public SQL read must hide held posts**: use `threadVisible` /
   `commentVisible` in `backend/internal/store/postgres.go`.
 - **Schema changes** are idempotent SQL applied on every start
-  (`001_init.sql` + `003_chat.sql` + `004_faq.sql` + `005_search.sql` + `006_chat_feedback.sql` + `007_forum_extras.sql` + `008_reputation.sql` + `009_profiles.sql` + `010_tags.sql` + `011_forum_answers.sql` + `012_chat_followups.sql` + `013_chat_trust_share.sql` + `014_edits.sql` + `015_saved_restrict.sql` + `016_notification_events.sql` in `Migrate`, `002_moderation.sql` in
+  (`001_init.sql` + `003_chat.sql` + `004_faq.sql` + `005_search.sql` + `006_chat_feedback.sql` + `007_forum_extras.sql` + `008_reputation.sql` + `009_profiles.sql` + `010_tags.sql` + `011_forum_answers.sql` + `012_chat_followups.sql` + `013_chat_trust_share.sql` + `014_edits.sql` + `015_saved_restrict.sql` + `016_notification_events.sql` + `017_chat_source_comment.sql` in `Migrate`, `002_moderation.sql` in
   `MigrateModeration`): `CREATE ... IF NOT EXISTS` /
   `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`.
 - **Store interface**: adding a method to `store.Store` also needs a stub on

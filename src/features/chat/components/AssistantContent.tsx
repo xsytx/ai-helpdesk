@@ -107,7 +107,8 @@ export function AssistantContent({ msg }: { msg: UiChatMessage & { onRetry?: () 
           {fromForum && msg.sourceThreadId ? (
             <Link
               viewTransition
-              to={`/forum/${msg.sourceThreadId}`}
+              // Straight to the answer it came from, which blinks (ThreadDetailPage).
+              to={`/forum/${msg.sourceThreadId}${msg.sourceCommentId ? `#answer-${msg.sourceCommentId}` : ""}`}
               className="mt-1.5 inline-flex items-center gap-0.5 text-xs font-medium text-primary-light hover:underline"
             >
               {t("chatOpenDiscussion")} →

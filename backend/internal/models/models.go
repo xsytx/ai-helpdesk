@@ -276,6 +276,8 @@ type ChatMessage struct {
 	// "forum" (a forum answer; SourceThreadID is its question, nil once deleted).
 	SourceType     *string `json:"source_type,omitempty"`
 	SourceThreadID *int64  `json:"source_thread_id,omitempty"`
+	// SourceCommentID: the forum answer or reply used (nil once deleted).
+	SourceCommentID *int64 `json:"source_comment_id,omitempty"`
 	// How far the community answer can be trusted (when the bot used it).
 	SourceAccepted bool `json:"source_accepted,omitempty"`
 	SourceLikes    int  `json:"source_likes,omitempty"`
@@ -304,7 +306,8 @@ type UserSuggestion struct {
 // ForumAnswer is a published question with its best answer, offered to the
 // AI chat as a possible "community answer" (store.ForumAnswers).
 type ForumAnswer struct {
-	ThreadID int64
+	ThreadID  int64
+	CommentID int64 // the answer or reply used
 	Title    string
 	Body     string
 	Answer   string
