@@ -270,10 +270,19 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
 - **Notifications.** Types: new answer (followers), reply, mention, your
   answer liked (`answer_liked`; taking the like back removes the unread
   notice) or marked as the solution (`answer_accepted`); never for your own
-  action. The header bell (`NotificationBell`) polls
-  `/api/notifications/unread-count` every 30 s and lists
-  `/api/notifications` when opened; a click marks it read and opens the
-  question. Notifications about posts the moderation hid are not shown
+  action. **Live:** a trigger (`016_notification_events.sql`) sends
+  `pg_notify('notification_events', {user_id, thread_id})` on every
+  notification insert/update/delete; the backend listens
+  (`ListenNotificationEvents`, reconnects) and an in-memory hub
+  (`internal/events`) passes it to that user's open pages over
+  `GET /api/notifications/stream` (Server-Sent Events, 25 s keep-alive, no
+  write deadline). `useLiveNotifications` (fetch with the token; visible
+  tabs only, browsers allow few connections per site) reloads the bell and
+  that question within ~0.5 s; polling stays as a fallback (30 s, 120 s
+  while live). The header bell (`NotificationBell`) lists
+  `/api/notifications` when opened; a click marks it read and opens
+  `/forum/<id>#answer-<comment>` (or `#question`), where
+  `HighlightFromAddress` scrolls to that post and `flash()` makes it blink 3 times. Notifications about posts the moderation hid are not shown
   (`notificationVisible` in `postgres.go`) until a moderator publishes them.
 - **Auto-refresh.** React Query polling: feed 15 s, thread 10 s (1.5 s while
   a post is `checking`), admin queue 5 s, admin badge 10 s; paused in
@@ -291,7 +300,7 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
 - **Every public SQL read must hide held posts**: use `threadVisible` /
   `commentVisible` in `backend/internal/store/postgres.go`.
 - **Schema changes** are idempotent SQL applied on every start
-  (`001_init.sql` + `003_chat.sql` + `004_faq.sql` + `005_search.sql` + `006_chat_feedback.sql` + `007_forum_extras.sql` + `008_reputation.sql` + `009_profiles.sql` + `010_tags.sql` + `011_forum_answers.sql` + `012_chat_followups.sql` + `013_chat_trust_share.sql` + `014_edits.sql` + `015_saved_restrict.sql` in `Migrate`, `002_moderation.sql` in
+  (`001_init.sql` + `003_chat.sql` + `004_faq.sql` + `005_search.sql` + `006_chat_feedback.sql` + `007_forum_extras.sql` + `008_reputation.sql` + `009_profiles.sql` + `010_tags.sql` + `011_forum_answers.sql` + `012_chat_followups.sql` + `013_chat_trust_share.sql` + `014_edits.sql` + `015_saved_restrict.sql` + `016_notification_events.sql` in `Migrate`, `002_moderation.sql` in
   `MigrateModeration`): `CREATE ... IF NOT EXISTS` /
   `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`.
 - **Store interface**: adding a method to `store.Store` also needs a stub on
@@ -349,7 +358,7 @@ questions in the AI chat, 👍/👎, "ask on the forum" from an answer, admin
 "AI chat" insights → FAQ, "maybe already asked", solved answers,
 unanswered filter, reports.
 
-Also done: saved questions; mute/ban with reason and end date; like/solution notifications and edited-post history; replies to answers; @mentions in posts; trust badges, copy and share links in the chat; header theme toggle; suggested next questions in the chat; dark theme; the bot answers from the forum (Stories 8-9: "community answer"
+Also done: live notifications and jump-to-post; saved questions; mute/ban with reason and end date; like/solution notifications and edited-post history; replies to answers; @mentions in posts; trust badges, copy and share links in the chat; header theme toggle; suggested next questions in the chat; dark theme; the bot answers from the forum (Stories 8-9: "community answer"
 + AI explanation + link); choosable tags and multi-topic filters;
 streaming answers with a stop button; reputation, levels and top
 helpers; photos on questions and answers; avatars on the server; public

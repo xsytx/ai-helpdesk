@@ -1,4 +1,4 @@
-import {
+import { useLiveNotifications,
   useMarkAllNotificationsRead,
   useMarkNotificationRead,
   useNotifications,
@@ -19,14 +19,16 @@ export function NotificationBell() {
   const { t } = useLocale();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
-  const unread = useUnreadNotificationCount().data ?? 0;
+  const live = useLiveNotifications();
+  const unread = useUnreadNotificationCount(live).data ?? 0;
   const list = useNotifications(open);
   const markRead = useMarkNotificationRead();
   const markAll = useMarkAllNotificationsRead();
 
   function openNotification(n: AppNotification) {
     if (!n.read) markRead.mutate(n.id);
-    navigate(`/forum/${n.threadId}`, { viewTransition: true });
+    // Straight to the answer or reply it is about (the question page lights it up).
+    navigate(`/forum/${n.threadId}#${n.commentId ? `answer-${n.commentId}` : "question"}`, { viewTransition: true });
   }
 
   return (

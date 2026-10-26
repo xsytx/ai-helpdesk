@@ -4,6 +4,7 @@ package handlers
 import (
 	"net/http"
 
+	"campus-forum/internal/events"
 	"campus-forum/internal/mailer"
 	appmw "campus-forum/internal/middleware"
 	"campus-forum/internal/mlclient"
@@ -35,6 +36,8 @@ type Handlers struct {
 	// ChatRetentionDays: unpinned AI chats with no message for this many days
 	// are deleted (0 = keep forever).
 	ChatRetentionDays int
+	// Events passes live notification signals to open pages (nil = off).
+	Events *events.Hub
 }
 
 func New(s store.Store, jwtSecret []byte, m mailer.Mailer, uploadDir, baseURL string, allowedEmailDomains []string) *Handlers {

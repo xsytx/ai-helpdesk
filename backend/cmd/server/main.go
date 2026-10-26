@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"campus-forum/internal/events"
 	"campus-forum/internal/handlers"
 	"campus-forum/internal/mailer"
 	"campus-forum/internal/middleware"
@@ -197,6 +198,18 @@ func main() {
 	}
 	go h.CleanupChatConversations(ctx)
 
+	// Live notifications: the database announces every change, and the
+	// open pages of that user hear it at once (GET /api/notifications/stream).
+	h.Events = events.NewHub()
+	go func() {
+		for ctx.Err() == nil {
+			if err := pgStore.ListenNotificationEvents(ctx, h.Events.Publish); err != nil && ctx.Err() == nil {
+				log.Printf("live notifications: %v (listening again in 3s)", err)
+			}
+			time.Sleep(3 * time.Second)
+		}
+	}()
+
 	mux := http.NewServeMux()
 	authMw := middleware.Auth(secret)
 	optionalAuthMw := middleware.OptionalAuth(secret)
@@ -265,6 +278,7 @@ func main() {
 	mux.Handle("POST /api/comments/{id}/vote", authMw(http.HandlerFunc(h.VoteComment)))
 	mux.Handle("GET /api/notifications", authMw(http.HandlerFunc(h.ListNotifications)))
 	mux.Handle("GET /api/notifications/unread-count", authMw(http.HandlerFunc(h.UnreadNotificationCount)))
+	mux.Handle("GET /api/notifications/stream", authMw(http.HandlerFunc(h.NotificationStream)))
 	mux.Handle("POST /api/notifications/read-all", authMw(http.HandlerFunc(h.MarkAllNotificationsRead)))
 	mux.Handle("POST /api/notifications/{id}/read", authMw(http.HandlerFunc(h.MarkNotificationRead)))
 	mux.Handle("POST /api/threads/{id}/report", authMw(writeLimiter(http.HandlerFunc(h.ReportThread))))

@@ -10,6 +10,23 @@ function play(el: Element | null, keyframes: Keyframe[], options: KeyframeAnimat
   el.animate(keyframes, options);
 }
 
+/**
+ * Makes an element blink three times, e.g. the answer a notification points
+ * at. With less motion asked for, a plain outline shows for a moment instead.
+ */
+export function flash(el: HTMLElement | null) {
+  if (!el) return;
+  const color = "var(--color-brand)";
+  if (prefersReducedMotion() || typeof el.animate !== "function") {
+    el.style.outline = `2px solid ${color}`;
+    window.setTimeout(() => (el.style.outline = ""), 2000);
+    return;
+  }
+  const on = { boxShadow: `0 0 0 2px ${color}, inset 0 0 0 999px color-mix(in oklab, ${color} 12%, transparent)` };
+  const off = { boxShadow: "0 0 0 2px transparent, inset 0 0 0 999px transparent" };
+  el.animate([off, on, off, on, off, on, off], { duration: 1800, easing: "ease-in-out" });
+}
+
 /** Quick grow-and-settle, e.g. on a like. */
 export function pop(el: Element | null) {
   play(

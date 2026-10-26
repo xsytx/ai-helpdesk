@@ -18,13 +18,14 @@ import { useQueryClient } from "@tanstack/react-query";
 import { postActionError, useDeleteThread, useUpdateThread, type PostActionError } from "@/features/forum/postActions";
 import type { Thread } from "@/entities/forum";
 import { Button } from "@/shared/ui/Button";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { flash } from "@/shared/lib/motion";
 import { useLocale } from "@/i18n/LocaleContext";
 import { formatRelativeTime } from "@/shared/lib/format";
 import { UserAvatar } from "@/features/profile/components/UserAvatar";
 import { Card } from "@/shared/ui/Card";
 import { ArrowLeft } from "lucide-react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 
 export function ThreadDetailPage() {
   const { threadId = "" } = useParams();
@@ -64,6 +65,7 @@ export function ThreadDetailPage() {
       </Link>
 
       <ThreadCardFull thread={thread} />
+      <HighlightFromAddress ready={!answersLoading} />
 
       <Card>
         <div className="mb-1 flex flex-wrap items-baseline justify-between gap-2">
@@ -138,7 +140,7 @@ function ThreadCardFull({ thread }: { thread: Thread }) {
   }
 
   return (
-    <Card>
+    <Card id="question">
       {reporting ? <ReportDialog target={{ kind: "thread", id: thread.id }} onClose={() => setReporting(false)} /> : null}
       <div className="flex gap-3">
         <Link viewTransition to={`/users/${thread.authorId}`} aria-label={thread.authorName} className="shrink-0">
@@ -233,6 +235,27 @@ function ThreadCardFull({ thread }: { thread: Thread }) {
       </div>
     </Card>
   );
+}
+
+/**
+ * Opened from a notification (/forum/12#answer-34 or #question): scroll to
+ * that post once the answers are there and let it glow for a moment.
+ */
+function HighlightFromAddress({ ready }: { ready: boolean }) {
+  const location = useLocation();
+  const done = useRef("");
+  useEffect(() => {
+    const id = location.hash.slice(1);
+    const key = `${location.key}:${id}`;
+    if (!ready || !id || done.current === key) return;
+    const el = document.getElementById(id);
+    if (!el) return;
+    done.current = key;
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    el.scrollIntoView({ block: "center", behavior: reduce ? "auto" : "smooth" });
+    flash(el);
+  }, [ready, location.key, location.hash]);
+  return null;
 }
 
 /** Save the question for later (Profile → Saved). */

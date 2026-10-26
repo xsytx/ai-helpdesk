@@ -134,6 +134,7 @@ export function AnswerList({
         return (
           <li
             key={answer.id}
+            id={`answer-${answer.id}`}
             ref={(el) => {
               if (el) itemRefs.current.set(answer.id, el);
               else itemRefs.current.delete(answer.id);
@@ -170,7 +171,8 @@ export function AnswerList({
                   {repliesOf.get(answer.id)!.map((r) => (
                     <li
                       key={r.id}
-                      className={cn(r === solution && "-ml-1 rounded-lg border border-green-300 p-2 ring-1 ring-green-200")}
+                      id={`answer-${r.id}`}
+                      className={cn("rounded-lg", r === solution && "-ml-1 rounded-lg border border-green-300 p-2 ring-1 ring-green-200")}
                     >
                       {r === solution ? (
                         <span className="mb-1 inline-flex items-center gap-0.5 text-[10px] font-bold uppercase tracking-wide text-green-700">
