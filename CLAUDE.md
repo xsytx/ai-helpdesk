@@ -178,6 +178,14 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   the chat bot uses a reply that is accepted or has ≥ 1 like. The answer's author gets
   `reply_to_comment` and no extra mention notice; a follower who is
   @mentioned gets only `mention`.
+- **Edited posts (`014_edits.sql`, `store/edits.go`).** A change of a
+  question's title/text or an answer's text sets `edited_at` (tags alone
+  don't) and keeps the replaced version in `post_revisions`. Everyone sees
+  "· изменено <time>" (`EditedMark`); the earlier versions
+  (`GET /api/threads|comments/{id}/revisions`) only the author and staff — an
+  edit may have removed something on purpose. A solution edited after
+  `threads.accepted_at` shows "Изменено после того, как ответ отметили
+  решением".
 - **@mentions** (no other formatting: posts are plain text). Questions and
   answers are typed in `PostEditor`: "@" + letters suggests people
   (`GET /api/users/search?q=`); the box shows "@Name", and the saved text
@@ -243,7 +251,10 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   `DELETE /api/attachments/{id}` (the answer's author). Shown under the
   answer; added in the reply form and edited like question photos
   (`PhotoEditor`, `PhotoPicker max`).
-- **Notifications.** The header bell (`NotificationBell`) polls
+- **Notifications.** Types: new answer (followers), reply, mention, your
+  answer liked (`answer_liked`; taking the like back removes the unread
+  notice) or marked as the solution (`answer_accepted`); never for your own
+  action. The header bell (`NotificationBell`) polls
   `/api/notifications/unread-count` every 30 s and lists
   `/api/notifications` when opened; a click marks it read and opens the
   question. Notifications about posts the moderation hid are not shown
@@ -264,7 +275,7 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
 - **Every public SQL read must hide held posts**: use `threadVisible` /
   `commentVisible` in `backend/internal/store/postgres.go`.
 - **Schema changes** are idempotent SQL applied on every start
-  (`001_init.sql` + `003_chat.sql` + `004_faq.sql` + `005_search.sql` + `006_chat_feedback.sql` + `007_forum_extras.sql` + `008_reputation.sql` + `009_profiles.sql` + `010_tags.sql` + `011_forum_answers.sql` + `012_chat_followups.sql` + `013_chat_trust_share.sql` in `Migrate`, `002_moderation.sql` in
+  (`001_init.sql` + `003_chat.sql` + `004_faq.sql` + `005_search.sql` + `006_chat_feedback.sql` + `007_forum_extras.sql` + `008_reputation.sql` + `009_profiles.sql` + `010_tags.sql` + `011_forum_answers.sql` + `012_chat_followups.sql` + `013_chat_trust_share.sql` + `014_edits.sql` in `Migrate`, `002_moderation.sql` in
   `MigrateModeration`): `CREATE ... IF NOT EXISTS` /
   `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`.
 - **Store interface**: adding a method to `store.Store` also needs a stub on
@@ -284,7 +295,9 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   `shared/lib/motion.ts` and must respect `prefers-reduced-motion`.
 - **Links** use React Router `viewTransition` (page fade; the `main` area is
   `view-transition-name: page`, which makes it its own stacking context —
-  full-screen overlays must be portalled to `document.body`).
+  full-screen overlays must be portalled to `document.body`). `ScrollRestoration`
+  in `AppShell` (keyed by path): a new page opens at the top, back/forward
+  returns to the old position, `?q=`/`?tags=` changes don't scroll.
 - **Onboarding tour** (`features/onboarding/tour.ts`) points at elements with
   `data-tour="..."`; keep those attributes when restyling the shell.
 - **Browser storage** goes through `shared/lib/storage.ts` (`safeStorage`,
@@ -320,7 +333,7 @@ questions in the AI chat, 👍/👎, "ask on the forum" from an answer, admin
 "AI chat" insights → FAQ, "maybe already asked", solved answers,
 unanswered filter, reports.
 
-Also done: replies to answers; @mentions in posts; trust badges, copy and share links in the chat; header theme toggle; suggested next questions in the chat; dark theme; the bot answers from the forum (Stories 8-9: "community answer"
+Also done: like/solution notifications and edited-post history; replies to answers; @mentions in posts; trust badges, copy and share links in the chat; header theme toggle; suggested next questions in the chat; dark theme; the bot answers from the forum (Stories 8-9: "community answer"
 + AI explanation + link); choosable tags and multi-topic filters;
 streaming answers with a stop button; reputation, levels and top
 helpers; photos on questions and answers; avatars on the server; public

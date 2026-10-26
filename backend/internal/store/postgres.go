@@ -83,7 +83,10 @@ func (s *PostgresStore) Migrate(ctx context.Context) error {
 	if _, err := s.pool.Exec(ctx, chatFollowupsSQL); err != nil {
 		return err
 	}
-	_, err := s.pool.Exec(ctx, chatTrustShareSQL)
+	if _, err := s.pool.Exec(ctx, chatTrustShareSQL); err != nil {
+		return err
+	}
+	_, err := s.pool.Exec(ctx, editsSQL)
 	return err
 }
 
@@ -325,7 +328,8 @@ const threadSelect = `
 	       (SELECT count(*) FROM attachments a WHERE a.thread_id = t.id AND a.comment_id IS NULL)::int AS photo_count,
 	       COALESCE((SELECT array_agg('/uploads/' || p.path ORDER BY p.id) FROM (
 	           SELECT a.id, a.path FROM attachments a WHERE a.thread_id = t.id AND a.comment_id IS NULL ORDER BY a.id LIMIT 3
-	       ) p), ARRAY[]::text[]) AS preview_photos
+	       ) p), ARRAY[]::text[]) AS preview_photos,
+	       t.edited_at, t.accepted_at
 	FROM threads t
 	JOIN users u ON u.id = t.user_id
 	LEFT JOIN (SELECT thread_id, COUNT(*) AS cnt FROM comments c
@@ -341,7 +345,7 @@ func scanThread(row pgx.Row) (models.Thread, error) {
 	var t models.Thread
 	err := row.Scan(&t.ID, &t.UserID, &t.AuthorName, &t.Title, &t.Body, &t.Score, &t.LockedAt,
 		&t.CreatedAt, &t.CommentCnt, &t.Tags, &t.ModerationStatus, &t.AcceptedCommentID, &t.AuthorAvatar,
-		&t.PhotoCount, &t.PreviewPhotos)
+		&t.PhotoCount, &t.PreviewPhotos, &t.EditedAt, &t.AcceptedAt)
 	return t, err
 }
 
@@ -482,12 +486,13 @@ func (s *PostgresStore) GetThread(ctx context.Context, id int64) (models.Thread,
 func (s *PostgresStore) UpdateThread(ctx context.Context, id, userID int64, in ThreadInput) (models.Thread, error) {
 	// The old text comes back too: only people newly mentioned are notified.
 	const q = `
-		UPDATE threads t SET title = $1, body = $2
-		FROM (SELECT body FROM threads WHERE id = $3 FOR UPDATE) old
+		UPDATE threads t SET title = $1, body = $2,
+		       edited_at = CASE WHEN old.title <> $1 OR old.body <> $2 THEN now() ELSE t.edited_at END
+		FROM (SELECT title, body FROM threads WHERE id = $3 FOR UPDATE) old
 		WHERE t.id = $3 AND t.user_id = $4
-		RETURNING old.body`
-	var previous string
-	err := s.pool.QueryRow(ctx, q, in.Title, in.Body, id, userID).Scan(&previous)
+		RETURNING old.title, old.body`
+	var previousTitle, previous string
+	err := s.pool.QueryRow(ctx, q, in.Title, in.Body, id, userID).Scan(&previousTitle, &previous)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return models.Thread{}, s.ownershipErr(ctx, "threads", id)
 	}
@@ -496,6 +501,9 @@ func (s *PostgresStore) UpdateThread(ctx context.Context, id, userID int64, in T
 	}
 	if err := s.setThreadTags(ctx, id, in.Tags); err != nil {
 		return models.Thread{}, err
+	}
+	if previousTitle != in.Title || previous != in.Body {
+		s.saveRevision(ctx, &id, nil, previousTitle, previous)
 	}
 	s.notifyMentions(ctx, userID, id, nil, in.Body, previous, 0)
 	return s.GetThread(ctx, id)
@@ -532,14 +540,14 @@ func (s *PostgresStore) ownershipErr(ctx context.Context, table string, id int64
 
 const commentSelect = `
 	SELECT c.id, c.thread_id, c.user_id, u.display_name, c.parent_comment_id, c.body, c.score, c.created_at,
-	       c.moderation_status, u.avatar
+	       c.moderation_status, u.avatar, c.edited_at
 	FROM comments c
 	JOIN users u ON u.id = c.user_id`
 
 func scanComment(row pgx.Row) (models.Comment, error) {
 	var c models.Comment
 	err := row.Scan(&c.ID, &c.ThreadID, &c.UserID, &c.AuthorName, &c.ParentCommentID, &c.Body, &c.Score, &c.CreatedAt,
-		&c.ModerationStatus, &c.AuthorAvatar)
+		&c.ModerationStatus, &c.AuthorAvatar, &c.EditedAt)
 	return c, err
 }
 
@@ -675,7 +683,8 @@ func (s *PostgresStore) getCommentByID(ctx context.Context, id int64) (models.Co
 func (s *PostgresStore) UpdateComment(ctx context.Context, id, userID int64, body string) (models.Comment, error) {
 	// The old text comes back too: only people newly mentioned are notified.
 	const q = `
-		UPDATE comments c SET body = $1
+		UPDATE comments c SET body = $1,
+		       edited_at = CASE WHEN old.body <> $1 THEN now() ELSE c.edited_at END
 		FROM (SELECT body FROM comments WHERE id = $2 FOR UPDATE) old
 		WHERE c.id = $2 AND c.user_id = $3
 		RETURNING old.body, c.thread_id`
@@ -687,6 +696,9 @@ func (s *PostgresStore) UpdateComment(ctx context.Context, id, userID int64, bod
 	}
 	if err != nil {
 		return models.Comment{}, err
+	}
+	if previous != body {
+		s.saveRevision(ctx, nil, &id, "", previous)
 	}
 	s.notifyMentions(ctx, userID, threadID, &id, body, previous, 0)
 	return s.getCommentByID(ctx, id)
@@ -774,6 +786,10 @@ func (s *PostgresStore) Vote(ctx context.Context, userID int64, targetType strin
 
 	if err := tx.Commit(ctx); err != nil {
 		return 0, err
+	}
+	if targetType == "comment" && value == 1 {
+		// delta > 0: the like was added; otherwise it was taken back.
+		s.notifyAnswerLiked(ctx, userID, targetID, delta > 0)
 	}
 	return score, nil
 }

@@ -6,6 +6,7 @@ import { useAcceptAnswer, useLikeAnswer } from "@/features/forum/api";
 import { cn } from "@/shared/lib/cn";
 import { CheckCircle2, Reply } from "lucide-react";
 import { ReplyForm, type ReplyTarget } from "./ReplyForm";
+import { EditedMark } from "./EditedMark";
 import { useLocale } from "@/i18n/LocaleContext";
 import { formatRelativeTime } from "@/shared/lib/format";
 import { HiddenPostNotice } from "@/features/moderation/components/HiddenPostNotice";
@@ -36,11 +37,14 @@ export function AnswerList({
   answers: byLikes,
   threadAuthorId,
   acceptedAnswerId,
+  acceptedAt,
 }: {
   threadId: string;
   answers: Answer[];
   threadAuthorId?: string;
   acceptedAnswerId?: string;
+  /** When the solution was marked: an edit after that is pointed out. */
+  acceptedAt?: string;
 }) {
   const { user } = useAuth();
   const { locale, t } = useLocale();
@@ -60,6 +64,8 @@ export function AnswerList({
   // The answer with the solution in it (itself, or one of its replies) goes on top.
   const accepted = solution && isReply(solution) ? topLevel.find((a) => a.id === solution.parentId) : solution;
   const answers = accepted ? [accepted, ...topLevel.filter((a) => a !== accepted)] : topLevel;
+  const changedAfterAccepted = (a: Answer) =>
+    a === solution && Boolean(a.editedAt && acceptedAt && a.editedAt > acceptedAt);
   const replyTo = (rootId: string, a: Answer) =>
     user ? () => setReplying({ rootId, target: { answerId: rootId, authorId: a.authorId, authorName: a.authorName } }) : undefined;
 
@@ -157,6 +163,7 @@ export function AnswerList({
                 locale={locale}
                 onReply={replyTo(answer.id, answer)}
                 actions={acceptButton(answer)}
+                changedAfterAccepted={changedAfterAccepted(answer)}
               />
               {repliesOf.get(answer.id)?.length ? (
                 <ul className="mt-3 space-y-3 border-l-2 border-border/60 pl-3">
@@ -177,6 +184,7 @@ export function AnswerList({
                         locale={locale}
                         compact
                         onReply={replyTo(answer.id, r)}
+                        changedAfterAccepted={changedAfterAccepted(r)}
                         actions={
                           <>
                             {likeButton(r)}
@@ -212,6 +220,7 @@ function AnswerContent({
   compact = false,
   onReply,
   actions,
+  changedAfterAccepted = false,
 }: {
   threadId: string;
   answer: Answer;
@@ -221,6 +230,8 @@ function AnswerContent({
   onReply?: () => void;
   /** More buttons next to "Reply" (like, mark as the solution). */
   actions?: ReactNode;
+  /** The solution was edited after it was marked. */
+  changedAfterAccepted?: boolean;
 }) {
   const { t } = useLocale();
   const { canEdit, canDelete, canReport } = usePostPermissions(answer.authorId);
@@ -271,7 +282,10 @@ function AnswerContent({
             </Link>
             <LevelBadge level={answer.authorLevel} points={answer.authorPoints} hideNewcomer />
           </p>
-          <p className="text-xs text-label">{formatRelativeTime(answer.createdAt, locale)}</p>
+          <p className="text-xs text-label">
+            {formatRelativeTime(answer.createdAt, locale)}
+            <EditedMark kind="comment" id={answer.id} editedAt={answer.editedAt} canSeeHistory={canDelete} />
+          </p>
         </div>
         {mode === "view" ? (
           <PostMenu
@@ -290,6 +304,11 @@ function AnswerContent({
       </div>
       {reporting ? <ReportDialog target={{ kind: "comment", id: answer.id }} onClose={() => setReporting(false)} /> : null}
       <HiddenPostNotice status={answer.moderationStatus} authorId={answer.authorId} compact className="mt-2" />
+      {changedAfterAccepted ? (
+        <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-xs text-amber-900">
+          {t("editedAfterSolution")}
+        </p>
+      ) : null}
       {mode === "edit" ? (
         <form className="mt-2 space-y-2" onSubmit={save}>
           <PostEditor ariaLabel={t("postEdit")} value={body} onChange={setBody} rows={3} />

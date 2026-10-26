@@ -4,6 +4,7 @@ import (
 	"context"
 	_ "embed"
 	"errors"
+	"log"
 	"strings"
 	"unicode/utf8"
 
@@ -127,10 +128,33 @@ func (s *PostgresStore) SetAcceptedAnswer(ctx context.Context, threadID, userID 
 			return ErrInvalidTarget
 		}
 	}
-	_, err = s.pool.Exec(ctx,
-		`UPDATE threads SET accepted_comment_id = $2, accepted_at = CASE WHEN $2::bigint IS NULL THEN NULL ELSE now() END
-		 WHERE id = $1`, threadID, commentID)
-	return err
+	var previous *int64
+	err = s.pool.QueryRow(ctx,
+		`UPDATE threads t SET accepted_comment_id = $2, accepted_at = CASE WHEN $2::bigint IS NULL THEN NULL ELSE now() END
+		 FROM (SELECT accepted_comment_id FROM threads WHERE id = $1 FOR UPDATE) old
+		 WHERE t.id = $1 RETURNING old.accepted_comment_id`, threadID, commentID).Scan(&previous)
+	if err != nil {
+		return err
+	}
+	if previous != nil && (commentID == nil || *previous != *commentID) {
+		if _, nerr := s.pool.Exec(ctx,
+			`DELETE FROM notifications WHERE type = 'answer_accepted' AND comment_id = $1 AND read_at IS NULL`, *previous,
+		); nerr != nil {
+			log.Printf("could not take back the solution notification for comment %d: %v", *previous, nerr)
+		}
+	}
+	if commentID != nil && (previous == nil || *previous != *commentID) {
+		if _, nerr := s.pool.Exec(ctx,
+			`INSERT INTO notifications (user_id, actor_id, type, thread_id, comment_id)
+			 SELECT c.user_id, $1, 'answer_accepted', $2, c.id FROM comments c WHERE c.id = $3 AND c.user_id <> $1
+			 ON CONFLICT (user_id, thread_id, type) WHERE read_at IS NULL
+			 DO UPDATE SET actor_id = EXCLUDED.actor_id, comment_id = EXCLUDED.comment_id, created_at = now()`,
+			userID, threadID, *commentID,
+		); nerr != nil {
+			log.Printf("could not create the solution notification for comment %d: %v", *commentID, nerr)
+		}
+	}
+	return nil
 }
 
 // --- Reports ---

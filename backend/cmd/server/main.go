@@ -225,6 +225,8 @@ func main() {
 	mux.HandleFunc("GET /api/threads/similar", h.SimilarThreads)
 	mux.HandleFunc("GET /api/leaderboard", h.Leaderboard)
 	mux.Handle("GET /api/users/search", authMw(http.HandlerFunc(h.SearchUsers)))
+	mux.Handle("GET /api/threads/{id}/revisions", authMw(http.HandlerFunc(h.ThreadRevisions)))
+	mux.Handle("GET /api/comments/{id}/revisions", authMw(http.HandlerFunc(h.CommentRevisions)))
 	mux.HandleFunc("GET /api/users/{id}", h.GetUserProfile)
 	mux.HandleFunc("GET /api/users/{id}/threads", h.ListUserThreads)
 	mux.HandleFunc("GET /api/users/{id}/comments", h.ListUserComments)

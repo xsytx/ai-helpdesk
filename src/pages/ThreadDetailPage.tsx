@@ -7,6 +7,7 @@ import { Bell, BellOff } from "lucide-react";
 import { DeleteConfirm, PostActionErrorText, PostMenu, usePostPermissions } from "@/features/forum/components/PostMenu";
 import { TagChip, TagPicker } from "@/features/forum/components/TagInput";
 import { PostEditor } from "@/features/forum/components/PostEditor";
+import { EditedMark } from "@/features/forum/components/EditedMark";
 import { RichText } from "@/shared/ui/RichText";
 import { FORUM_TAGS } from "@/features/forum/tags";
 import { ReportDialog } from "@/features/forum/components/ReportDialog";
@@ -80,6 +81,7 @@ export function ThreadDetailPage() {
               answers={answers}
               threadAuthorId={thread.authorId}
               acceptedAnswerId={thread.acceptedAnswerId}
+              acceptedAt={thread.acceptedAt}
             />
           </div>
         )}
@@ -150,6 +152,7 @@ function ThreadCardFull({ thread }: { thread: Thread }) {
               </Link>{" "}
               <LevelBadge level={thread.authorLevel} points={thread.authorPoints} hideNewcomer className="mx-0.5 align-middle" /> ·{" "}
               {formatRelativeTime(thread.createdAt, locale)}
+              <EditedMark kind="thread" id={thread.id} editedAt={thread.editedAt} canSeeHistory={canDelete} />
             </p>
             <div className="flex items-center gap-1">
               <FollowButton threadId={thread.id} />

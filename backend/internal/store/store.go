@@ -108,6 +108,8 @@ type Store interface {
 
 	// ListFAQs: in the admins' order (sort_order, then id).
 	ListFAQs(ctx context.Context) ([]models.FAQ, error)
+	// PostRevisions: earlier versions of a question ("thread") or answer ("comment"), newest first.
+	PostRevisions(ctx context.Context, kind string, id int64) ([]models.PostRevision, error)
 	// SearchUsers: people to @mention whose name (a word of it) starts with q.
 	SearchUsers(ctx context.Context, q string, limit int) ([]models.UserSuggestion, error)
 	// Read-only chat links.

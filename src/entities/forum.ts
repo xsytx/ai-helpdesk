@@ -27,6 +27,10 @@ export interface Thread {
   previewPhotos?: string[];
   /** The answer the author marked as the solution ("Solved"). */
   acceptedAnswerId?: string;
+  /** When the solution was marked. */
+  acceptedAt?: string;
+  /** When the title or text last changed (not set = never edited). */
+  editedAt?: string;
   /** Search results only: where the words were found ("similar" = a near match, e.g. a typo). */
   searchMatch?: "title" | "body" | "answer" | "tag" | "similar";
 }
@@ -49,6 +53,8 @@ export interface Answer {
   moderationStatus?: ModerationStatus;
   /** A reply under another answer (that answer's id); answers have none. */
   parentId?: string;
+  /** When the text last changed (not set = never edited). */
+  editedAt?: string;
 }
 
 /** "unanswered": questions with no answer yet, newest first. */

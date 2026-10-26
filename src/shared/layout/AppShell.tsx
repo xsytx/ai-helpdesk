@@ -6,7 +6,7 @@ import { NotificationBell } from "@/features/notifications/components/Notificati
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { ThemeToggle } from "./ThemeToggle";
 import { Logo } from "./Logo";
-import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
+import { Link, NavLink, Outlet, ScrollRestoration, useNavigate } from "react-router-dom";
 import { useMoveLegacyAvatar } from "@/features/profile/api";
 import {
   BookOpen,
@@ -108,6 +108,9 @@ export function AppShell() {
         <main className="flex-1 overflow-auto [view-transition-name:page] px-4 py-5 pb-24 md:px-6 md:pb-6">
           <Outlet />
         </main>
+        {/* A new page opens at the top; back/forward returns to where you were. Keyed
+            by path, so a search or filter in the address (?q=, ?tags=) doesn't jump. */}
+        <ScrollRestoration getKey={(location) => location.pathname} />
 
         <nav
           className="fixed inset-x-0 bottom-0 z-40 flex items-end justify-around border-t border-border/50 bg-surface px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 md:hidden"

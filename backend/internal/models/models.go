@@ -59,6 +59,10 @@ type Thread struct {
 	// AcceptedCommentID is the answer the author marked as the solution
 	// ("Solved"); nil if none, or if that answer is hidden by moderation.
 	AcceptedCommentID *int64 `json:"accepted_comment_id,omitempty"`
+	// AcceptedAt: when the solution was marked (an answer edited after it gets a note).
+	AcceptedAt *time.Time `json:"accepted_at,omitempty"`
+	// EditedAt: when the title or text last changed; nil = never edited.
+	EditedAt *time.Time `json:"edited_at,omitempty"`
 	// SearchMatch is set on search results only: where the words were found
 	// ("title", "body", "answer", "tag") or "similar" (a near match, e.g. a typo).
 	SearchMatch string `json:"search_match,omitempty"`
@@ -77,6 +81,8 @@ type Comment struct {
 	CreatedAt       time.Time `json:"created_at"`
 	// ModerationStatus: ok | checking | held | rejected (see 002_moderation.sql).
 	ModerationStatus string `json:"moderation_status"`
+	// EditedAt: when the text last changed; nil = never edited.
+	EditedAt *time.Time `json:"edited_at,omitempty"`
 	// Attachments: the answer's photos (thread page only).
 	Attachments []Attachment `json:"attachments,omitempty"`
 }
@@ -251,6 +257,13 @@ type ChatMessage struct {
 	// Rating is the student's 👍 (1) / 👎 (-1) on an answer; nil = not rated.
 	Rating    *int16    `json:"rating,omitempty"`
 	CreatedAt time.Time `json:"created_at"`
+}
+
+// PostRevision is an earlier version of an edited question or answer.
+type PostRevision struct {
+	Title      string    `json:"title,omitempty"`
+	Body       string    `json:"body"`
+	ReplacedAt time.Time `json:"replaced_at"`
 }
 
 // UserSuggestion is a person offered after "@" in a post.

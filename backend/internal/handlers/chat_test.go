@@ -159,6 +159,9 @@ func (s *chatTestStore) UnshareChatConversation(context.Context, int64, int64) e
 func (s *chatTestStore) SharedChat(context.Context, string) (models.ChatConversation, []models.ChatMessage, error) {
 	return models.ChatConversation{}, nil, store.ErrNotFound
 }
+func (s *chatTestStore) PostRevisions(context.Context, string, int64) ([]models.PostRevision, error) {
+	return nil, nil
+}
 func (s *chatTestStore) SearchUsers(context.Context, string, int) ([]models.UserSuggestion, error) {
 	return nil, nil
 }

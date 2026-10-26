@@ -35,6 +35,8 @@ interface ApiThread {
   author_avatar?: string;
   photo_count?: number;
   preview_photos?: string[];
+  edited_at?: string;
+  accepted_at?: string;
 }
 
 interface ApiComment {
@@ -49,6 +51,7 @@ interface ApiComment {
   moderation_status?: ModerationStatus;
   author_avatar?: string;
   attachments?: { id: number; url: string }[];
+  edited_at?: string;
 }
 
 function toThread(t: ApiThread): Thread {
@@ -69,6 +72,8 @@ function toThread(t: ApiThread): Thread {
     authorAvatar: t.author_avatar ?? "",
     photoCount: t.photo_count ?? 0,
     previewPhotos: t.preview_photos ?? [],
+    editedAt: t.edited_at,
+    acceptedAt: t.accepted_at,
   };
 }
 
@@ -86,6 +91,7 @@ function toAnswer(c: ApiComment, userId: string | undefined): Answer {
     authorAvatar: c.author_avatar ?? "",
     attachments: c.attachments?.map((a) => ({ id: String(a.id), url: a.url })),
     parentId: c.parent_comment_id ? String(c.parent_comment_id) : undefined,
+    editedAt: c.edited_at,
     // A remembered like on an answer with no likes is stale (e.g. un-liked on
     // another device), so it doesn't count.
     likedByUserIds: userId && c.score > 0 && readLikes(userId).has(id) ? [userId] : [],

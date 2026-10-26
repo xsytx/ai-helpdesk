@@ -6,6 +6,7 @@ import {
   type AppNotification,
 } from "@/features/notifications/api";
 import { useLocale } from "@/i18n/LocaleContext";
+import type { TranslationKey } from "@/i18n/translations";
 import { cn } from "@/shared/lib/cn";
 import { formatRelativeTime } from "@/shared/lib/format";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
@@ -82,11 +83,17 @@ export function NotificationBell() {
   );
 }
 
+const NOTIF_TEXT: Record<AppNotification["type"], TranslationKey> = {
+  comment_on_thread: "notifCommentOnThread",
+  reply_to_comment: "notifReplyToComment",
+  mention: "notifMention",
+  answer_liked: "notifAnswerLiked",
+  answer_accepted: "notifAnswerAccepted",
+};
+
 function NotificationItem({ n, onOpen }: { n: AppNotification; onOpen: () => void }) {
   const { t, locale } = useLocale();
-  const text = t(
-    n.type === "mention" ? "notifMention" : n.type === "reply_to_comment" ? "notifReplyToComment" : "notifCommentOnThread",
-  )
+  const text = t(NOTIF_TEXT[n.type] ?? "notifCommentOnThread")
     .replace("{name}", n.actorName)
     .replace("{title}", n.threadTitle);
   return (

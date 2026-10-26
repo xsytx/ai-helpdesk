@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 /** Someone answered in a thread you follow (yours, or one you answered in), or replied to your answer. */
 export interface AppNotification {
   id: string;
-  type: "comment_on_thread" | "reply_to_comment" | "mention";
+  type: "comment_on_thread" | "reply_to_comment" | "mention" | "answer_liked" | "answer_accepted";
   threadId: string;
   threadTitle: string;
   actorName: string;
