@@ -303,7 +303,8 @@ function FollowButton({ threadId }: { threadId: string }) {
       }
     >
       {subscribed ? <BellOff className="h-3.5 w-3.5" /> : <Bell className="h-3.5 w-3.5" />}
-      {subscribed ? t("unfollowThread") : t("followThread")}
+      {/* On a phone just the bell: the text would squeeze the author line. */}
+      <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">{subscribed ? t("unfollowThread") : t("followThread")}</span>
     </button>
   );
 }
