@@ -63,7 +63,9 @@ export async function startTour(t: (key: TranslationKey) => string) {
     return [{ element, popover: { title: t(title), description: t(body) } }];
   });
 
-  driver({
+  const animate = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let moving = false;
+  const tour = driver({
     steps,
     showProgress: true,
     progressText: t("tourProgress"),
@@ -74,8 +76,57 @@ export async function startTour(t: (key: TranslationKey) => string) {
     stagePadding: 6,
     stageRadius: 16,
     overlayOpacity: 0.55,
-    smoothScroll: true,
+    animate,
+    // We scroll ourselves (goTo): driver.js would scroll while it also moves
+    // the spotlight and redraws the tip, and the two together stutter.
+    smoothScroll: false,
     // Clicking the highlighted element mid-tour would navigate away.
     disableActiveInteraction: true,
-  }).drive();
+    onNextClick: () => goTo((tour.getActiveIndex() ?? 0) + 1),
+    onPrevClick: () => goTo((tour.getActiveIndex() ?? 0) - 1),
+  });
+
+  /** Scroll the next target into view first, then move the spotlight once the page is still. */
+  async function goTo(index: number) {
+    if (moving || index < 0) return;
+    if (index >= steps.length) return tour.destroy();
+    const element = steps[index].element;
+    if (element instanceof Element && !inView(element)) {
+      moving = true;
+      // Fade the current tip out first: driver.js drags it along while the page scrolls.
+      document.querySelector(".driver-popover")?.classList.add("sdu-tour-hidden");
+      if (animate) await new Promise((r) => setTimeout(r, 120));
+      await scrollIntoCenter(element, animate);
+      moving = false;
+    }
+    tour.moveTo(index);
+  }
+
+  tour.drive();
+}
+
+function inView(element: Element) {
+  const rect = element.getBoundingClientRect();
+  return rect.top >= 0 && rect.bottom <= window.innerHeight;
+}
+
+function scrollIntoCenter(element: Element, smooth: boolean): Promise<void> {
+  const rect = element.getBoundingClientRect();
+  const offset = rect.height > window.innerHeight ? rect.top - 16 : rect.top - (window.innerHeight - rect.height) / 2;
+  const top = Math.max(0, window.scrollY + offset);
+  return new Promise((resolve) => {
+    if (!smooth) {
+      window.scrollTo({ top });
+      return resolve();
+    }
+    // scrollend isn't in every browser yet: fall back to a timer.
+    const done = () => {
+      window.removeEventListener("scrollend", done);
+      clearTimeout(timer);
+      resolve();
+    };
+    const timer = setTimeout(done, 700);
+    window.addEventListener("scrollend", done);
+    window.scrollTo({ top, behavior: "smooth" });
+  });
 }

@@ -199,6 +199,24 @@ body {
 .sdu-tour .driver-popover-close-btn {
   color: var(--color-grey);
 }
+/* Each step's tip eases in instead of appearing at once (driver.js only fades it). */
+@media (prefers-reduced-motion: no-preference) {
+  .driver-fade .driver-popover.sdu-tour {
+    animation: tour-in 260ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+}
+/* The tip is hidden while the tour scrolls to the next step (tour.ts). */
+.driver-popover.sdu-tour.sdu-tour-hidden {
+  animation: none;
+  opacity: 0;
+  transition: opacity 120ms ease-out;
+}
+@keyframes tour-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+}
 
 @keyframes page-out {
   to {
