@@ -10,6 +10,8 @@ import { Armchair, BookOpen, Building2, ConciergeBell, MapPin, Search, Sparkles,
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
+const prefersReducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
 const KINDS: { kind: PlaceKind | "all"; key: TranslationKey; icon: typeof MapPin }[] = [
   { kind: "all", key: "mapsCatAll", icon: MapPin },
   { kind: "block", key: "mapsCatBlocks", icon: Building2 },
@@ -43,7 +45,10 @@ export function MapsPage() {
   const picked = PLACES.find((p) => p.code === params.get("place"));
   const target = room ?? (roomPlace ? { ...roomPlace, floor: code!.floor } : undefined) ?? picked ?? (q.trim() ? results[0] : undefined);
 
-  const update = (next: Record<string, string | null>) => {
+  // The card on the map shows only for a place picked on the map.
+  const [mapPick, setMapPick] = useState(false);
+  const update = (next: Record<string, string | null>, fromMap = false) => {
+    setMapPick(fromMap);
     const p = new URLSearchParams(params);
     for (const [k, v] of Object.entries(next)) {
       if (v) p.set(k, v);
@@ -108,20 +113,8 @@ export function MapsPage() {
         </div>
       </Card>
 
+      {/* The map comes before the details: picking a place changes only what is below it, so the map stays put. */}
       <div className="space-y-6">
-        <Card className="space-y-5">
-          {(q.trim() || kind !== "all") && !room && (
-            <PlaceList places={results} selected={target?.code} onPick={(p) => update({ place: p.code })} />
-          )}
-          {target ? (
-            <PlaceDetails target={target} from={from} onFrom={setFrom} />
-          ) : q.trim() ? (
-            <NotFound q={q} />
-          ) : (
-            <p className="text-sm text-label">{t("mapsEmpty")}</p>
-          )}
-        </Card>
-
         <Card>
           <details open className="group">
             <summary className="flex cursor-pointer list-none items-center justify-between">
@@ -133,9 +126,28 @@ export function MapsPage() {
                 block={target ? schemeBlockOf(target) : undefined}
                 spot={target && "spot" in target ? target.spot : undefined}
                 from={from}
+                // Clicking the picked place again clears it.
+                onPick={(code) => update({ q: null, cat: null, place: code === target?.code ? null : code }, code !== target?.code)}
+                popup={mapPick && picked ? { title: picked.name[locale], text: picked.where[locale] } : undefined}
+                onMore={() => document.getElementById("place-details")?.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth" })}
+                onClosePopup={() => setMapPick(false)}
+                onClear={() => update({ q: null, place: null })}
               />
             </div>
           </details>
+        </Card>
+
+        <Card id="place-details" className="scroll-mt-20 space-y-5">
+          {(q.trim() || kind !== "all") && !room && (
+            <PlaceList places={results} selected={target?.code} onPick={(p) => update({ place: p.code })} />
+          )}
+          {target ? (
+            <PlaceDetails target={target} from={from} onFrom={setFrom} />
+          ) : q.trim() ? (
+            <NotFound q={q} />
+          ) : (
+            <p className="text-sm text-label">{t("mapsEmpty")}</p>
+          )}
         </Card>
       </div>
 
