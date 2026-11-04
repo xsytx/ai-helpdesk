@@ -62,7 +62,7 @@ export const router = createBrowserRouter([
                   },
                   {
                     path: "navigation",
-                    element: <PlaceholderPage titleKey="navigation" descriptionKey="navigationSoon" />,
+                    element: lazyPage(() => import("@/pages/MapsPage"), "MapsPage"),
                   },
                   {
                     path: "courses",
