@@ -12,6 +12,7 @@ import (
 
 	"campus-forum/internal/mlclient"
 	"campus-forum/internal/models"
+	"campus-forum/internal/store"
 )
 
 type chatAskReq struct {
@@ -70,8 +71,10 @@ func (h *Handlers) chatBackground(ctx context.Context, uid int64, conv *models.C
 		return bg
 	}
 	for _, a := range answers {
+		// Mentions as plain "@Name": the model repeats whatever text it is given.
 		bg.Forum = append(bg.Forum, mlclient.ForumCandidate{
-			ThreadID: a.ThreadID, CommentID: a.CommentID, Title: a.Title, Body: a.Body, Answer: a.Answer,
+			ThreadID: a.ThreadID, CommentID: a.CommentID,
+			Title: store.PlainMentions(a.Title), Body: store.PlainMentions(a.Body), Answer: store.PlainMentions(a.Answer),
 			Accepted: a.Accepted, Likes: a.Likes, Staff: a.Staff,
 		})
 	}

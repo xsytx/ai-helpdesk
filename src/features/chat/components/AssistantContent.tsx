@@ -118,12 +118,13 @@ export function AssistantContent({ msg }: { msg: UiChatMessage & { onRetry?: () 
         {msg.aiExplanation ? (
           <div>
             <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-label">{t("chatAiExplanation")}</p>
-            <p className="whitespace-pre-wrap">{msg.aiExplanation}</p>
+            <RichText text={msg.aiExplanation} />
           </div>
         ) : null}
       </div>
     );
   }
 
-  return <p className="whitespace-pre-wrap">{msg.text}</p>;
+  // RichText: an answer can quote a forum post with an @mention in it.
+  return <RichText text={msg.text} />;
 }

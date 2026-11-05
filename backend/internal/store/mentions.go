@@ -16,6 +16,17 @@ import (
 // profile. The id is what counts; the name is only for reading.
 var mentionRx = regexp.MustCompile(`@\[[^\]\n]{1,80}\]\(u(\d{1,18})\)`)
 
+// mentionNameRx is the same mention with the name captured.
+var mentionNameRx = regexp.MustCompile(`@\[([^\]
+]{1,80})\]\(u\d{1,18}\)`)
+
+// PlainMentions writes the mentions in body as plain "@Name", for text that
+// leaves the website's own rendering (e.g. forum answers given to the AI model,
+// which would otherwise copy the raw @[Name](u12) into its reply).
+func PlainMentions(body string) string {
+	return mentionNameRx.ReplaceAllString(body, "@$1")
+}
+
 // maxMentions caps how many people one post can notify.
 const maxMentions = 10
 
