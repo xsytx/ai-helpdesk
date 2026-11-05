@@ -286,6 +286,19 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   `/forum/<id>#answer-<comment>` (or `#question`), where
   `HighlightFromAddress` scrolls to that post and `flash()` makes it blink 3 times. Notifications about posts the moderation hid are not shown
   (`notificationVisible` in `postgres.go`) until a moderator publishes them.
+- **Campus navigation (Sprint 5, `/navigation`, `MapsPage`).** Places live in
+  `features/locations/places.ts` for now (blocks A–I, lecture halls "bochkas",
+  canteen, medical point, services; three languages). A room code like `F205`
+  is decoded (block · floor · room); `D117` etc. open the bochka they belong to.
+  `CampusScheme` shows the 1st-floor plan image (`public/maps/campus-1f.webp`,
+  from the 3D-tour plan) with block tints and letters drawn on top, clickable
+  places (a card on the map; × closes only the card, "Clear route" clears the
+  pick), and a route from Entrance C or G along walkable space only. The map
+  sits above the details card so picking a place never moves it. Block I is
+  approximate (dashed) until its plan is known. "Report a mistake" on a place
+  → `POST /api/location-reports` (one open report per student and place);
+  admin panel → "Map reports" (`/admin?section=map-reports`) marks them
+  fixed / rejected (`018_location_reports.sql`, `handlers/location_reports.go`).
 - **Auto-refresh.** React Query polling: feed 15 s, thread 10 s (1.5 s while
   a post is `checking`), admin queue 5 s, admin badge 10 s; paused in
   background tabs; never refetches over a like that is still saving.
@@ -302,7 +315,7 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
 - **Every public SQL read must hide held posts**: use `threadVisible` /
   `commentVisible` in `backend/internal/store/postgres.go`.
 - **Schema changes** are idempotent SQL applied on every start
-  (`001_init.sql` + `003_chat.sql` + `004_faq.sql` + `005_search.sql` + `006_chat_feedback.sql` + `007_forum_extras.sql` + `008_reputation.sql` + `009_profiles.sql` + `010_tags.sql` + `011_forum_answers.sql` + `012_chat_followups.sql` + `013_chat_trust_share.sql` + `014_edits.sql` + `015_saved_restrict.sql` + `016_notification_events.sql` + `017_chat_source_comment.sql` in `Migrate`, `002_moderation.sql` in
+  (`001_init.sql` + `003_chat.sql` + `004_faq.sql` + `005_search.sql` + `006_chat_feedback.sql` + `007_forum_extras.sql` + `008_reputation.sql` + `009_profiles.sql` + `010_tags.sql` + `011_forum_answers.sql` + `012_chat_followups.sql` + `013_chat_trust_share.sql` + `014_edits.sql` + `015_saved_restrict.sql` + `016_notification_events.sql` + `017_chat_source_comment.sql` + `018_location_reports.sql` in `Migrate`, `002_moderation.sql` in
   `MigrateModeration`): `CREATE ... IF NOT EXISTS` /
   `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`.
 - **Store interface**: adding a method to `store.Store` also needs a stub on

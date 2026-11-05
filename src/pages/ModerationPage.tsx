@@ -14,6 +14,7 @@ import { useCategoryLabel } from "@/features/moderation/components/ModerationNot
 import { FaqEditor } from "@/features/faq/components/FaqEditor";
 import { ChatInsightsSection } from "@/features/chat/components/ChatInsightsSection";
 import { ReportsSection } from "@/features/moderation/components/ReportsSection";
+import { LocationReportsSection } from "@/features/locations/components/LocationReportsSection";
 import { useReports } from "@/features/moderation/reports";
 import type { FaqDraft } from "@/features/faq/api";
 import { useLocale } from "@/i18n/LocaleContext";
@@ -152,6 +153,7 @@ const SECTIONS = [
   { id: "faq", key: "adminSectionFaq" },
   { id: "chat", key: "adminSectionChat" },
   { id: "restrictions", key: "adminSectionRestrictions" },
+  { id: "map-reports", key: "adminSectionMapReports" },
 ] as const;
 
 type SectionId = (typeof SECTIONS)[number]["id"];
@@ -199,6 +201,8 @@ export function ModerationPage() {
         <FaqEditor initialDraft={faqDraft} onDraftUsed={() => setFaqDraft(undefined)} />
       ) : section === "reports" ? (
         <ReportsSection />
+      ) : section === "map-reports" ? (
+        <LocationReportsSection />
       ) : section === "restrictions" ? (
         <RestrictionsSection />
       ) : section === "chat" ? (

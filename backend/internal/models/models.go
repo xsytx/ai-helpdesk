@@ -208,6 +208,21 @@ type Report struct {
 	ResolvedAt   *time.Time `json:"resolved_at,omitempty"`
 }
 
+// LocationReport is a student's "the directions are wrong" report about a
+// place on the campus navigation page.
+type LocationReport struct {
+	ID           int64      `json:"id"`
+	UserID       int64      `json:"user_id"`
+	ReporterName string     `json:"reporter_name"`
+	PlaceCode    string     `json:"place_code"`
+	PlaceName    string     `json:"place_name"`
+	Entrance     string     `json:"entrance"`
+	Text         string     `json:"text"`
+	Status       string     `json:"status"` // open, fixed, rejected
+	CreatedAt    time.Time  `json:"created_at"`
+	ResolvedAt   *time.Time `json:"resolved_at,omitempty"`
+}
+
 // FAQ is one question/answer entry, managed by moderators/admins and
 // shown on the public FAQ page in SortOrder (then ID) order. Question and
 // Answer are the English text; the _kz/_ru fields hold the translations.

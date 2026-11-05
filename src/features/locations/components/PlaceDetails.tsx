@@ -1,8 +1,11 @@
 import { useLocale } from "@/i18n/LocaleContext";
 import type { TranslationKey } from "@/i18n/translations";
 import { cn } from "@/shared/lib/cn";
-import { Armchair, ArrowUp, BookOpen, Building2, CheckCircle2, Clock, ConciergeBell, DoorOpen, ExternalLink, Footprints, Info, Lightbulb, UtensilsCrossed } from "lucide-react";
-import type { ReactNode } from "react";
+import { getErrorStatus } from "@/shared/api/client";
+import { Button } from "@/shared/ui/Button";
+import { Armchair, ArrowUp, BookOpen, Building2, CheckCircle2, Clock, ConciergeBell, DoorOpen, ExternalLink, Flag, Footprints, Info, Lightbulb, UtensilsCrossed } from "lucide-react";
+import { useState, type ReactNode } from "react";
+import { useReportLocation } from "../api";
 import { TOUR_URL, blockPlace, type Entrance, type Place, type PlaceKind, type RoomCode, type SchemeBlock } from "../places";
 
 export const KIND_ICON: Record<PlaceKind, typeof Building2> = {
@@ -148,7 +151,58 @@ export function PlaceDetails({ target, from, onFrom }: { target: Place | RoomCod
           <p className="mt-1.5 text-xs text-label">{t("mapsTourHint")}</p>
         </div>
       )}
+
+      {/* key: a new place starts with a fresh form */}
+      <ReportMistake key={room ? room.code : place!.code} placeCode={room ? room.code : place!.code} placeName={title} from={from} />
     </div>
+  );
+}
+
+/** "Report a mistake": a student says the route or the position is wrong; admins see it in the admin panel. */
+function ReportMistake({ placeCode, placeName, from }: { placeCode: string; placeName: string; from: Entrance }) {
+  const { t } = useLocale();
+  const report = useReportLocation();
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState("");
+  const tooShort = text.trim().length < 5;
+
+  if (report.isSuccess) {
+    return <p className="rounded-xl bg-green-50 px-3 py-2.5 text-sm text-green-700">{t("mapsReportThanks")}</p>;
+  }
+  if (!open) {
+    return (
+      <Button variant="secondary" size="sm" onClick={() => setOpen(true)}>
+        <Flag className="h-4 w-4" />
+        {t("mapsReportMistake")}
+      </Button>
+    );
+  }
+  const status = report.isError ? getErrorStatus(report.error) : undefined;
+  return (
+    <form
+      className="space-y-2 rounded-2xl border border-border bg-background-2/50 p-3"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (!tooShort) report.mutate({ placeCode, placeName, entrance: from, text: text.trim() });
+      }}
+    >
+      <label htmlFor="map-report" className="block text-sm font-semibold text-primary">{t("mapsReportTitle")}</label>
+      <textarea
+        id="map-report"
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        maxLength={1000}
+        rows={3}
+        autoFocus
+        placeholder={t("mapsReportPlaceholder")}
+        className="w-full resize-y rounded-xl border border-border bg-surface px-3 py-2 text-sm text-primary outline-none placeholder:text-label/70 focus:border-brand"
+      />
+      {status === 409 ? <p className="text-sm text-error">{t("mapsReportAlready")}</p> : report.isError ? <p className="text-sm text-error">{t("mapsReportFailed")}</p> : null}
+      <div className="flex flex-wrap gap-2">
+        <Button type="submit" size="sm" disabled={tooShort || report.isPending}>{t("mapsReportSend")}</Button>
+        <Button type="button" size="sm" variant="ghost" onClick={() => setOpen(false)}>{t("cancel")}</Button>
+      </div>
+    </form>
   );
 }
 

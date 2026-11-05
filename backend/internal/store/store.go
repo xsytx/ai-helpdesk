@@ -103,6 +103,12 @@ type Store interface {
 	ListReports(ctx context.Context, status string, page, pageSize int) (reports []models.Report, total int, err error)
 	ResolveReport(ctx context.Context, id int64) error
 
+	// --- Campus navigation: "Report a mistake" (018_location_reports.sql) ---
+	// CreateLocationReport: ErrConflict if the student already has an open report about that place.
+	CreateLocationReport(ctx context.Context, userID int64, placeCode, placeName, entrance, text string) (models.LocationReport, error)
+	ListLocationReports(ctx context.Context, status string) ([]models.LocationReport, error)
+	SetLocationReportStatus(ctx context.Context, id int64, status string, by int64) (models.LocationReport, error)
+
 	// --- FAQ (public read, moderator/admin write — enforced at the
 	// handler layer, same as the other moderation actions) ---
 
