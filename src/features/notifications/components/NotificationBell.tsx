@@ -1,3 +1,4 @@
+import { Mascot } from "@/shared/ui/Mascot";
 import { useLiveNotifications,
   useMarkAllNotificationsRead,
   useMarkNotificationRead,
@@ -74,7 +75,10 @@ export function NotificationBell() {
             ) : list.isError ? (
               <p className="px-3 py-4 text-sm text-error">{t("notificationsLoadFailed")}</p>
             ) : list.data.length === 0 ? (
-              <p className="px-3 py-6 text-center text-sm text-label">{t("notificationsEmpty")}</p>
+              <div className="flex flex-col items-center gap-2 px-3 py-5 text-center">
+                <Mascot mood="sleep" size="md" />
+                <p className="text-sm text-label">{t("notificationsEmpty")}</p>
+              </div>
             ) : (
               list.data.map((n) => <NotificationItem key={n.id} n={n} onOpen={() => openNotification(n)} />)
             )}

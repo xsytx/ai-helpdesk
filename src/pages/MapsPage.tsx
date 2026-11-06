@@ -1,3 +1,4 @@
+import { Mascot } from "@/shared/ui/Mascot";
 import { CampusScheme } from "@/features/locations/components/CampusScheme";
 import { KIND_ICON, PlaceDetails, schemeBlockOf } from "@/features/locations/components/PlaceDetails";
 import { PLACES, parseRoomCode, placeForRoom, searchPlaces, type Entrance, type Place, type PlaceKind } from "@/features/locations/places";
@@ -208,6 +209,7 @@ function NotFound({ q }: { q: string }) {
   const navigate = useNavigate();
   return (
     <div className="space-y-3 py-6 text-center">
+      <Mascot mood="sad" size="md" className="mx-auto" />
       <p className="font-semibold text-primary">{t("mapsNotFound").replace("{q}", q)}</p>
       <p className="text-sm text-label">{t("mapsNotFoundHint")}</p>
       <div className="flex flex-wrap justify-center gap-2">

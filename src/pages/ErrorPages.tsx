@@ -1,7 +1,8 @@
+import { Mascot } from "@/shared/ui/Mascot";
 import { useLocale } from "@/i18n/LocaleContext";
 import { Button } from "@/shared/ui/Button";
 import { Card } from "@/shared/ui/Card";
-import { AlertTriangle, Home, RefreshCw, SearchX } from "lucide-react";
+import { Home, RefreshCw } from "lucide-react";
 import { useEffect } from "react";
 import { Link, useRouteError } from "react-router-dom";
 
@@ -30,7 +31,7 @@ export function ErrorPage() {
 
   return (
     <Centered>
-      <AlertTriangle className="mx-auto h-10 w-10 text-accent" aria-hidden />
+      <Mascot mood="sad" size="lg" className="mx-auto" />
       <h1 className="mt-3 text-lg font-bold text-primary">{t("errorTitle")}</h1>
       <p className="mt-1 text-sm text-label">{staleBuild ? t("errorNewVersion") : t("errorBody")}</p>
       <div className="mt-5 flex flex-wrap justify-center gap-2">
@@ -53,7 +54,7 @@ export function NotFoundPage() {
   const { t } = useLocale();
   return (
     <Centered>
-      <SearchX className="mx-auto h-10 w-10 text-primary-light" aria-hidden />
+      <Mascot mood="sad" size="lg" className="mx-auto" />
       <h1 className="mt-3 text-lg font-bold text-primary">{t("notFoundTitle")}</h1>
       <p className="mt-1 text-sm text-label">{t("notFoundBody")}</p>
       <Button asChild size="sm" className="mt-5">

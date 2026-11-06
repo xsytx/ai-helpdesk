@@ -1,3 +1,4 @@
+import { Mascot } from "@/shared/ui/Mascot";
 import { useAuth } from "@/app/AuthContext";
 import { faqText, type FaqEntry } from "@/entities/faq";
 import {
@@ -443,7 +444,10 @@ export function ChatPage() {
               <p className="text-sm text-error">{t("serverUnavailable")}</p>
             ) : messages.length === 0 ? (
               <div>
-                <p className="text-sm text-label">{t("askPlaceholder")}</p>
+                <div className="flex items-center gap-3">
+                  <Mascot mood="hello" size="sm" />
+                  <p className="text-sm text-label">{t("askPlaceholder")}</p>
+                </div>
                 <FaqQuickReplies onSelect={sendFaq} disabled={pendingKey !== null} />
               </div>
             ) : (
@@ -501,8 +505,8 @@ export function ChatPage() {
             {loading && streaming?.key === key && streaming.text ? (
               <StreamingBubble text={streaming.text} onGrow={followAnswer} />
             ) : loading ? (
-              <p className="flex items-center gap-2 text-sm text-label" aria-live="polite">
-                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+              <p className="flex items-center gap-3 text-sm text-label" aria-live="polite">
+                <Mascot mood="think" size="sm" />
                 {slow ? t("chatSlowHint") : t("chatTyping")}
               </p>
             ) : null}

@@ -1,3 +1,4 @@
+import { Mascot } from "@/shared/ui/Mascot";
 import { useLocale } from "@/i18n/LocaleContext";
 import type { TranslationKey } from "@/i18n/translations";
 import { cn } from "@/shared/lib/cn";
@@ -167,7 +168,12 @@ function ReportMistake({ placeCode, placeName, from }: { placeCode: string; plac
   const tooShort = text.trim().length < 5;
 
   if (report.isSuccess) {
-    return <p className="rounded-xl bg-green-50 px-3 py-2.5 text-sm text-green-700">{t("mapsReportThanks")}</p>;
+    return (
+      <div className="flex items-center gap-3 rounded-xl bg-green-50 px-3 py-2.5 text-sm text-green-700">
+        <Mascot mood="happy" size="sm" />
+        {t("mapsReportThanks")}
+      </div>
+    );
   }
   if (!open) {
     return (
