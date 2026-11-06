@@ -1,6 +1,7 @@
 // First-run guided tour (driver.js): a spotlight on key parts of the home
 // page with a short tip for each. Targets are marked with data-tour="...".
 import type { TranslationKey } from "@/i18n/translations";
+import { mascotElement, type MascotMood } from "@/shared/ui/Mascot";
 import type { DriveStep } from "driver.js";
 
 const START_KEY = "ai_helpdesk_start_tour";
@@ -40,14 +41,15 @@ function visibleTarget(name: string): Element | undefined {
   );
 }
 
-const STEPS: { target?: string; title: TranslationKey; body: TranslationKey }[] = [
-  { title: "tourWelcomeTitle", body: "tourWelcomeBody" },
+/** mascot: Barys greets on the first tip and cheers on the last. */
+const STEPS: { target?: string; title: TranslationKey; body: TranslationKey; mascot?: MascotMood }[] = [
+  { title: "tourWelcomeTitle", body: "tourWelcomeBody", mascot: "hello" },
   { target: "ask", title: "tourAskTitle", body: "tourAskBody" },
   { target: "new-chat", title: "tourChatTitle", body: "tourChatBody" },
   { target: "forum", title: "tourForumTitle", body: "tourForumBody" },
   { target: "language", title: "tourLanguageTitle", body: "tourLanguageBody" },
   { target: "settings", title: "tourSettingsTitle", body: "tourSettingsBody" },
-  { title: "tourDoneTitle", body: "tourDoneBody" },
+  { title: "tourDoneTitle", body: "tourDoneBody", mascot: "happy" },
 ];
 
 export async function startTour(t: (key: TranslationKey) => string) {
@@ -56,11 +58,19 @@ export async function startTour(t: (key: TranslationKey) => string) {
   // Loaded only when a tour runs, to keep it out of the main bundle.
   const [{ driver }] = await Promise.all([import("driver.js"), import("driver.js/dist/driver.css")]);
 
-  const steps: DriveStep[] = STEPS.flatMap(({ target, title, body }) => {
+  const steps: DriveStep[] = STEPS.flatMap(({ target, title, body, mascot }) => {
     const element = target ? visibleTarget(target) : undefined;
     // Skip a step whose target isn't on screen rather than pointing at nothing.
     if (target && !element) return [];
-    return [{ element, popover: { title: t(title), description: t(body) } }];
+    return [{
+      element,
+      popover: {
+        title: t(title),
+        description: t(body),
+        popoverClass: mascot ? "sdu-tour sdu-tour-mascot" : "sdu-tour",
+        onPopoverRender: mascot ? (popover) => popover.title.before(mascotElement(mascot, "lg")) : undefined,
+      },
+    }];
   });
 
   const animate = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;

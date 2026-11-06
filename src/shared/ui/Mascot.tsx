@@ -37,8 +37,49 @@ const reducedMotion = () => typeof window !== "undefined" && window.matchMedia("
  * motion" on, it stays on the first frame. Decorative: the text next to it
  * says the same, so screen readers skip it.
  */
-export function Mascot({ mood, size = "md", className }: { mood: MascotMood; size?: MascotSize; className?: string }) {
+/** One frame's size in px and the whole sheet's background size for a mood at a size. */
+function geometry(mood: MascotMood, size: MascotSize) {
   const sheet = SHEETS[mood];
+  const scale = SIZES[size] / CAT_HEIGHT;
+  const w = Math.round(sheet.w * scale);
+  const h = Math.round(sheet.h * scale);
+  return { sheet, w, h, backgroundSize: `${w * sheet.durations.length}px ${h}px` };
+}
+
+/**
+ * The mascot as a plain element, for places outside React (the onboarding
+ * tour's tips). It animates itself and stops once it is taken off the page.
+ */
+export function mascotElement(mood: MascotMood, size: MascotSize = "md"): HTMLElement {
+  const { sheet, w, h, backgroundSize } = geometry(mood, size);
+  const el = document.createElement("span");
+  el.setAttribute("aria-hidden", "true");
+  el.className = "sdu-mascot";
+  Object.assign(el.style, {
+    display: "block",
+    width: `${w}px`,
+    height: `${h}px`,
+    backgroundImage: `url(/mascot/barys-${mood}.png)`,
+    backgroundRepeat: "no-repeat",
+    backgroundSize,
+    backgroundPosition: "0 0",
+  });
+  if (reducedMotion()) return el;
+  let i = 0;
+  const next = () =>
+    setTimeout(() => {
+      // Wait while it is still being put on the page; stop once it is removed.
+      if (!el.isConnected && i > 0) return;
+      i = (i + 1) % sheet.durations.length;
+      el.style.backgroundPosition = `${-i * w}px 0`;
+      next();
+    }, sheet.durations[i]);
+  next();
+  return el;
+}
+
+export function Mascot({ mood, size = "md", className }: { mood: MascotMood; size?: MascotSize; className?: string }) {
+  const { sheet, w, h, backgroundSize } = geometry(mood, size);
   const [frame, setFrame] = useState(0);
 
   useEffect(() => {
@@ -57,9 +98,6 @@ export function Mascot({ mood, size = "md", className }: { mood: MascotMood; siz
     return () => clearTimeout(timer);
   }, [sheet]);
 
-  const scale = SIZES[size] / CAT_HEIGHT;
-  const w = Math.round(sheet.w * scale);
-  const h = Math.round(sheet.h * scale);
   return (
     <span
       aria-hidden
@@ -73,7 +111,7 @@ export function Mascot({ mood, size = "md", className }: { mood: MascotMood; siz
         width: w,
         height: h,
         backgroundImage: `url(/mascot/barys-${mood}.png)`,
-        backgroundSize: `${w * sheet.durations.length}px ${h}px`,
+        backgroundSize,
         backgroundPosition: `${-frame * w}px 0`,
       }}
     />

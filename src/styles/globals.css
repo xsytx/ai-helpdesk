@@ -161,6 +161,17 @@ body {
   color: var(--color-primary);
   box-shadow: 0 12px 32px rgb(30 33 81 / 0.25);
 }
+/* The first and last tips: Barys on top, the text centred under him (tour.ts). */
+.sdu-tour-mascot .sdu-mascot {
+  margin: 0 auto 10px;
+}
+.sdu-tour-mascot .driver-popover-title,
+.sdu-tour-mascot .driver-popover-description {
+  text-align: center;
+}
+:root[data-theme="dark"] .sdu-tour-mascot .sdu-mascot {
+  filter: drop-shadow(0 0 1px rgb(255 255 255 / 0.6));
+}
 .sdu-tour .driver-popover-title {
   font-family: var(--font-sans);
   font-size: 16px;
