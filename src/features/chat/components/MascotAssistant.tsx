@@ -63,6 +63,19 @@ export function useAssistantVisible(): [boolean, (show: boolean) => void] {
   return [visible, set];
 }
 
+/** md and up (Tailwind's 768px): laptops and tablets get the bigger Barys. */
+function useWideScreen() {
+  const query = "(min-width: 768px)";
+  const [wide, setWide] = useState(() => window.matchMedia(query).matches);
+  useEffect(() => {
+    const mq = window.matchMedia(query);
+    const onChange = () => setWide(mq.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+  return wide;
+}
+
 export function MascotAssistant() {
   const { pathname } = useLocation();
   const [visible, setVisible] = useAssistantVisible();
@@ -77,6 +90,22 @@ function Widget({ pathname, onHide }: { pathname: string; onHide: () => void }) 
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [hover, setHover] = useState(false);
+  const wide = useWideScreen();
+  // Phones: he slides away while you scroll down (so he never hides the end of
+  // a page) and comes back when you scroll up or stop at the bottom.
+  const [tucked, setTucked] = useState(false);
+  useEffect(() => {
+    let lastY = window.scrollY;
+    const onScroll = () => {
+      const y = window.scrollY;
+      const atBottom = window.innerHeight + y >= document.documentElement.scrollHeight - 4;
+      if (Math.abs(y - lastY) < 6) return;
+      setTucked(y > lastY && y > 80 && !atBottom);
+      lastY = y;
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<UiChatMessage[]>([]);
   const [streaming, setStreaming] = useState<string | null>(null);
@@ -185,7 +214,12 @@ function Widget({ pathname, onHide }: { pathname: string; onHide: () => void }) 
   const suggestions = messages.length === 0 ? pageSuggestions(pathname).map((k) => t(k)) : last?.followups ?? [];
 
   return (
-    <div className="sdu-assistant fixed bottom-[5.5rem] right-3 z-40 flex flex-col items-end gap-2 md:bottom-5 md:right-5">
+    <div
+      className={cn(
+        "sdu-assistant fixed bottom-[5.5rem] right-3 z-40 flex flex-col items-end gap-2 transition-[transform,opacity] duration-300 md:bottom-5 md:right-5",
+        tucked && !open && "max-md:pointer-events-none max-md:translate-x-[120%] max-md:opacity-0",
+      )}
+    >
       {open ? (
         <section
           role="dialog"
@@ -318,7 +352,11 @@ function Widget({ pathname, onHide }: { pathname: string; onHide: () => void }) 
         </section>
       ) : null}
 
-      <div className="group relative" onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>
+      <div
+        className="group relative"
+        onPointerEnter={(e) => e.pointerType === "mouse" && setHover(true)}
+        onPointerLeave={() => setHover(false)}
+      >
         {!open ? (
           <span className="pointer-events-none absolute bottom-full right-0 mb-1 hidden whitespace-nowrap rounded-xl bg-surface px-3 py-1.5 text-xs font-semibold text-primary shadow-md md:group-hover:block">
             {t("assistantAsk")}
@@ -330,11 +368,14 @@ function Widget({ pathname, onHide }: { pathname: string; onHide: () => void }) 
           aria-expanded={open}
           aria-label={t("assistantAsk")}
           className={cn(
-            "flex h-16 w-16 items-center justify-center rounded-full border border-border/60 bg-surface shadow-lg transition-transform motion-safe:hover:scale-105",
+            "flex items-center justify-center rounded-full border border-border/60 bg-surface shadow-lg transition-transform motion-safe:hover:scale-105",
+            // Laptops: a big round button. Phones: a small one, except when he
+            // points (the paw needs room): then a wider pill.
+            wide ? "h-[5.5rem] w-[5.5rem]" : mood === "point-left" ? "h-16 px-2.5" : "h-16 w-16",
             open && "ring-2 ring-brand/40",
           )}
         >
-          <Mascot mood={mood} size="sm" />
+          <Mascot mood={mood} size={wide || mood === "point-left" ? "md" : "sm"} />
         </button>
         {!open ? (
           <button
