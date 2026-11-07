@@ -2,7 +2,9 @@ import { cn } from "@/shared/lib/cn";
 import { useEffect, useState } from "react";
 
 /** Barys, the pixel-art snow leopard: one animation per mood. */
-export type MascotMood = "idle" | "hello" | "think" | "sleep" | "happy" | "sad";
+export type MascotMood =
+  | "idle" | "hello" | "think" | "sleep" | "happy" | "sad"
+  | "confused" | "point-left" | "point-right";
 
 /**
  * public/mascot/barys-<mood>.png: the animation's frames side by side on a
@@ -17,6 +19,9 @@ const SHEETS: Record<MascotMood, { w: number; h: number; durations: number[] }> 
   sleep: { w: 184, h: 184, durations: [600, 600, 600, 600, 1200, 600, 300, 300, 600, 600, 1200] },
   happy: { w: 210, h: 192, durations: Array(12).fill(150) },
   sad: { w: 174, h: 144, durations: [300, 300, 300, 300, 900, 300, 300, 300, 300, 300] },
+  confused: { w: 204, h: 192, durations: [600, 600, 300, 300, 600, 600, 300, 300] },
+  "point-left": { w: 222, h: 144, durations: [450, 450, 450, 450, 450, 150, 150, 150, 450, 450] },
+  "point-right": { w: 222, h: 144, durations: [450, 450, 450, 450, 450, 150, 150, 150, 450, 450] },
 };
 /** The cat's own height in a frame without extras (sparkles, "z"): sizes are set by it. */
 const CAT_HEIGHT = 144;

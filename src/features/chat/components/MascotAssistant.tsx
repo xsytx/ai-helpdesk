@@ -2,9 +2,10 @@
 // small chat with the assistant. It uses the same streaming endpoint as the
 // chat page, so the conversation is saved and "Open in full chat" continues it.
 import { useLocale } from "@/i18n/LocaleContext";
+import type { TranslationKey } from "@/i18n/translations";
 import { cn } from "@/shared/lib/cn";
 import { safeStorage } from "@/shared/lib/storage";
-import { Mascot } from "@/shared/ui/Mascot";
+import { Mascot, type MascotMood } from "@/shared/ui/Mascot";
 import { useQueryClient } from "@tanstack/react-query";
 import { ArrowUp, Maximize2, Square, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -23,6 +24,18 @@ import { AssistantContent } from "./AssistantContent";
 import { StreamingBubble } from "./StreamingBubble";
 
 const HIDDEN_KEY = "ai_helpdesk_assistant_hidden";
+
+/** Questions to start with, by the page you are on (the first matching path prefix). */
+const PAGE_SUGGESTIONS: { path: string; keys: TranslationKey[] }[] = [
+  { path: "/navigation", keys: ["assistantSuggestCanteen", "assistantSuggestLibrary", "assistantSuggestPrint"] },
+  { path: "/forum", keys: ["assistantSuggestDorm", "assistantSuggestClubs", "assistantSuggestScholarship"] },
+  { path: "/users", keys: ["assistantSuggestDorm", "assistantSuggestClubs", "assistantSuggestScholarship"] },
+  { path: "/courses", keys: ["assistantSuggestGpa", "suggestionEcts", "suggestionSyllabus"] },
+  { path: "/faq", keys: ["assistantSuggestAdvisor", "assistantSuggestRetake", "suggestionEcts"] },
+  { path: "/", keys: ["suggestionDean", "suggestionEcts", "suggestionSyllabus"] },
+];
+const pageSuggestions = (pathname: string) =>
+  (PAGE_SUGGESTIONS.find((s) => (s.path === "/" ? true : pathname.startsWith(s.path))) ?? PAGE_SUGGESTIONS[PAGE_SUGGESTIONS.length - 1]).keys;
 const CHANGED = "sdu-assistant-visibility";
 
 /**
@@ -55,10 +68,10 @@ export function MascotAssistant() {
   const [visible, setVisible] = useAssistantVisible();
   // The chat page is already a chat: no second one in the corner.
   if (!visible || pathname.startsWith("/chat")) return null;
-  return <Widget onHide={() => setVisible(false)} />;
+  return <Widget pathname={pathname} onHide={() => setVisible(false)} />;
 }
 
-function Widget({ onHide }: { onHide: () => void }) {
+function Widget({ pathname, onHide }: { pathname: string; onHide: () => void }) {
   const { t } = useLocale();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -154,9 +167,22 @@ function Widget({ onHide }: { onHide: () => void }) {
 
   // The only Barys on screen (the corner button): thinking while he answers,
   // asleep when the assistant is off, waving when you point at him.
-  const mood = busy ? "think" : status === "degraded" ? "sleep" : hover ? "hello" : "idle";
+  // asleep when the assistant is off, puzzled when he had no answer, waving
+  // when you point at him; on the map page he points at the map.
   const last = messages[messages.length - 1];
-  const suggestions = messages.length === 0 ? [t("suggestionDean"), t("suggestionEcts"), t("suggestionSyllabus")] : last?.followups ?? [];
+  const noAnswer = last?.role === "assistant" && (last.error || last.status === "fallback");
+  const mood: MascotMood = busy
+    ? "think"
+    : status === "degraded"
+      ? "sleep"
+      : hover
+        ? "hello"
+        : noAnswer
+          ? "confused"
+          : pathname.startsWith("/navigation") && !open
+            ? "point-left"
+            : "idle";
+  const suggestions = messages.length === 0 ? pageSuggestions(pathname).map((k) => t(k)) : last?.followups ?? [];
 
   return (
     <div className="sdu-assistant fixed bottom-[5.5rem] right-3 z-40 flex flex-col items-end gap-2 md:bottom-5 md:right-5">
