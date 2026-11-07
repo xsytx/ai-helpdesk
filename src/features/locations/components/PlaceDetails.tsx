@@ -105,10 +105,7 @@ export function PlaceDetails({ target, from, onFrom }: { target: Place | RoomCod
       {route && (
         <section>
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <h3 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-label">
-              <Mascot mood="point-right" size="sm" />
-              {t("mapsHowToGet")}
-            </h3>
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-label">{t("mapsHowToGet")}</h3>
             <div className="inline-flex rounded-xl border border-border bg-surface p-0.5 text-xs font-semibold" role="group" aria-label={t("mapsFrom")}>
               {(["C", "G"] as const).map((e) => (
                 <button

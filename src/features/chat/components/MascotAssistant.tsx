@@ -195,9 +195,8 @@ function Widget({ pathname, onHide }: { pathname: string; onHide: () => void }) 
   }
 
   // The only Barys on screen (the corner button): thinking while he answers,
-  // asleep when the assistant is off, waving when you point at him.
-  // asleep when the assistant is off, puzzled when he had no answer, waving
-  // when you point at him; on the map page he points at the map.
+  // asleep when the assistant is off, waving when you point at him, puzzled
+  // when he had no answer. The same on every page.
   const last = messages[messages.length - 1];
   const noAnswer = last?.role === "assistant" && (last.error || last.status === "fallback");
   const mood: MascotMood = busy
@@ -208,9 +207,7 @@ function Widget({ pathname, onHide }: { pathname: string; onHide: () => void }) 
         ? "hello"
         : noAnswer
           ? "confused"
-          : pathname.startsWith("/navigation") && !open
-            ? "point-left"
-            : "idle";
+          : "idle";
   const suggestions = messages.length === 0 ? pageSuggestions(pathname).map((k) => t(k)) : last?.followups ?? [];
 
   return (
@@ -369,13 +366,12 @@ function Widget({ pathname, onHide }: { pathname: string; onHide: () => void }) 
           aria-label={t("assistantAsk")}
           className={cn(
             "flex items-center justify-center rounded-full border border-border/60 bg-surface shadow-lg transition-transform motion-safe:hover:scale-105",
-            // Laptops: a big round button. Phones: a small one, except when he
-            // points (the paw needs room): then a wider pill.
-            wide ? "h-[5.5rem] w-[5.5rem]" : mood === "point-left" ? "h-16 px-2.5" : "h-16 w-16",
+            // Laptops: a big round button. Phones: a small one.
+            wide ? "h-[5.5rem] w-[5.5rem]" : "h-16 w-16",
             open && "ring-2 ring-brand/40",
           )}
         >
-          <Mascot mood={mood} size={wide || mood === "point-left" ? "md" : "sm"} />
+          <Mascot mood={mood} size={wide ? "md" : "sm"} />
         </button>
         {!open ? (
           <button

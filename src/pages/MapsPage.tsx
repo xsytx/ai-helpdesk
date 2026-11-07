@@ -46,6 +46,16 @@ export function MapsPage() {
   const picked = PLACES.find((p) => p.code === params.get("place"));
   const target = room ?? (roomPlace ? { ...roomPlace, floor: code!.floor } : undefined) ?? picked ?? (q.trim() ? results[0] : undefined);
 
+  // What Barys says on the map: where to and, for upper floors, which floor.
+  const fill = (text: string, vars: Record<string, string | number>) =>
+    text.replace(/\{(\w+)\}/g, (_, k: string) => String(vars[k] ?? ""));
+  const guide = (() => {
+    if (!target) return undefined;
+    const name = "room" in target ? target.code : target.kind === "block" && target.block ? fill(t("mapsBlock"), { block: target.block }) : target.name[locale];
+    const floor = target.floor;
+    return floor && floor > 1 ? fill(t("mapsGuideFloor"), { name, floor }) : fill(t("mapsGuide"), { name });
+  })();
+
   // The card on the map shows only for a place picked on the map.
   const [mapPick, setMapPick] = useState(false);
   const update = (next: Record<string, string | null>, fromMap = false) => {
@@ -133,6 +143,7 @@ export function MapsPage() {
                 onMore={() => document.getElementById("place-details")?.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth" })}
                 onClosePopup={() => setMapPick(false)}
                 onClear={() => update({ q: null, place: null })}
+                guide={guide}
               />
             </div>
           </details>

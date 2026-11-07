@@ -8,6 +8,7 @@
 // real plan is known.
 import { useLocale } from "@/i18n/LocaleContext";
 import { cn } from "@/shared/lib/cn";
+import { Mascot } from "@/shared/ui/Mascot";
 import { ArrowDown, Eraser, X } from "lucide-react";
 import { useId, type KeyboardEvent, type ReactNode } from "react";
 import { PLACES, type Entrance, type SchemeBlock, type SchemeSpot } from "../places";
@@ -124,7 +125,7 @@ function anchorOf(block?: SchemeBlock, spot?: SchemeSpot): { x: number; y: numbe
 
 export interface SchemePopup { title: string; text: string }
 
-export function CampusScheme({ block, spot, from, onPick, popup, onMore, onClosePopup, onClear }: {
+export function CampusScheme({ block, spot, from, onPick, popup, onMore, onClosePopup, onClear, guide }: {
   block?: SchemeBlock;
   spot?: SchemeSpot;
   from: Entrance;
@@ -137,6 +138,8 @@ export function CampusScheme({ block, spot, from, onPick, popup, onMore, onClose
   onClosePopup?: () => void;
   /** Clears the picked place: no outline, no route. */
   onClear?: () => void;
+  /** What Barys says next to the route ("This way: Block F, then up to floor 2!"). */
+  guide?: string;
 }) {
   const { t, locale } = useLocale();
   const maskId = useId();
@@ -255,6 +258,8 @@ export function CampusScheme({ block, spot, from, onPick, popup, onMore, onClose
             )}
           </svg>
 
+          {route && end && guide && <RouteGuide start={route[0]} end={end} text={guide} quiet={Boolean(popup && anchor)} />}
+
           {(block || spot) && onClear && (
             <button
               type="button"
@@ -305,6 +310,37 @@ export function CampusScheme({ block, spot, from, onPick, popup, onMore, onClose
         <span className="block">{t("mapsSchemeNote")}</span>
       </figcaption>
     </figure>
+  );
+}
+
+/**
+ * Barys next to the entrance the route starts from, pointing the way it goes
+ * (towards the place: left or right), with the short directions in a bubble.
+ * While the place's card is open on the map he keeps quiet (no bubble).
+ */
+function RouteGuide({ start, end, text, quiet }: { start: Pt; end: Pt; text: string; quiet: boolean }) {
+  const right = end[0] >= start[0];
+  return (
+    <div
+      // A new route: he appears again (the key restarts the fade-in).
+      key={`${start.join()}-${end.join()}`}
+      aria-hidden
+      className="pointer-events-none absolute z-[5] flex flex-col items-start gap-1 motion-safe:animate-[assistant-in_260ms_cubic-bezier(0.2,0.8,0.2,1)]"
+      style={{
+        left: `${(start[0] / W) * 100}%`,
+        top: `${(start[1] / H) * 100}%`,
+        // Just right of the entrance dot (both entrances have room there).
+        transform: "translate(16px, calc(-100% + 16px))",
+      }}
+    >
+      {!quiet && (
+        <p className="relative w-max max-w-[11rem] rounded-xl border border-border bg-surface px-2.5 py-1.5 text-xs font-semibold leading-snug text-primary shadow-md">
+          {text}
+          <span className="absolute -bottom-1.5 left-5 h-3 w-3 rotate-45 border-b border-r border-border bg-surface" />
+        </p>
+      )}
+      <Mascot mood={right ? "point-right" : "point-left"} size="sm" />
+    </div>
   );
 }
 
