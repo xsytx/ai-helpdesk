@@ -10,6 +10,8 @@ import { requestTour } from "@/features/onboarding/tour";
 import { isStaffRole } from "@/features/moderation/api";
 import { useTheme, type ThemeChoice } from "@/shared/lib/theme";
 import { cn } from "@/shared/lib/cn";
+import { useAssistantVisible } from "@/features/chat/components/MascotAssistant";
+import { Mascot } from "@/shared/ui/Mascot";
 import { Compass, Monitor, Moon, ShieldCheck, Sun } from "lucide-react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 
@@ -50,6 +52,38 @@ function ThemePicker() {
   );
 }
 
+/** Barys in the corner of every page: on or off. */
+function AssistantSwitch() {
+  const { t } = useLocale();
+  const [visible, setVisible] = useAssistantVisible();
+  return (
+    <div className="mt-4 flex items-center justify-between gap-3">
+      <span id="assistant-label" className="flex items-center gap-2 text-sm font-medium text-label">
+        <Mascot mood={visible ? "idle" : "sleep"} size="sm" />
+        {t("assistantShowLabel")}
+      </span>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={visible}
+        aria-labelledby="assistant-label"
+        onClick={() => setVisible(!visible)}
+        className={cn(
+          "relative h-6 w-11 shrink-0 rounded-full transition-colors",
+          visible ? "bg-brand" : "bg-border",
+        )}
+      >
+        <span
+          className={cn(
+            "absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform",
+            visible && "translate-x-5",
+          )}
+        />
+      </button>
+    </div>
+  );
+}
+
 export function SettingsPage() {
   const { user, logout } = useAuth();
   const { t } = useLocale();
@@ -76,6 +110,7 @@ export function SettingsPage() {
           <LanguageSwitcher />
         </div>
         <ThemePicker />
+        <AssistantSwitch />
         <Button
           variant="secondary"
           size="sm"

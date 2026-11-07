@@ -151,6 +151,17 @@ body {
   }
 }
 
+/* Barys in the corner (MascotAssistant): out of the way while the tour runs. */
+body.driver-active .sdu-assistant {
+  display: none;
+}
+@keyframes assistant-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+}
+
 /* First-run tour (driver.js popovers), matched to the app's cards and buttons. */
 .driver-popover.sdu-tour {
   max-width: 320px;
