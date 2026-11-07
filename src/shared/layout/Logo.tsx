@@ -5,10 +5,12 @@ import { Link } from "react-router-dom";
 type LogoProps = {
   className?: string;
   showText?: boolean;
+  /** Extra classes for the "SDU Helpdesk" text (e.g. hide it on narrow phones). */
+  textClassName?: string;
   to?: string;
 };
 
-export function Logo({ className, showText = true, to = "/" }: LogoProps) {
+export function Logo({ className, showText = true, textClassName, to = "/" }: LogoProps) {
   const { t } = useLocale();
   return (
     <Link
@@ -26,7 +28,7 @@ export function Logo({ className, showText = true, to = "/" }: LogoProps) {
         decoding="async"
       />
       {showText ? (
-        <span className="text-lg font-semibold text-primary">{t("brand")}</span>
+        <span className={cn("text-lg font-semibold text-primary", textClassName)}>{t("brand")}</span>
       ) : null}
     </Link>
   );

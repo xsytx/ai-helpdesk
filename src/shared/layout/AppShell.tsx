@@ -88,8 +88,9 @@ export function AppShell() {
 
       <div className="flex min-h-dvh flex-1 flex-col">
         <header className="sticky top-0 z-40 flex items-center justify-between gap-3 border-b border-border/40 bg-surface/95 px-4 py-3 backdrop-blur md:px-6">
-          <div className="md:hidden">
-            <Logo />
+          <div className="min-w-0 md:hidden">
+            {/* Narrow phones: the icon only, so the language, theme, bell and avatar fit. */}
+            <Logo textClassName="max-[400px]:hidden" />
           </div>
           <div className="hidden flex-1 md:block" />
           <div className="flex items-center gap-2">
@@ -131,7 +132,8 @@ export function AppShell() {
             </span>
             <span className="text-[10px] font-semibold text-primary">{t("newChat")}</span>
           </button>
-          <MobileTab to="/faq" label={t("faq")} icon={BookOpen} />
+          {/* Maps instead of FAQ here: the FAQ is also on the home page. */}
+          <MobileTab to="/navigation" label={t("navigation")} icon={MapPin} />
           <MobileTab to="/settings" label={t("profile")} icon={Settings} tour="settings" />
         </nav>
       </div>
