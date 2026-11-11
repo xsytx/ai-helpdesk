@@ -134,9 +134,9 @@ export const PLACES: Place[] = [
     aliases: ["senate", "сенат", "senate hall", "сенатский зал", "b206"],
   },
   {
-    code: "RED_HALL", kind: "study",
+    code: "RED_HALL", kind: "study", block: "A", floor: 1,
     name: { en: "Red Hall", kz: "Қызыл зал", ru: "Красный зал" },
-    where: { en: "Main building (see the 3D tour; not on the plan yet)", kz: "Бас ғимарат (3D турды қараңыз; жоспарда әлі жоқ)", ru: "Главный корпус (см. 3D-тур; на плане пока нет)" },
+    where: { en: "Block A, 1st floor", kz: "A блогы, 1-қабат", ru: "Блок A, 1 этаж" },
     aliases: ["red hall", "красный зал", "қызыл зал"],
   },
   {

@@ -18,3 +18,9 @@ CREATE TABLE IF NOT EXISTS map_point_changes (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS map_point_changes_recent_idx ON map_point_changes (created_at DESC, id DESC);
+
+-- 3. The advising desk became a place of the Maps page (ADVISING, with its 3D
+--    tour view): link the point collected for it, once (only while unlinked).
+UPDATE map_points SET place = 'ADVISING'
+WHERE place = '' AND lower(name) IN ('advising desk', 'advisory desk')
+  AND NOT EXISTS (SELECT 1 FROM map_points WHERE place = 'ADVISING');
