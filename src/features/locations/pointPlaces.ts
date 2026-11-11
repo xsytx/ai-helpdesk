@@ -4,7 +4,7 @@
 // and rooms through their code (F205), so they are left out here.
 import { translations, type Locale } from "@/i18n/translations";
 import { TYPE_META, type MapPoint, type PointType } from "./mapPoints";
-import type { Place, PlaceKind, SchemeBlock } from "./places";
+import { placeForRoom, type Place, type PlaceKind, type SchemeBlock } from "./places";
 
 const LOCALES: Locale[] = ["en", "kz", "ru"];
 const tr = (loc: Locale, key: keyof (typeof translations)["en"]) => translations[loc][key];
@@ -31,7 +31,7 @@ export function pointPlaces(points: MapPoint[]): Place[] {
   const out: Place[] = [];
   for (const p of points) {
     const kind = KIND[p.type];
-    if (!kind || p.place) continue;
+    if (!kind || p.place || (p.code && placeForRoom(p.code.toUpperCase()))) continue;
     const block = blockOf(p);
     const typeName = (loc: Locale) => tr(loc, TYPE_META[p.type].key);
     const text = (f: (loc: Locale) => string) => ({ en: f("en"), kz: f("kz"), ru: f("ru") });

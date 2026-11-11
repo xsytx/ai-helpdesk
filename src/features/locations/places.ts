@@ -28,8 +28,6 @@ export interface Place {
   floor?: number;
   hours?: string;
   contact?: string;
-  /** Point of the official 3D tour (vrmir3d), opened with #media=<n>. */
-  tour?: number;
   aliases: string[];
   popular?: boolean;
   /** A place made from a map point (pointPlaces.ts): that point's id. */
@@ -40,7 +38,7 @@ const faculty = (en: string, kz: string, ru: string): Text => ({ en, kz, ru });
 
 export const PLACES: Place[] = [
   {
-    code: "RED_CANTEEN", kind: "food", popular: true, tour: 35, spot: "canteen",
+    code: "RED_CANTEEN", kind: "food", popular: true, spot: "canteen",
     name: { en: "Red Canteen", kz: "Red Canteen асханасы", ru: "Столовая Red Canteen" },
     where: {
       en: "1st floor, across the main corridor from blocks F and G",
@@ -51,9 +49,9 @@ export const PLACES: Place[] = [
   },
   {
     code: "FOODPOINT", kind: "food",
-    name: { en: "Foodpoint", kz: "Foodpoint", ru: "Foodpoint" },
+    name: { en: "SDU Foodpoint", kz: "SDU Foodpoint", ru: "SDU Foodpoint" },
     where: { en: "Main building, 1st and 2nd floors", kz: "Бас ғимарат, 1 және 2-қабат", ru: "Главный корпус, 1 и 2 этажи" },
-    aliases: ["food", "еда", "тамақ", "cafe", "кафе"],
+    aliases: ["food", "еда", "тамақ", "cafe", "кафе", "foodpoint", "food point"],
   },
   {
     code: "H_CANTEEN", kind: "food", block: "H",
@@ -74,17 +72,17 @@ export const PLACES: Place[] = [
     aliases: ["canteen", "столовая", "асхана", "sdu life"],
   },
   {
-    code: "LIBRARY", kind: "study", popular: true, tour: 43, block: "B", contact: "library@sdu.edu.kz · ext. 184–186",
+    code: "LIBRARY", kind: "study", popular: true, block: "B", contact: "library@sdu.edu.kz · ext. 184–186",
     name: { en: "Scientific Library", kz: "Ғылыми кітапхана", ru: "Научная библиотека" },
     where: {
       en: "Block B. Floors 0–2: computers (0), study rooms (1), group work (2)",
       kz: "B блогы. 0–2 қабаттар: компьютерлер (0), оқу бөлмелері (1), топтық жұмыс (2)",
       ru: "Блок B. Этажи 0–2: компьютеры (0), учебные комнаты (1), групповая работа (2)",
     },
-    aliases: ["library", "библиотека", "кітапхана", "study room", "computer", "компьютер", "print", "printer", "принтер"],
+    aliases: ["research hub", "library", "библиотека", "кітапхана", "study room", "computer", "компьютер", "print", "printer", "принтер"],
   },
   {
-    code: "SSC", kind: "service", popular: true, tour: 27, contact: "SSC@sdu.edu.kz · ext. 333, 335",
+    code: "SSC", kind: "service", popular: true, contact: "SSC@sdu.edu.kz · ext. 333, 335",
     name: { en: "Student Service Center", kz: "Студенттерге қызмет көрсету орталығы", ru: "Центр обслуживания студентов" },
     where: { en: "Main building", kz: "Бас ғимарат", ru: "Главный корпус" },
     aliases: ["ssc", "справка", "анықтама", "certificate", "documents", "документы", "құжат"],
@@ -96,7 +94,59 @@ export const PLACES: Place[] = [
     aliases: ["accounting", "бухгалтерия", "payment", "оплата", "төлем"],
   },
   {
-    code: "COUNSELLING", kind: "service", tour: 28, contact: "ext. 246",
+    code: "ADVISING", kind: "service",
+    name: { en: "Advising desk", kz: "Эдвайзинг бөлімі (Advising desk)", ru: "Эдвайзинг (Advising desk)" },
+    where: {
+      en: "1st floor, in the hall between the lecture halls “Bochka B” and “Bochka C”",
+      kz: "1-қабат, «B» және «C» бочка дәріс залдарының арасындағы холл",
+      ru: "1 этаж, холл между лекционными залами «Бочка B» и «Бочка C»",
+    },
+    aliases: ["advising", "advisor", "adviser", "advisory", "эдвайзер", "эдвайзинг", "куратор"],
+  },
+  {
+    code: "IELTS_CENTER", kind: "study", block: "E", floor: 1, rooms: ["E105"],
+    name: { en: "IDP IELTS test centre (E105)", kz: "IDP IELTS тест орталығы (E105)", ru: "Тестовый центр IDP IELTS (E105)" },
+    where: { en: "Block E, 1st floor, room E105: IELTS on computer", kz: "E блогы, 1-қабат, E105: компьютерде IELTS", ru: "Блок E, 1 этаж, E105: IELTS на компьютере" },
+    aliases: ["ielts", "idp", "test centre", "test center", "тестовый центр", "тест орталығы", "e105"],
+  },
+  {
+    code: "LANGUAGE_SCHOOL", kind: "study", block: "E", floor: 1, rooms: ["E107"],
+    name: { en: "Language school, Extension Center (E107)", kz: "Тіл мектебі, Extension Center (E107)", ru: "Языковая школа при Extension Center (E107)" },
+    where: { en: "Block E, 1st floor, room E107", kz: "E блогы, 1-қабат, E107", ru: "Блок E, 1 этаж, E107" },
+    aliases: ["language school", "языковая школа", "тіл мектебі", "extension center", "extension centre", "e107"],
+  },
+  {
+    code: "DISTANCE_STUDIO", kind: "study", block: "F", floor: 1, rooms: ["F105"],
+    name: { en: "Distance learning studio (F105)", kz: "Қашықтан оқыту студиясы (F105)", ru: "Студия дистанционного обучения (F105)" },
+    where: { en: "Block F, 1st floor, room F105", kz: "F блогы, 1-қабат, F105", ru: "Блок F, 1 этаж, F105" },
+    aliases: ["studio", "студия", "distance learning", "дистанционное обучение", "қашықтан оқыту", "f105"],
+  },
+  {
+    code: "AI_LAB", kind: "study", block: "I", floor: 1, rooms: ["I105"],
+    name: { en: "AI Lab (I105)", kz: "AI Lab (I105)", ru: "AI Lab (I105)" },
+    where: { en: "Block I, 1st floor, room I105", kz: "I блогы, 1-қабат, I105", ru: "Блок I, 1 этаж, I105" },
+    aliases: ["ai lab", "artificial intelligence", "искусственный интеллект", "жасанды интеллект", "i105"],
+  },
+  {
+    code: "SENATE_HALL", kind: "study", block: "B", floor: 2, rooms: ["B206"],
+    name: { en: "Senate Hall (B206)", kz: "Сенат залы (B206)", ru: "Сенатский зал (B206)" },
+    where: { en: "Block B, 2nd floor, room B206", kz: "B блогы, 2-қабат, B206", ru: "Блок B, 2 этаж, B206" },
+    aliases: ["senate", "сенат", "senate hall", "сенатский зал", "b206"],
+  },
+  {
+    code: "RED_HALL", kind: "study",
+    name: { en: "Red Hall", kz: "Қызыл зал", ru: "Красный зал" },
+    where: { en: "Main building (see the 3D tour; not on the plan yet)", kz: "Бас ғимарат (3D турды қараңыз; жоспарда әлі жоқ)", ru: "Главный корпус (см. 3D-тур; на плане пока нет)" },
+    aliases: ["red hall", "красный зал", "қызыл зал"],
+  },
+  {
+    code: "DIGITAL_DEV", kind: "service",
+    name: { en: "Digital Development Department", kz: "Цифрлық даму бөлімі", ru: "Отдел цифрового развития" },
+    where: { en: "Main building (see the 3D tour; not on the plan yet)", kz: "Бас ғимарат (3D турды қараңыз; жоспарда әлі жоқ)", ru: "Главный корпус (см. 3D-тур; на плане пока нет)" },
+    aliases: ["digital development", "цифровое развитие", "цифрового развития", "цифрлық даму", "it department"],
+  },
+  {
+    code: "COUNSELLING", kind: "service", contact: "ext. 246",
     name: { en: "Psychological Counselling Centre", kz: "Психологиялық кеңес орталығы", ru: "Психологическая служба" },
     where: { en: "Main building", kz: "Бас ғимарат", ru: "Главный корпус" },
     aliases: ["psychologist", "психолог", "counselling", "консультация"],
@@ -112,7 +162,7 @@ export const PLACES: Place[] = [
     aliases: ["medical", "doctor", "медпункт", "врач", "дәрігер", "медицина"],
   },
   {
-    code: "SDU_LIFE", kind: "rest", popular: true, tour: 72,
+    code: "SDU_LIFE", kind: "rest", popular: true,
     name: { en: "SDU Life", kz: "SDU Life", ru: "SDU Life" },
     where: {
       en: "Separate building: gym, sports court, club rooms, dance hall",
@@ -132,7 +182,7 @@ export const PLACES: Place[] = [
     aliases: ["relax", "rest", "sleep", "отдых", "поспать", "демалыс"],
   },
   {
-    code: "DORM", kind: "rest", tour: 85, contact: "Girls 8778 637 2657 · Boys 8778 727 9567", hours: "Mon–Fri 8:30–17:30, Sat 9:00–14:00",
+    code: "DORM", kind: "rest", contact: "Girls 8778 637 2657 · Boys 8778 727 9567", hours: "Mon–Fri 8:30–17:30, Sat 9:00–14:00",
     name: { en: "Student House (dorm)", kz: "Студенттер үйі (жатақхана)", ru: "Студенческий дом (общежитие)" },
     where: { en: "On campus, about 30 m from the university", kz: "Кампуста, университеттен 30 м жерде", ru: "На кампусе, в 30 м от университета" },
     aliases: ["dorm", "общежитие", "общага", "жатақхана", "student house"],
@@ -232,7 +282,7 @@ export const PLACES: Place[] = [
   },
 ];
 
-export const TOUR_URL = "https://vrmir3d.com/SDU_University_VR/2/#media=";
+
 
 /** A room code like "F205": block F, floor 2, room 05. Blocks A–I. */
 export interface RoomCode {

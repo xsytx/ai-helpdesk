@@ -8,10 +8,11 @@ import { copyText } from "@/shared/lib/clipboard";
 import { Armchair, ArrowUp, BookOpen, Building2, Check, CheckCircle2, Clock, ConciergeBell, Crosshair, DoorOpen, ExternalLink, Flag, Footprints, Info, Lightbulb, Link2, UtensilsCrossed } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { useReportLocation, type MapSpot } from "../api";
+import { toursFor } from "../tours";
 import { FLOOR_ORDER, floorOfRoom, pointsFor, useMapPoints, type MapFloor } from "../mapPoints";
 import { FloorPlan } from "./FloorPlan";
 import { PlaceFloorPlan } from "./PlaceFloorPlan";
-import { ENTRANCE_KEY, ENTRANCE_ORDER, TOUR_URL, blockPlace, type Entrance, type Place, type PlaceKind, type RoomCode, type SchemeBlock } from "../places";
+import { ENTRANCE_KEY, ENTRANCE_ORDER, blockPlace, type Entrance, type Place, type PlaceKind, type RoomCode, type SchemeBlock } from "../places";
 
 export const KIND_ICON: Record<PlaceKind, typeof Building2> = {
   block: Building2, food: UtensilsCrossed, study: BookOpen, service: ConciergeBell, rest: Armchair, entrance: DoorOpen,
@@ -63,7 +64,8 @@ export function PlaceDetails({ target, from, onFrom }: { target: Place | RoomCod
   const faculty = room ? blockPlace(room.block) : null;
 
   const title = room ? fill(t("mapsRoomTitle"), { code: room.code }) : place!.name[locale];
-  const tour = place?.tour;
+  // 3D tour views: a room by its code, a map point by its name, a place by its code.
+  const tours = room ? toursFor(room.code) : place!.point ? toursFor(place!.name.en) : toursFor(place!.code);
   const spot = place?.spot;
   const route =
     spot || (block && (room || place?.kind === "block" || place?.floor))
@@ -143,10 +145,10 @@ export function PlaceDetails({ target, from, onFrom }: { target: Place | RoomCod
         </section>
       )}
 
-      {tour !== undefined && (
+      {tours.length > 0 && (
         <div>
           <a
-            href={`${TOUR_URL}${tour}`}
+            href={tours[0].url}
             target="_blank"
             rel="noreferrer"
             className="inline-flex h-10 items-center gap-2 rounded-xl bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-hover"
@@ -154,7 +156,26 @@ export function PlaceDetails({ target, from, onFrom }: { target: Place | RoomCod
             <ExternalLink className="h-4 w-4" />
             {t("mapsOpenTour")}
           </a>
-          <p className="mt-1.5 text-xs text-label">{t("mapsTourHint")}</p>
+          {tours.length > 1 ? (
+            <div className="mt-2.5">
+              <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-label">{t("mapsTourMore")}</p>
+              <ul className="flex flex-wrap gap-1.5">
+                {tours.slice(1).map((view) => (
+                  <li key={view.url}>
+                    <a
+                      href={view.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1 rounded-full border border-border bg-surface px-3 py-1 text-xs font-medium text-primary hover:bg-background-2"
+                    >
+                      <ExternalLink className="h-3 w-3 text-label" />
+                      {view.label[locale]}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
         </div>
       )}
 
