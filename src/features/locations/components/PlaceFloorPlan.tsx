@@ -38,7 +38,7 @@ export function PlaceFloorPlan({ target }: { target: Place | RoomCode }) {
   const room = "room" in target ? target : null;
   const place = room ? null : (target as Place);
   const code = room ? room.code : place!.code;
-  const matches = points ? pointsFor(points, code, place?.rooms) : [];
+  const matches = !points ? [] : place?.point ? points.filter((p) => p.id === place.point) : pointsFor(points, code, place?.rooms);
   const block = target.block;
   const startFloor: MapFloor | undefined =
     (room ? floorOfRoom(room.floor) : undefined) ?? matches[0]?.floor ?? (place?.kind === "block" ? "1" : undefined);

@@ -1,6 +1,7 @@
 // Campus places for the navigation page (Sprint 5). Facts come from SDU_info.md
 // and the official 3D tour; the list moves to the database with the admin editor.
 import type { Locale, TranslationKey } from "@/i18n/translations";
+import { searchPlaces as rankPlaces } from "./placeSearch";
 
 export type Text = Record<Locale, string>;
 export type PlaceKind = "block" | "food" | "study" | "service" | "rest" | "entrance";
@@ -31,6 +32,8 @@ export interface Place {
   tour?: number;
   aliases: string[];
   popular?: boolean;
+  /** A place made from a map point (pointPlaces.ts): that point's id. */
+  point?: string;
 }
 
 const faculty = (en: string, kz: string, ru: string): Text => ({ en, kz, ru });
@@ -252,14 +255,11 @@ const BLOCK_PLACE: Partial<Record<string, string>> = { A: "BLOCK_A", B: "BLOCK_B
 export const placeForRoom = (code: string) => PLACES.find((p) => p.rooms?.includes(code));
 export const blockPlace = (block: string) => PLACES.find((p) => p.code === BLOCK_PLACE[block]);
 
-const norm = (s: string) => s.toLowerCase().replace(/ё/g, "е").trim();
 
-/** Places matching the query in any language (name, where, aliases). */
-export function searchPlaces(q: string): Place[] {
-  const words = norm(q).split(/\s+/).filter(Boolean);
-  if (!words.length) return [];
-  return PLACES.filter((p) => {
-    const hay = norm([...Object.values(p.name), ...Object.values(p.where), ...p.aliases, p.code].join(" "));
-    return words.every((w) => hay.includes(w));
-  });
+/**
+ * Places matching the query in any language, best first (word starts, typos,
+ * word endings; see placeSearch.ts). `extra` = more places, e.g. map points.
+ */
+export function searchPlaces(q: string, extra: Place[] = []): Place[] {
+  return rankPlaces(q, [...PLACES, ...extra]);
 }

@@ -335,6 +335,15 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   update / delete is logged in `map_point_changes` (before/after JSON;
   `GET /api/admin/map/changes`) and "Recent changes" can undo any entry.
   Admin tabs "Map reports" / "Map editor" show the open report count.
+- **Maps search (`placeSearch.ts`, `pointPlaces.ts`).** Like the forum's:
+  every typed word must match a word start; typos (1 slip in 4+ letters, 2 in
+  8+, letter swaps), Russian/Kazakh endings and dashed words ("wifi") match;
+  filler words ("where", "где", "қайда") are ignored; names rank above
+  aliases above descriptions. Map points that aren't rooms or linked to a
+  built-in place (advising desk, cloakroom, labs, Senate Hall…) are places
+  too (`PT_<id>`, their pin on the floor plan; reports about them sit on that
+  point in the editor). Suggestions under the box while typing (↑/↓, Enter,
+  Esc); a category chip clears the search text.
 - **"Show on map" in the AI chat (`features/locations/mapLinks.ts`, `MapLinks`).**
   Under an answer, buttons for room codes in the question (F205, "F 205")
   and, when the question asks where something is ("where", "где", "қайда"…),

@@ -20,12 +20,14 @@ import {
 } from "../mapPoints";
 import { PLACES, parseRoomCode } from "../places";
 import { FloorPlan } from "./FloorPlan";
+import { pointIdOf } from "../pointPlaces";
 
 const placeRooms = (code: string) => PLACES.find((p) => p.code === code)?.rooms ?? [];
 
 /** Where a report sits on the plans: its points, or (for "BLOCK_F" and rooms not on the plan) its block letter. */
 function reportTarget(r: LocationReport, points: MapPoint[]) {
-  const matched = pointsFor(points, r.placeCode, placeRooms(r.placeCode));
+  const pointId = pointIdOf(r.placeCode);
+  const matched = pointId ? points.filter((p) => p.id === pointId) : pointsFor(points, r.placeCode, placeRooms(r.placeCode));
   const letter = /^BLOCK_([A-I])$/.exec(r.placeCode)?.[1] ?? /^([A-I])\d{3}$/.exec(r.placeCode)?.[1];
   return { matched, block: matched.length === 0 ? letter : undefined };
 }

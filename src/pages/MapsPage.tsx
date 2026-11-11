@@ -2,6 +2,10 @@ import { Mascot } from "@/shared/ui/Mascot";
 import { CampusScheme } from "@/features/locations/components/CampusScheme";
 import { KIND_ICON, PlaceDetails, schemeBlockOf } from "@/features/locations/components/PlaceDetails";
 import { PLACES, parseRoomCode, placeForRoom, searchPlaces, type Entrance, type Place, type PlaceKind } from "@/features/locations/places";
+import { useMapPoints } from "@/features/locations/mapPoints";
+import { pointPlaces } from "@/features/locations/pointPlaces";
+import { searchTerms } from "@/features/locations/placeSearch";
+import { highlight } from "@/shared/lib/highlight";
 import { useLocale } from "@/i18n/LocaleContext";
 import type { TranslationKey } from "@/i18n/translations";
 import { cn } from "@/shared/lib/cn";
@@ -39,11 +43,14 @@ export function MapsPage() {
   // A room code that names a place (D117 = lecture hall "Bochka A") opens that place.
   const roomPlace = code ? placeForRoom(code.code) : undefined;
   const room = roomPlace ? null : code;
+  // The points admins keep on the floor plans (advising desk, cloakroom, labs…) are searchable places too.
+  const { data: points } = useMapPoints();
+  const extra = useMemo(() => pointPlaces(points ?? []), [points]);
   const results = useMemo(() => {
-    const list = q.trim() ? searchPlaces(q) : kind === "all" ? PLACES.filter((p) => p.popular) : PLACES;
+    const list = q.trim() ? searchPlaces(q, extra) : kind === "all" ? PLACES.filter((p) => p.popular) : [...PLACES, ...extra];
     return kind === "all" ? list : list.filter((p) => p.kind === kind);
-  }, [q, kind]);
-  const picked = PLACES.find((p) => p.code === params.get("place"));
+  }, [q, kind, extra]);
+  const picked = [...PLACES, ...extra].find((p) => p.code === params.get("place"));
   const target = room ?? (roomPlace ? { ...roomPlace, floor: code!.floor } : undefined) ?? picked ?? (q.trim() ? results[0] : undefined);
 
   // What Barys says on the map: where to and, for upper floors, which floor.
@@ -85,17 +92,17 @@ export function MapsPage() {
             {t("mapsAskAi")}
           </Button>
         </div>
-        <form onSubmit={submit} className="mt-4 flex items-center gap-2 rounded-2xl border-2 border-primary/80 bg-surface py-1.5 pl-3 pr-1.5 focus-within:border-brand">
-          <Search className="h-5 w-5 shrink-0 text-label" />
-          <input
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            placeholder={t("mapsSearchPlaceholder")}
-            aria-label={t("mapsSearchPlaceholder")}
-            className="min-w-0 flex-1 bg-transparent py-1.5 text-base text-primary outline-none placeholder:text-label/70"
-          />
-          <Button type="submit" size="sm">{t("mapsFind")}</Button>
-        </form>
+        <SearchBox
+          draft={draft}
+          setDraft={setDraft}
+          extra={extra}
+          onSubmit={submit}
+          onPickPlace={(p) => {
+            setDraft("");
+            update({ q: null, cat: null, place: p.code });
+          }}
+          onPickRoom={(code) => update({ q: code, cat: null, place: null })}
+        />
         <p className="mt-2 text-xs text-label">
           {t("mapsTry")}{" "}
           {EXAMPLES.map((ex, i) => (
@@ -111,7 +118,7 @@ export function MapsPage() {
               key={k}
               type="button"
               aria-pressed={kind === k}
-              onClick={() => update({ cat: k === "all" ? null : k, place: null })}
+              onClick={() => update({ cat: k === "all" ? null : k, q: null, place: null })}
               className={cn(
                 "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors",
                 kind === k ? "border-brand bg-brand text-white" : "border-border bg-surface text-primary hover:bg-background-2",
@@ -188,6 +195,128 @@ export function MapsPage() {
         </div>
       </Card>
     </div>
+  );
+}
+
+/**
+ * The search box with suggestions while typing (like the forum's search):
+ * places by word starts and small typos, map points included, and a room
+ * code decoded at once. ↑/↓ choose, Enter opens, Esc closes.
+ */
+function SearchBox({ draft, setDraft, extra, onSubmit, onPickPlace, onPickRoom }: {
+  draft: string;
+  setDraft: (v: string) => void;
+  extra: Place[];
+  onSubmit: (e: FormEvent) => void;
+  onPickPlace: (p: Place) => void;
+  onPickRoom: (code: string) => void;
+}) {
+  const { t, locale } = useLocale();
+  const [open, setOpen] = useState(false);
+  const [active, setActive] = useState(-1);
+  const room = parseRoomCode(draft);
+  const places = useMemo(() => (draft.trim().length >= 2 ? searchPlaces(draft, extra).slice(0, 6) : []), [draft, extra]);
+  const items: ({ kind: "room"; code: string } | { kind: "place"; place: Place })[] = [
+    ...(room ? [{ kind: "room" as const, code: room.code }] : []),
+    ...places.map((place) => ({ kind: "place" as const, place })),
+  ];
+  const show = open && items.length > 0;
+  const words = searchTerms(draft);
+  const pick = (i: number) => {
+    const item = items[i];
+    if (!item) return;
+    setOpen(false);
+    setActive(-1);
+    if (item.kind === "room") onPickRoom(item.code);
+    else onPickPlace(item.place);
+  };
+
+  return (
+    <form
+      onSubmit={(e) => {
+        if (show && active >= 0) {
+          e.preventDefault();
+          pick(active);
+          return;
+        }
+        setOpen(false);
+        onSubmit(e);
+      }}
+      className="relative mt-4"
+    >
+      <div className="flex items-center gap-2 rounded-2xl border-2 border-primary/80 bg-surface py-1.5 pl-3 pr-1.5 focus-within:border-brand">
+        <Search className="h-5 w-5 shrink-0 text-label" />
+        <input
+          value={draft}
+          onChange={(e) => {
+            setDraft(e.target.value);
+            setOpen(true);
+            setActive(-1);
+          }}
+          onFocus={() => setOpen(true)}
+          onBlur={() => setOpen(false)}
+          onKeyDown={(e) => {
+            if (!show) return;
+            if (e.key === "ArrowDown") {
+              e.preventDefault();
+              setActive((a) => (a + 1) % items.length);
+            } else if (e.key === "ArrowUp") {
+              e.preventDefault();
+              setActive((a) => (a <= 0 ? items.length - 1 : a - 1));
+            } else if (e.key === "Escape") {
+              setOpen(false);
+            }
+          }}
+          placeholder={t("mapsSearchPlaceholder")}
+          aria-label={t("mapsSearchPlaceholder")}
+          aria-expanded={show}
+          aria-controls="maps-suggestions"
+          aria-autocomplete="list"
+          role="combobox"
+          autoComplete="off"
+          className="min-w-0 flex-1 bg-transparent py-1.5 text-base text-primary outline-none placeholder:text-label/70"
+        />
+        <Button type="submit" size="sm">{t("mapsFind")}</Button>
+      </div>
+      {show ? (
+        <ul id="maps-suggestions" role="listbox" className="absolute inset-x-0 top-full z-20 mt-1.5 overflow-hidden rounded-2xl border border-border bg-surface py-1 shadow-lg">
+          {items.map((item, i) => {
+            const Icon = item.kind === "room" ? Building2 : KIND_ICON[item.place.kind];
+            return (
+              <li key={item.kind === "room" ? `room-${item.code}` : item.place.code} role="option" aria-selected={i === active}>
+                <button
+                  type="button"
+                  // Before the input's blur closes the list.
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => pick(i)}
+                  onMouseEnter={() => setActive(i)}
+                  className={cn("flex w-full items-center gap-3 px-3 py-2 text-left", i === active ? "bg-background-2" : "hover:bg-background-2")}
+                >
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-background-2 text-primary">
+                    <Icon className="h-4 w-4" />
+                  </span>
+                  <span className="min-w-0">
+                    {item.kind === "room" ? (
+                      <>
+                        <span className="block text-sm font-semibold text-primary">{t("mapsRoomTitle").replace("{code}", item.code)}</span>
+                        <span className="block text-xs text-label">
+                          {t("mapsBlock").replace("{block}", item.code[0])} · {t("mapsFloorTab").replace("{floor}", item.code[1])}
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="block truncate text-sm font-semibold text-primary">{highlight(item.place.name[locale], words)}</span>
+                        <span className="block truncate text-xs text-label">{item.place.where[locale]}</span>
+                      </>
+                    )}
+                  </span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      ) : null}
+    </form>
   );
 }
 

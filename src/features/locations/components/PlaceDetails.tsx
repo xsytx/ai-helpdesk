@@ -201,7 +201,8 @@ function ReportMistake({ target, placeCode, placeName, from }: { target: Place |
   const [picking, setPicking] = useState(false);
   const [spot, setSpot] = useState<MapSpot>();
   const room = "room" in target ? target : null;
-  const matches = points ? pointsFor(points, placeCode, room ? [] : (target as Place).rooms) : [];
+  const asPlace = room ? null : (target as Place);
+  const matches = !points ? [] : asPlace?.point ? points.filter((p) => p.id === asPlace.point) : pointsFor(points, placeCode, asPlace?.rooms ?? []);
   const [floor, setFloor] = useState<MapFloor>((room ? floorOfRoom(room.floor) : undefined) ?? matches[0]?.floor ?? "1");
   const tooShort = text.trim().length < 5;
 
