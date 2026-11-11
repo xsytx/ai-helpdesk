@@ -1,10 +1,13 @@
 // Campus places for the navigation page (Sprint 5). Facts come from SDU_info.md
 // and the official 3D tour; the list moves to the database with the admin editor.
-import type { Locale } from "@/i18n/translations";
+import type { Locale, TranslationKey } from "@/i18n/translations";
 
 export type Text = Record<Locale, string>;
 export type PlaceKind = "block" | "food" | "study" | "service" | "rest" | "entrance";
-export type Entrance = "C" | "G";
+export type Entrance = "C" | "G" | "I";
+/** The entrances in the order the switch shows them, and their names. */
+export const ENTRANCE_ORDER: Entrance[] = ["C", "G", "I"];
+export const ENTRANCE_KEY: Record<Entrance, TranslationKey> = { C: "mapsEntranceC", G: "mapsEntranceG", I: "mapsEntranceI" };
 /** Blocks drawn on the campus scheme (see CampusScheme). */
 export type SchemeBlock = "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | "I";
 /** Points on the scheme that are not a block: the round lecture halls, the canteen, the medical point. */
@@ -213,6 +216,16 @@ export const PLACES: Place[] = [
     name: { en: "Entrance G", kz: "G кіреберісі", ru: "Вход G" },
     where: faculty("Side entrance by block G", "G блогының жанындағы бүйір кіреберіс", "Боковой вход у блока G"),
     aliases: ["entrance", "вход", "кіреберіс"],
+  },
+  {
+    code: "ENTRANCE_I", kind: "entrance", block: "I",
+    name: { en: "Entrance I", kz: "I кіреберісі", ru: "Вход I" },
+    where: faculty(
+      "East entrance: the east wall of the big hall under blocks H and I",
+      "Шығыс кіреберіс: H және I блоктарының астындағы үлкен холлдың шығыс қабырғасы",
+      "Восточный вход: восточная стена большого холла под блоками H и I",
+    ),
+    aliases: ["entrance", "вход", "кіреберіс", "east entrance", "восточный вход"],
   },
 ];
 

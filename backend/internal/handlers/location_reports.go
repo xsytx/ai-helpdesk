@@ -54,8 +54,8 @@ func (h *Handlers) CreateLocationReport(w http.ResponseWriter, r *http.Request) 
 	case utf8.RuneCountInString(name) > 120:
 		writeError(w, http.StatusBadRequest, "place name is too long")
 		return
-	case req.Entrance != "" && req.Entrance != "C" && req.Entrance != "G":
-		writeError(w, http.StatusBadRequest, "entrance must be C or G")
+	case req.Entrance != "" && req.Entrance != "C" && req.Entrance != "G" && req.Entrance != "I":
+		writeError(w, http.StatusBadRequest, "entrance must be C, G or I")
 		return
 	case utf8.RuneCountInString(text) < locationReportMinRunes:
 		writeError(w, http.StatusBadRequest, "describe what is wrong")

@@ -290,12 +290,16 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   `features/locations/places.ts` for now (blocks A–I, lecture halls "bochkas",
   canteen, medical point, services; three languages). A room code like `F205`
   is decoded (block · floor · room); `D117` etc. open the bochka they belong to.
-  `CampusScheme` shows the 1st-floor plan image (`public/maps/campus-1f.webp`,
-  from the 3D-tour plan) with block tints and letters drawn on top, clickable
+  `CampusScheme` shows the full 1st-floor plan (`public/maps/floor1.png`, the
+  same image the floor plans use, drawn at 1/`PLAN_SCALE` = 1/2.3653 so the
+  scheme's units stay as traced) with block tints and letters drawn on top, clickable
   places (a card on the map; × closes only the card, "Clear route" clears the
-  pick), and a route from Entrance C or G along walkable space only. The map
-  sits above the details card so picking a place never moves it. Block I is
-  approximate (dashed) until its plan is known. "Report a mistake" on a place
+  pick), and a route from Entrance C, G or I along walkable space only:
+  the hall just below the wings (`HALL_Y`; the wings' bottom strip is rooms),
+  each wing entered through its passage between its two stairwells
+  (`WING_DOOR_X`), B and A through the atrium's north glass door; the hall
+  continues into the big hall under H and I, whose east wall has Entrance I. The map
+  sits above the details card so picking a place never moves it. "Report a mistake" on a place
   → `POST /api/location-reports` (one open report per student and place);
   admin panel → "Map reports" (`/admin?section=map-reports`) marks them
   fixed / rejected (`018_location_reports.sql`, `handlers/location_reports.go`).

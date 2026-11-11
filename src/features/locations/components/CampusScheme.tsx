@@ -1,22 +1,33 @@
-// The 1st-floor plan of the main building (public/maps/campus-1f.webp, a clean
-// copy of the 3D-tour plan) with the blocks tinted and lettered like the
-// Freshman's guide map, the found place outlined, and the walking route from the
-// chosen entrance. Coordinates are in the image's own units (2000 × 714).
-// Routes only use walkable space: the atrium (around its round stairs), the main
-// corridor along the wings, the hall in front of the lecture halls, and the
-// passages to the canteen and the H building. Block I is drawn after H until its
-// real plan is known.
+// The 1st-floor plan of the main building (public/maps/floor1.png, the full
+// plan the map points were collected on) with the blocks tinted and lettered
+// like the Freshman's guide map, the found place outlined, and the walking
+// route from the chosen entrance. Coordinates here are scheme units (the plan
+// at 1/PLAN_SCALE of its pixels; see PLAN_*), which is what every block,
+// hall and route below was traced in. Routes only use walkable space: the
+// atrium, the hall below the wings (with the big hall under H and I at its
+// east end), each wing's passage, and the doors of the canteen and halls.
 import { useLocale } from "@/i18n/LocaleContext";
 import { cn } from "@/shared/lib/cn";
 import { Mascot } from "@/shared/ui/Mascot";
 import { ArrowDown, Eraser, X } from "lucide-react";
 import { useId, type KeyboardEvent, type ReactNode } from "react";
-import { PLACES, type Entrance, type SchemeBlock, type SchemeSpot } from "../places";
+import { ENTRANCE_KEY, PLACES, type Entrance, type SchemeBlock, type SchemeSpot } from "../places";
 
 type Pt = [number, number];
 interface Box { x: number; y: number; w: number; h: number }
 
-const W = 2000;
+/**
+ * The full plan image (4818 × 1689 px) in scheme units: plan pixel = PLAN_SCALE
+ * × scheme unit + offset, measured on six wing passages and the lecture halls.
+ * Room points (map_points) use plan pixels; this scheme uses the units.
+ */
+const PLAN_SCALE = 2.3653;
+const PLAN_X = 0.6 / PLAN_SCALE;
+const PLAN_Y = -2 / PLAN_SCALE;
+const PLAN_W = 4818 / PLAN_SCALE;
+const PLAN_H = 1689 / PLAN_SCALE;
+/** The drawing area: wide enough for the east wall and Entrance I. */
+const W = 2040;
 const H = 714;
 
 /** One colour per block, as on the campus map. */
@@ -37,7 +48,6 @@ const BLOCKS: Record<SchemeBlock, Box[]> = {
   H: [box(1541, 175, 1687, 410), box(1476, 468, 1720, 625)],
   I: [box(1811, 175, 1968, 410)],
 };
-const WINGS: SchemeBlock[] = ["D", "E", "F", "G", "H", "I"];
 /** Where each block's letter badge sits. */
 const BADGE: Record<SchemeBlock, Pt> = {
   A: [70, 108], B: [58, 352], C: [138, 560],
@@ -53,45 +63,77 @@ const HALLS: Record<"A" | "B" | "C" | "D", { cx: number; cy: number; r: number }
 const CANTEEN = box(962, 462, 1205, 610);
 const MED: Pt = [1447, 392];
 
-// Walkways (y of the main corridor and of the hall in front of the lecture halls).
-const CORRIDOR = 393;
-const LOBBY = 447;
-const LOBBY_EAST = 880;
-/** The atrium's east side, clear of its round stairs, where it meets the corridor and the hall. */
-const ATRIUM_X = 362;
+// Walkways, traced on the plan image. The wings' bottom strip (y 370–415)
+// holds rooms (toilets, shop, medical point), so routes never run along it:
+// the walkway is the hall just below it (HALL_Y), and each wing is entered
+// through its passage between its two stairwells (WING_DOOR_X).
+const HALL_Y = 447;
+/** East of the H passage the hall runs a little lower, below the stairs in it. */
+const HALL_Y_EAST = 458;
+const HALL_EAST_FROM = 1570;
+const hallY = (x: number) => (x >= HALL_EAST_FROM ? HALL_Y_EAST : HALL_Y);
 
-/** From each entrance to the main corridor (the point where the route reaches it). */
-const ENTRANCES: Record<Entrance, { at: Pt; toCorridor: Pt[] }> = {
-  // Through the entrance hall and the east side of the atrium.
-  C: { at: [228, 650], toCorridor: [[300, 578], [ATRIUM_X, 505], [ATRIUM_X, CORRIDOR]] },
-  // Through the G building to the corridor.
-  G: { at: [1282, 660], toCorridor: [[1330, 575], [1330, 470], [1330, CORRIDOR]] },
+/** The passage up into each wing (between the wing's two stairwells). */
+const WING_DOOR_X: Partial<Record<SchemeBlock, number>> = { D: 552, E: 824, F: 1074, G: 1350, H: 1628, I: 1899 };
+/** How far up the wing's own corridor the route goes. */
+const WING_END_Y = 300;
+
+/** Atrium side: from the C entrance hall up to the hall (west end of the walkway). */
+const C_TO_HALL: Pt[] = [[262, 612], [300, 578], [350, 505], [368, 496], [400, 478], [425, HALL_Y]];
+/** From the gap east of the atrium to block B's hall (through the atrium's north side and its glass door). */
+const ATRIUM_TO_B: Pt[] = [[338, 483], [322, 452], [275, 430], [250, 417], [225, 395], [205, 330]];
+
+/** Each entrance and the way from it to the walkway. */
+const ENTRANCES: Record<Entrance, { at: Pt; toHall: Pt[] }> = {
+  // Main entrance: the glass entrance hall of block C, then past the atrium.
+  C: { at: [228, 650], toHall: C_TO_HALL },
+  // Through the G building to the hall.
+  G: { at: [1316, 656], toHall: [[1312, 615], [1343, 560], [1343, 470], [1343, HALL_Y]] },
+  // East entrance: on the east wall of the big hall under blocks H and I.
+  I: { at: [1995, 469], toHall: [[1960, HALL_Y_EAST]] },
 };
+
+/** Along the walkway from x1 to x2 (a step down to the lower eastern part on the way). */
+function alongHall(x1: number, x2: number): Pt[] {
+  const out: Pt[] = [];
+  const east = HALL_EAST_FROM;
+  if (x1 < east && x2 >= east) out.push([east - 15, HALL_Y], [east + 15, HALL_Y_EAST]);
+  if (x1 >= east && x2 < east) out.push([east + 15, HALL_Y_EAST], [east - 15, HALL_Y]);
+  out.push([x2, hallY(x2)]);
+  return out;
+}
 
 /** The route from an entrance to the place, along walkable space only. */
 function routePoints(from: Entrance, block?: SchemeBlock, spot?: SchemeSpot): Pt[] | null {
-  const { at, toCorridor } = ENTRANCES[from];
-  const viaCorridor = (x: number): Pt[] => [at, ...toCorridor, [x, CORRIDOR]];
-  // The hall in front of the lecture halls opens from the atrium (west end) and
-  // from the corridor at its east end; each entrance uses the nearer one.
-  const toLobby = (): Pt[] =>
-    from === "C" ? [at, [300, 578], [ATRIUM_X, 505], [ATRIUM_X, LOBBY]] : [...viaCorridor(LOBBY_EAST), [LOBBY_EAST, LOBBY]];
+  const { at, toHall } = ENTRANCES[from];
+  const hallStart = toHall[toHall.length - 1];
+  /** From the entrance along the walkway to x. */
+  const toX = (x: number): Pt[] => [at, ...toHall, ...alongHall(hallStart[0], x)];
+  /** To the gap east of the atrium (where the ways to blocks A, B and C start). */
+  const toAtrium = (): Pt[] =>
+    from === "C" ? [at, ...C_TO_HALL.slice(0, 3)] : [...toX(425), [400, 478], [368, 496], [350, 505]];
 
   if (spot?.startsWith("hall")) {
     const h = HALLS[spot.slice(4) as keyof typeof HALLS];
-    return [...toLobby(), [h.cx, LOBBY], [h.cx, h.cy - h.r]];
+    return [...toX(h.cx), [h.cx, h.cy - h.r]];
   }
-  if (spot === "canteen") return [...viaCorridor(1140), [1140, 472], [CANTEEN.x + CANTEEN.w / 2, 472]];
-  if (spot === "med") return viaCorridor(MED[0]);
+  // The canteen's door is on its north side, towards the walkway.
+  if (spot === "canteen") return [...toX(1032), [1032, 500]];
+  if (spot === "med") return [...toX(MED[0]), [MED[0], MED[1] + 6]];
   if (!block) return null;
-  if (WINGS.includes(block)) {
-    const b = BLOCKS[block][0];
-    const cx = b.x + b.w / 2;
-    return [...viaCorridor(cx), [cx, 330]];
+
+  if (block === "H") {
+    // The hall's stairs sit right under H's passage: go round them on the west.
+    const door = WING_DOOR_X.H!;
+    return [...toX(1600), [1620, 425], [door, 410], [door, WING_END_Y]];
   }
-  if (block === "C") return from === "C" ? [at, [300, 578], [318, 560]] : [...viaCorridor(ATRIUM_X), [ATRIUM_X, 505], [318, 560]];
-  if (block === "B") return [...viaCorridor(300), [250, 330], [190, 300]];
-  return [...viaCorridor(300), [250, 330], [250, 200], [215, 115]];
+  const door = WING_DOOR_X[block];
+  if (door !== undefined) return [...toX(door), [door, 412], [door, WING_END_Y]];
+
+  if (block === "C") return from === "C" ? [at, [262, 612], [300, 578], [318, 560]] : [...toAtrium(), [318, 560]];
+  if (block === "B") return [...toAtrium(), ...ATRIUM_TO_B];
+  // Block A: through block B's hall and north to the A building.
+  return [...toAtrium(), ...ATRIUM_TO_B, [200, 230], [215, 115]];
 }
 
 /** The outlines of the found place (also cut out of the fade over the rest). */
@@ -175,7 +217,7 @@ export function CampusScheme({ block, spot, from, onPick, popup, onMore, onClose
       <div className="overflow-x-auto rounded-2xl border border-border/60 bg-white">
         <div className="relative min-w-[720px]">
           <svg viewBox={`0 0 ${W} ${H}`} aria-label={t("mapsSchemeTitle")} className="block h-auto w-full">
-            <image href="/maps/campus-1f.webp" x="0" y="0" width={W} height={H} />
+            <image href="/maps/floor1.png" x={PLAN_X} y={PLAN_Y} width={PLAN_W} height={PLAN_H} />
 
             {/* Block tints, the canteen, the lecture halls and the medical point. */}
             <g pointerEvents="none">
@@ -184,7 +226,6 @@ export function CampusScheme({ block, spot, from, onPick, popup, onMore, onClose
                   <rect
                     key={`${key}${i}`} x={b.x} y={b.y} width={b.w} height={b.h} rx="16"
                     fill={COLOR[key]} fillOpacity="0.12" stroke={COLOR[key]} strokeOpacity="0.55" strokeWidth="3"
-                    strokeDasharray={key === "I" ? "14 10" : undefined}
                   />
                 )),
               )}
@@ -238,7 +279,7 @@ export function CampusScheme({ block, spot, from, onPick, popup, onMore, onClose
               const [x, y] = ENTRANCES[key].at;
               return (
                 <circle key={key} cx={x} cy={y} r={key === from ? 17 : 12} fill="#dc2626" stroke="#fff" strokeWidth="5" pointerEvents="none">
-                  <title>{key === "C" ? t("mapsEntranceC") : t("mapsEntranceG")}</title>
+                  <title>{t(ENTRANCE_KEY[key])}</title>
                 </circle>
               );
             })}
@@ -320,26 +361,39 @@ export function CampusScheme({ block, spot, from, onPick, popup, onMore, onClose
  */
 function RouteGuide({ start, end, text, quiet }: { start: Pt; end: Pt; text: string; quiet: boolean }) {
   const right = end[0] >= start[0];
+  // Entrance I is near the plan's right edge with the walkway above it: Barys
+  // stands in the empty space below it instead, his bubble under him.
+  const below = start[0] > W * 0.8;
+  const bubble = !quiet && (
+    <p className="relative w-max max-w-[11rem] rounded-xl border border-border bg-surface px-2.5 py-1.5 text-xs font-semibold leading-snug text-primary shadow-md">
+      {text}
+      <span
+        className={cn(
+          "absolute h-3 w-3 rotate-45 border-border bg-surface",
+          below ? "-top-1.5 right-5 border-l border-t" : "-bottom-1.5 left-5 border-b border-r",
+        )}
+      />
+    </p>
+  );
   return (
     <div
       // A new route: he appears again (the key restarts the fade-in).
       key={`${start.join()}-${end.join()}`}
       aria-hidden
-      className="pointer-events-none absolute z-[5] flex flex-col items-start gap-1 motion-safe:animate-[assistant-in_260ms_cubic-bezier(0.2,0.8,0.2,1)]"
+      className={cn(
+        "pointer-events-none absolute z-[5] flex flex-col gap-1 motion-safe:animate-[assistant-in_260ms_cubic-bezier(0.2,0.8,0.2,1)]",
+        below ? "items-end" : "items-start",
+      )}
       style={{
         left: `${(start[0] / W) * 100}%`,
         top: `${(start[1] / H) * 100}%`,
-        // Just right of the entrance dot (both entrances have room there).
-        transform: "translate(16px, calc(-100% + 16px))",
+        // Just right of and above the entrance dot; for Entrance I, below it and to its left.
+        transform: below ? "translate(calc(-100% + 20px), 14px)" : "translate(16px, calc(-100% + 16px))",
       }}
     >
-      {!quiet && (
-        <p className="relative w-max max-w-[11rem] rounded-xl border border-border bg-surface px-2.5 py-1.5 text-xs font-semibold leading-snug text-primary shadow-md">
-          {text}
-          <span className="absolute -bottom-1.5 left-5 h-3 w-3 rotate-45 border-b border-r border-border bg-surface" />
-        </p>
-      )}
+      {below ? null : bubble}
       <Mascot mood={right ? "point-right" : "point-left"} size="sm" />
+      {below ? bubble : null}
     </div>
   );
 }

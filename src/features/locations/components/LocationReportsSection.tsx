@@ -7,7 +7,7 @@ import { Check, ExternalLink, RotateCcw, X } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useLocationReports, useSetLocationReportStatus, type LocationReport, type LocationReportStatus } from "../api";
-import { parseRoomCode } from "../places";
+import { ENTRANCE_KEY, parseRoomCode } from "../places";
 
 const TABS: { status: LocationReportStatus; key: TranslationKey }[] = [
   { status: "open", key: "reportsOpen" },
@@ -69,7 +69,7 @@ function MapReportCard({ report }: { report: LocationReport }) {
         <span className="rounded-full bg-background-2 px-2 py-0.5 font-mono text-label">{report.placeCode}</span>
         {report.entrance ? (
           <span className="rounded-full bg-red-50 px-2 py-0.5 text-red-800">
-            {report.entrance === "C" ? t("mapsEntranceC") : t("mapsEntranceG")}
+            {t(ENTRANCE_KEY[report.entrance])}
           </span>
         ) : null}
         <span className="font-normal text-label">

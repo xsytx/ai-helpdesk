@@ -11,7 +11,7 @@ import { useReportLocation, type MapSpot } from "../api";
 import { FLOOR_ORDER, floorOfRoom, pointsFor, useMapPoints, type MapFloor } from "../mapPoints";
 import { FloorPlan } from "./FloorPlan";
 import { PlaceFloorPlan } from "./PlaceFloorPlan";
-import { TOUR_URL, blockPlace, type Entrance, type Place, type PlaceKind, type RoomCode, type SchemeBlock } from "../places";
+import { ENTRANCE_KEY, ENTRANCE_ORDER, TOUR_URL, blockPlace, type Entrance, type Place, type PlaceKind, type RoomCode, type SchemeBlock } from "../places";
 
 export const KIND_ICON: Record<PlaceKind, typeof Building2> = {
   block: Building2, food: UtensilsCrossed, study: BookOpen, service: ConciergeBell, rest: Armchair, entrance: DoorOpen,
@@ -112,7 +112,7 @@ export function PlaceDetails({ target, from, onFrom }: { target: Place | RoomCod
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <h3 className="text-xs font-semibold uppercase tracking-wide text-label">{t("mapsHowToGet")}</h3>
             <div className="inline-flex rounded-xl border border-border bg-surface p-0.5 text-xs font-semibold" role="group" aria-label={t("mapsFrom")}>
-              {(["C", "G"] as const).map((e) => (
+              {ENTRANCE_ORDER.map((e) => (
                 <button
                   key={e}
                   type="button"
@@ -120,7 +120,7 @@ export function PlaceDetails({ target, from, onFrom }: { target: Place | RoomCod
                   aria-pressed={from === e}
                   className={cn("rounded-lg px-3 py-1.5 transition-colors", from === e ? "bg-brand text-white" : "text-label hover:text-primary")}
                 >
-                  {e === "C" ? t("mapsEntranceC") : t("mapsEntranceG")}
+                  {t(ENTRANCE_KEY[e])}
                 </button>
               ))}
             </div>

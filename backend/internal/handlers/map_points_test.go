@@ -134,10 +134,11 @@ func TestMapPoints(t *testing.T) {
 func TestLocationReportSuggestedSpot(t *testing.T) {
 	e := newLocationReportEnv(t)
 	student := e.user("user")
-	body := map[string]any{"place_code": "F205", "text": "The room is on the other side", "suggested": map[string]any{"floor": "2", "x": 2500, "y": 600}}
+	// From Entrance I (the block I side) with a spot on the plan.
+	body := map[string]any{"place_code": "F205", "entrance": "I", "text": "The room is on the other side", "suggested": map[string]any{"floor": "2", "x": 2500, "y": 600}}
 	code, rep := e.call(student, http.MethodPost, "/api/location-reports", body)
 	spot, _ := rep["suggested"].(map[string]any)
-	if code != http.StatusCreated || spot == nil || spot["floor"] != "2" || spot["x"] != float64(2500) {
+	if code != http.StatusCreated || rep["entrance"] != "I" || spot == nil || spot["floor"] != "2" || spot["x"] != float64(2500) {
 		t.Fatalf("report with a spot: %d %v", code, rep)
 	}
 	code, rep = e.call(student, http.MethodPost, "/api/location-reports", map[string]any{"place_code": "F206", "text": "No spot this time"})
