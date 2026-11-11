@@ -221,6 +221,27 @@ type LocationReport struct {
 	Status       string     `json:"status"` // open, fixed, rejected
 	CreatedAt    time.Time  `json:"created_at"`
 	ResolvedAt   *time.Time `json:"resolved_at,omitempty"`
+	// The spot the student tapped on the floor plan ("it's actually here"), if any.
+	Suggested *MapSpot `json:"suggested,omitempty"`
+}
+
+// MapSpot is a position on a floor plan (pixels of the plan image).
+type MapSpot struct {
+	Floor string `json:"floor"`
+	X     int    `json:"x"`
+	Y     int    `json:"y"`
+}
+
+// MapPointChange is one entry of the map editor's change log. Before is nil
+// for a new point, After is nil for a deleted one.
+type MapPointChange struct {
+	ID        int64          `json:"id"`
+	PointID   int64          `json:"point_id"`
+	Action    string         `json:"action"` // create, update, delete
+	UserName  string         `json:"user_name"`
+	Before    *MapPointInput `json:"before"`
+	After     *MapPointInput `json:"after"`
+	CreatedAt time.Time      `json:"created_at"`
 }
 
 // MapPoint is a room, stairs, toilet, entrance or service placed on a floor

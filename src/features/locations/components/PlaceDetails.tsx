@@ -4,9 +4,12 @@ import type { TranslationKey } from "@/i18n/translations";
 import { cn } from "@/shared/lib/cn";
 import { getErrorStatus } from "@/shared/api/client";
 import { Button } from "@/shared/ui/Button";
-import { Armchair, ArrowUp, BookOpen, Building2, CheckCircle2, Clock, ConciergeBell, DoorOpen, ExternalLink, Flag, Footprints, Info, Lightbulb, UtensilsCrossed } from "lucide-react";
-import { useState, type ReactNode } from "react";
-import { useReportLocation } from "../api";
+import { copyText } from "@/shared/lib/clipboard";
+import { Armchair, ArrowUp, BookOpen, Building2, Check, CheckCircle2, Clock, ConciergeBell, Crosshair, DoorOpen, ExternalLink, Flag, Footprints, Info, Lightbulb, Link2, UtensilsCrossed } from "lucide-react";
+import { useEffect, useState, type ReactNode } from "react";
+import { useReportLocation, type MapSpot } from "../api";
+import { FLOOR_ORDER, floorOfRoom, pointsFor, useMapPoints, type MapFloor } from "../mapPoints";
+import { FloorPlan } from "./FloorPlan";
 import { PlaceFloorPlan } from "./PlaceFloorPlan";
 import { TOUR_URL, blockPlace, type Entrance, type Place, type PlaceKind, type RoomCode, type SchemeBlock } from "../places";
 
@@ -85,6 +88,7 @@ export function PlaceDetails({ target, from, onFrom }: { target: Place | RoomCod
             {room && <Chip>{fill(t("mapsRoom"), { room: room.room })}</Chip>}
             {faculty && <Chip tone="sky">{faculty.where[locale]}</Chip>}
           </div>
+          <CopyLink path={room ? `/navigation?q=${encodeURIComponent(room.code)}` : `/navigation?place=${encodeURIComponent(place!.code)}`} />
         </div>
       </div>
 
@@ -157,17 +161,48 @@ export function PlaceDetails({ target, from, onFrom }: { target: Place | RoomCod
       <PlaceFloorPlan target={target} />
 
       {/* key: a new place starts with a fresh form */}
-      <ReportMistake key={room ? room.code : place!.code} placeCode={room ? room.code : place!.code} placeName={title} from={from} />
+      <ReportMistake key={room ? room.code : place!.code} target={target} placeCode={room ? room.code : place!.code} placeName={title} from={from} />
     </div>
   );
 }
 
-/** "Report a mistake": a student says the route or the position is wrong; admins see it in the admin panel. */
-function ReportMistake({ placeCode, placeName, from }: { placeCode: string; placeName: string; from: Entrance }) {
+/** "Copy link": a link straight to this room or place, to send to a friend. */
+function CopyLink({ path }: { path: string }) {
+  const { t } = useLocale();
+  const [copied, setCopied] = useState(false);
+  useEffect(() => {
+    if (!copied) return;
+    const timer = setTimeout(() => setCopied(false), 2000);
+    return () => clearTimeout(timer);
+  }, [copied]);
+  return (
+    <button
+      type="button"
+      onClick={async () => setCopied(await copyText(`${window.location.origin}${path}`))}
+      className="mt-2 inline-flex items-center gap-1.5 rounded-lg px-1.5 py-1 text-xs font-semibold text-brand hover:bg-background-2 dark:text-primary"
+    >
+      {copied ? <Check className="h-3.5 w-3.5" /> : <Link2 className="h-3.5 w-3.5" />}
+      {copied ? t("mapsLinkCopied") : t("mapsCopyLink")}
+    </button>
+  );
+}
+
+/**
+ * "Report a mistake": a student says the route or the position is wrong, and
+ * may tap the right spot on the floor plan ("it's actually here"); admins see
+ * it in the admin panel and apply it in one click.
+ */
+function ReportMistake({ target, placeCode, placeName, from }: { target: Place | RoomCode; placeCode: string; placeName: string; from: Entrance }) {
   const { t } = useLocale();
   const report = useReportLocation();
+  const { data: points } = useMapPoints();
   const [open, setOpen] = useState(false);
   const [text, setText] = useState("");
+  const [picking, setPicking] = useState(false);
+  const [spot, setSpot] = useState<MapSpot>();
+  const room = "room" in target ? target : null;
+  const matches = points ? pointsFor(points, placeCode, room ? [] : (target as Place).rooms) : [];
+  const [floor, setFloor] = useState<MapFloor>((room ? floorOfRoom(room.floor) : undefined) ?? matches[0]?.floor ?? "1");
   const tooShort = text.trim().length < 5;
 
   if (report.isSuccess) {
@@ -192,7 +227,7 @@ function ReportMistake({ placeCode, placeName, from }: { placeCode: string; plac
       className="space-y-2 rounded-2xl border border-border bg-background-2/50 p-3"
       onSubmit={(e) => {
         e.preventDefault();
-        if (!tooShort) report.mutate({ placeCode, placeName, entrance: from, text: text.trim() });
+        if (!tooShort) report.mutate({ placeCode, placeName, entrance: from, text: text.trim(), suggested: spot });
       }}
     >
       <label htmlFor="map-report" className="block text-sm font-semibold text-primary">{t("mapsReportTitle")}</label>
@@ -206,6 +241,52 @@ function ReportMistake({ placeCode, placeName, from }: { placeCode: string; plac
         placeholder={t("mapsReportPlaceholder")}
         className="w-full resize-y rounded-xl border border-border bg-surface px-3 py-2 text-sm text-primary outline-none placeholder:text-label/70 focus:border-brand"
       />
+      {points ? (
+        picking ? (
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs font-semibold text-primary">{spot ? t("mapsSpotPicked") : t("mapsSpotTap")}</p>
+              <div className="inline-flex rounded-lg border border-border bg-surface p-0.5 text-xs font-semibold" role="group" aria-label={t("mapEditorFloor")}>
+                {FLOOR_ORDER.map((f) => (
+                  <button
+                    key={f}
+                    type="button"
+                    aria-pressed={floor === f}
+                    onClick={() => setFloor(f)}
+                    className={cn("rounded-md px-2 py-1", floor === f ? "bg-brand text-white" : "text-label hover:text-primary")}
+                  >
+                    {f}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <FloorPlan
+              floor={floor}
+              points={points}
+              highlight={matches.filter((p) => p.floor === floor).map((p) => p.id)}
+              ghost={spot && spot.floor === floor ? { x: spot.x, y: spot.y } : null}
+              focus={matches.find((p) => p.floor === floor) ? { x: matches.find((p) => p.floor === floor)!.x, y: matches.find((p) => p.floor === floor)!.y, key: `report-${floor}` } : null}
+              picking
+              onPlanClick={(x, y) => setSpot({ floor, x, y })}
+              className="h-[240px] md:h-[300px]"
+            />
+            {spot ? (
+              <button type="button" onClick={() => setSpot(undefined)} className="text-xs font-semibold text-label hover:text-primary">
+                {t("mapsSpotClear")}
+              </button>
+            ) : null}
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setPicking(true)}
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand hover:underline dark:text-primary"
+          >
+            <Crosshair className="h-3.5 w-3.5" />
+            {t("mapsSpotOffer")}
+          </button>
+        )
+      ) : null}
       {status === 409 ? <p className="text-sm text-error">{t("mapsReportAlready")}</p> : report.isError ? <p className="text-sm text-error">{t("mapsReportFailed")}</p> : null}
       <div className="flex flex-wrap gap-2">
         <Button type="submit" size="sm" disabled={tooShort || report.isPending}>{t("mapsReportSend")}</Button>

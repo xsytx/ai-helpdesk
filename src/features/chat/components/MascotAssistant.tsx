@@ -91,6 +91,8 @@ function Widget({ pathname, onHide }: { pathname: string; onHide: () => void }) 
   const [open, setOpen] = useState(false);
   const [hover, setHover] = useState(false);
   const wide = useWideScreen();
+  // A link in an answer ("Show on map") opened another page: get out of its way.
+  useEffect(() => setOpen(false), [pathname]);
   // Phones: he slides away while you scroll down (so he never hides the end of
   // a page) and comes back when you scroll up or stop at the bottom.
   const [tucked, setTucked] = useState(false);
@@ -261,7 +263,7 @@ function Widget({ pathname, onHide }: { pathname: string; onHide: () => void }) 
                 {status === "degraded" ? t("chatAssistantUnavailable") : t("assistantHello")}
               </div>
             ) : null}
-            {messages.map((m) =>
+            {messages.map((m, index) =>
               m.role === "user" ? (
                 <div key={m.id} className="ml-auto max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-br-md bg-brand px-4 py-2.5 text-sm text-white">
                   {m.text}
@@ -272,7 +274,7 @@ function Widget({ pathname, onHide }: { pathname: string; onHide: () => void }) 
                 </p>
               ) : (
                 <div key={m.id} className="mr-auto max-w-[95%]">
-                  <AssistantContent msg={m} />
+                  <AssistantContent msg={m} question={messages[index - 1]?.role === "user" ? messages[index - 1]!.text : undefined} />
                 </div>
               ),
             )}

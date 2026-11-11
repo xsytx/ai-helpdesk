@@ -311,6 +311,7 @@ func main() {
 	mux.Handle("POST /api/admin/map/points", authMw(writeLimiter(http.HandlerFunc(h.CreateMapPoint))))
 	mux.Handle("PUT /api/admin/map/points/{id}", authMw(writeLimiter(http.HandlerFunc(h.UpdateMapPoint))))
 	mux.Handle("DELETE /api/admin/map/points/{id}", authMw(writeLimiter(http.HandlerFunc(h.DeleteMapPoint))))
+	mux.Handle("GET /api/admin/map/changes", authMw(http.HandlerFunc(h.ListMapPointChanges)))
 	mux.Handle("POST /api/reports/{id}/resolve", authMw(http.HandlerFunc(h.ResolveReport)))
 	mux.Handle("GET /api/moderation/queue", authMw(http.HandlerFunc(h.ListModerationQueue)))
 	mux.Handle("POST /api/moderation/queue/{id}/approve", authMw(http.HandlerFunc(h.ApproveModeration)))

@@ -478,7 +478,7 @@ export function ChatPage() {
                         msg.error ? "border border-error/30 bg-surface" : "bg-background-2",
                       )}
                     >
-                      <AssistantContent msg={msg} />
+                      <AssistantContent msg={msg} question={messages[index - 1]?.role === "user" ? messages[index - 1]!.text : undefined} />
                     </div>
                     {msg.error ? null : (
                       <AnswerActions

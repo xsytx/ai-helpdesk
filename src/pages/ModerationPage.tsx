@@ -16,6 +16,7 @@ import { ChatInsightsSection } from "@/features/chat/components/ChatInsightsSect
 import { ReportsSection } from "@/features/moderation/components/ReportsSection";
 import { LocationReportsSection } from "@/features/locations/components/LocationReportsSection";
 import { MapEditorSection } from "@/features/locations/components/MapEditorSection";
+import { useLocationReports } from "@/features/locations/api";
 import { useReports } from "@/features/moderation/reports";
 import type { FaqDraft } from "@/features/faq/api";
 import { useLocale } from "@/i18n/LocaleContext";
@@ -170,6 +171,9 @@ export function ModerationPage() {
   const openSection = (id: SectionId) => setParams(id === "moderation" ? {} : { section: id }, { replace: true });
   const pending = usePendingModerationCount().data ?? 0;
   const openReports = useReports("open", isStaffRole(user?.role)).data?.total ?? 0;
+  const openMapReports = useLocationReports("open", isStaffRole(user?.role)).data?.length ?? 0;
+  const badge = (id: SectionId) =>
+    id === "moderation" ? pending : id === "reports" ? openReports : id === "map-reports" || id === "map-editor" ? openMapReports : 0;
 
   if (!isStaffRole(user?.role)) {
     return <p className="mx-auto max-w-3xl text-sm text-label">{t("moderationNoAccess")}</p>;
@@ -178,7 +182,7 @@ export function ModerationPage() {
   return (
     <div className={cn("mx-auto space-y-4", section === "map-editor" ? "max-w-6xl" : "max-w-3xl")}>
       <h1 className="text-xl font-bold text-primary">{t("adminPanel")}</h1>
-      <nav className="flex gap-1 border-b border-border/60" aria-label={t("adminPanel")}>
+      <nav className="flex gap-1 overflow-x-auto border-b border-border/60" aria-label={t("adminPanel")}>
         {SECTIONS.map((s) => (
           <button
             key={s.id}
@@ -186,15 +190,13 @@ export function ModerationPage() {
             aria-current={section === s.id ? "page" : undefined}
             onClick={() => openSection(s.id)}
             className={cn(
-              "-mb-px inline-flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm font-semibold transition-colors",
+              "-mb-px inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-semibold transition-colors",
               section === s.id ? "border-primary text-primary" : "border-transparent text-label hover:text-primary",
             )}
           >
             {t(s.key)}
-            {(s.id === "moderation" ? pending : s.id === "reports" ? openReports : 0) > 0 ? (
-              <span className="rounded-full bg-red-600 px-1.5 text-[11px] font-bold leading-5 text-white">
-                {s.id === "moderation" ? pending : openReports}
-              </span>
+            {badge(s.id) > 0 ? (
+              <span className="rounded-full bg-red-600 px-1.5 text-[11px] font-bold leading-5 text-white">{badge(s.id)}</span>
             ) : null}
           </button>
         ))}

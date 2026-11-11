@@ -105,7 +105,7 @@ type Store interface {
 
 	// --- Campus navigation: "Report a mistake" (018_location_reports.sql) ---
 	// CreateLocationReport: ErrConflict if the student already has an open report about that place.
-	CreateLocationReport(ctx context.Context, userID int64, placeCode, placeName, entrance, text string) (models.LocationReport, error)
+	CreateLocationReport(ctx context.Context, userID int64, placeCode, placeName, entrance, text string, suggested *models.MapSpot) (models.LocationReport, error)
 	ListLocationReports(ctx context.Context, status string) ([]models.LocationReport, error)
 	SetLocationReportStatus(ctx context.Context, id int64, status string, by int64) (models.LocationReport, error)
 
@@ -113,7 +113,8 @@ type Store interface {
 	ListMapPoints(ctx context.Context) ([]models.MapPoint, error)
 	CreateMapPoint(ctx context.Context, p models.MapPointInput, by int64) (models.MapPoint, error)
 	UpdateMapPoint(ctx context.Context, id int64, p models.MapPointInput, by int64) (models.MapPoint, error)
-	DeleteMapPoint(ctx context.Context, id int64) error
+	DeleteMapPoint(ctx context.Context, id int64, by int64) error
+	ListMapPointChanges(ctx context.Context) ([]models.MapPointChange, error)
 
 	// --- FAQ (public read, moderator/admin write — enforced at the
 	// handler layer, same as the other moderation actions) ---

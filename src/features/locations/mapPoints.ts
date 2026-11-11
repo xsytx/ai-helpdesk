@@ -74,7 +74,7 @@ interface ApiMapPoint extends MapPointDraft {
 
 const toPoint = (p: ApiMapPoint): MapPoint => ({ ...p, id: String(p.id) });
 
-export const mapPointKeys = { all: ["map-points"] as const };
+export const mapPointKeys = { all: ["map-points"] as const, changes: ["map-points", "changes"] as const };
 
 /** Every point; refetched on each visit, so students see an admin's change. */
 export function useMapPoints() {
@@ -104,6 +104,32 @@ export function useSaveMapPoint() {
         old ? (old.some((p) => p.id === saved.id) ? old.map((p) => (p.id === saved.id ? saved : p)) : [...old, saved]) : old,
       ),
     onSettled: () => qc.invalidateQueries({ queryKey: mapPointKeys.all }),
+  });
+}
+
+/** One entry of the editor's change log: the point before (null = it was new) and after (null = deleted). */
+export interface MapPointChange {
+  id: string;
+  pointId: string;
+  action: "create" | "update" | "delete";
+  userName: string;
+  before: MapPointDraft | null;
+  after: MapPointDraft | null;
+  createdAt: string;
+}
+
+export function useMapChanges() {
+  return useQuery({
+    queryKey: mapPointKeys.changes,
+    queryFn: async () => {
+      const { data } = await apiClient.get<{
+        changes: { id: number; point_id: number; action: MapPointChange["action"]; user_name: string; before: MapPointDraft | null; after: MapPointDraft | null; created_at: string }[];
+      }>("/admin/map/changes");
+      return data.changes.map((c): MapPointChange => ({
+        id: String(c.id), pointId: String(c.point_id), action: c.action, userName: c.user_name,
+        before: c.before, after: c.after, createdAt: c.created_at,
+      }));
+    },
   });
 }
 

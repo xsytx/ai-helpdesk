@@ -78,6 +78,19 @@ func writeMapPointErr(w http.ResponseWriter, err error) {
 	writeStoreErr(w, err, "could not save the point")
 }
 
+// ListMapPointChanges: GET /api/admin/map/changes (the editor's recent changes, for undo).
+func (h *Handlers) ListMapPointChanges(w http.ResponseWriter, r *http.Request) {
+	if _, ok := h.mapAdmin(w, r); !ok {
+		return
+	}
+	changes, err := h.Store.ListMapPointChanges(r.Context())
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "could not load the changes")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"changes": changes})
+}
+
 // CreateMapPoint: POST /api/admin/map/points.
 func (h *Handlers) CreateMapPoint(w http.ResponseWriter, r *http.Request) {
 	uid, ok := h.mapAdmin(w, r)
@@ -123,7 +136,8 @@ func (h *Handlers) UpdateMapPoint(w http.ResponseWriter, r *http.Request) {
 
 // DeleteMapPoint: DELETE /api/admin/map/points/{id}.
 func (h *Handlers) DeleteMapPoint(w http.ResponseWriter, r *http.Request) {
-	if _, ok := h.mapAdmin(w, r); !ok {
+	uid, ok := h.mapAdmin(w, r)
+	if !ok {
 		return
 	}
 	id, err := pathInt64(r, "id")
@@ -131,7 +145,7 @@ func (h *Handlers) DeleteMapPoint(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid point id")
 		return
 	}
-	if err := h.Store.DeleteMapPoint(r.Context(), id); err != nil {
+	if err := h.Store.DeleteMapPoint(r.Context(), id, uid); err != nil {
 		writeStoreErr(w, err, "could not delete the point")
 		return
 	}

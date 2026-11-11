@@ -2,7 +2,15 @@
 // route or position; admins mark reports fixed or rejected (Sprint 5).
 import { apiClient } from "@/shared/api/client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { MapFloor } from "./mapPoints";
 import type { Entrance } from "./places";
+
+/** A spot on a floor plan, in plan pixels ("it's actually here"). */
+export interface MapSpot {
+  floor: MapFloor;
+  x: number;
+  y: number;
+}
 
 export type LocationReportStatus = "open" | "fixed" | "rejected";
 
@@ -16,6 +24,8 @@ export interface LocationReport {
   text: string;
   status: LocationReportStatus;
   createdAt: string;
+  /** Where the student says it really is, if they tapped the plan. */
+  suggested?: MapSpot;
 }
 
 interface ApiLocationReport {
@@ -27,6 +37,7 @@ interface ApiLocationReport {
   text: string;
   status: LocationReportStatus;
   created_at: string;
+  suggested?: MapSpot | null;
 }
 
 const toReport = (r: ApiLocationReport): LocationReport => ({
@@ -38,6 +49,7 @@ const toReport = (r: ApiLocationReport): LocationReport => ({
   text: r.text,
   status: r.status,
   createdAt: r.created_at,
+  suggested: r.suggested ?? undefined,
 });
 
 const locationReportKeys = {
@@ -47,21 +59,25 @@ const locationReportKeys = {
 
 export function useReportLocation() {
   return useMutation({
-    mutationFn: async (input: { placeCode: string; placeName: string; entrance: Entrance; text: string }) => {
+    mutationFn: async (input: { placeCode: string; placeName: string; entrance: Entrance; text: string; suggested?: MapSpot }) => {
       const { data } = await apiClient.post<ApiLocationReport>("/location-reports", {
         place_code: input.placeCode,
         place_name: input.placeName,
         entrance: input.entrance,
         text: input.text,
+        ...(input.suggested ? { suggested: input.suggested } : {}),
       });
       return toReport(data);
     },
   });
 }
 
-export function useLocationReports(status: LocationReportStatus) {
+export function useLocationReports(status: LocationReportStatus, enabled = true) {
   return useQuery({
     queryKey: locationReportKeys.list(status),
+    enabled,
+    // The admin tab badge and the editor's red marks stay current.
+    refetchInterval: 30_000,
     queryFn: async () => {
       const { data } = await apiClient.get<{ reports: ApiLocationReport[] }>("/admin/location-reports", { params: { status } });
       return data.reports.map(toReport);

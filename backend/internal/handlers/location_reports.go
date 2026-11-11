@@ -8,6 +8,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"campus-forum/internal/models"
 	"campus-forum/internal/store"
 )
 
@@ -27,6 +28,8 @@ type locationReportReq struct {
 	PlaceName string `json:"place_name"`
 	Entrance  string `json:"entrance"`
 	Text      string `json:"text"`
+	// Optional: where the student says it really is on the floor plan.
+	Suggested *models.MapSpot `json:"suggested"`
 }
 
 // CreateLocationReport lets a student say a place's directions or position are wrong.
@@ -60,8 +63,12 @@ func (h *Handlers) CreateLocationReport(w http.ResponseWriter, r *http.Request) 
 	case utf8.RuneCountInString(text) > locationReportMaxRunes:
 		writeError(w, http.StatusBadRequest, "the report is too long")
 		return
+	case req.Suggested != nil && (!slices.Contains(store.MapFloors, req.Suggested.Floor) ||
+		req.Suggested.X < 0 || req.Suggested.X > mapMaxX || req.Suggested.Y < 0 || req.Suggested.Y > mapMaxY):
+		writeError(w, http.StatusBadRequest, "the suggested spot is outside the plan")
+		return
 	}
-	rep, err := h.Store.CreateLocationReport(r.Context(), uid, code, name, req.Entrance, text)
+	rep, err := h.Store.CreateLocationReport(r.Context(), uid, code, name, req.Entrance, text, req.Suggested)
 	if errors.Is(err, store.ErrConflict) {
 		writeError(w, http.StatusConflict, "you already reported this place")
 		return

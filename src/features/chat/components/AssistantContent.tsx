@@ -1,4 +1,5 @@
 import type { UiChatMessage } from "@/features/chat/api";
+import { MapLinks } from "@/features/locations/components/MapLinks";
 import { useLocale } from "@/i18n/LocaleContext";
 import { RichText } from "@/shared/ui/RichText";
 import { CheckCircle2, ShieldCheck, ThumbsUp, Users, Zap } from "lucide-react";
@@ -51,8 +52,23 @@ function TrustBadges({ msg }: { msg: UiChatMessage }) {
   );
 }
 
-/** The inside of an assistant's bubble, by what kind of answer it is. */
-export function AssistantContent({ msg }: { msg: UiChatMessage & { onRetry?: () => void } }) {
+/**
+ * The inside of an assistant's bubble, by what kind of answer it is, and
+ * "Show on map" buttons when the student's question asked where a room or a
+ * place is (question = the question it answers; none = no buttons).
+ */
+export function AssistantContent({ msg, question }: { msg: UiChatMessage & { onRetry?: () => void }; question?: string }) {
+  const body = <AssistantBody msg={msg} />;
+  if (!question || msg.error) return body;
+  return (
+    <>
+      {body}
+      <MapLinks text={question} />
+    </>
+  );
+}
+
+function AssistantBody({ msg }: { msg: UiChatMessage & { onRetry?: () => void } }) {
   const { t } = useLocale();
 
   if (msg.error) {

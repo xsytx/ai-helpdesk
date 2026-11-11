@@ -315,8 +315,27 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   click to edit, drag to move (saved on drop), add, delete, find by code;
   open "Report a mistake" reports are red rings on their points, with Show /
   Mark fixed / Reject. Students refetch the points on every visit. The
-  overview scheme with routes (`CampusScheme`) is still drawn from
-  `places.ts`. Point names are one language (as entered).
+  overview scheme with routes (`CampusScheme`, titled "Route from the
+  entrance") is still drawn from `places.ts`; the floor plan is "Exact spot".
+  Point names are one language (as entered).
+- **Map extras (`020_map_extras.sql`).** Students: tap any pin to see what it
+  is, "Nearest toilet / stairs" (closest point of that type on the floor),
+  "Copy link" to a room or place, and in "Report a mistake" an optional tap
+  on the plan = the right spot (`location_reports.suggested_floor/x/y`,
+  `suggested` in the API). Editor: a new point can be dragged before it is
+  saved; after saving, "add next" offers the next code (F201 → F202); arrow
+  keys nudge the selected point (Shift = 10 px, saved after 0.5 s); Esc stops
+  adding; in add mode a click on an existing point places the new one there
+  (never selects/renames the old one); "Apply spot" moves the point to the
+  student's spot (or creates it) and marks the report fixed. Every create /
+  update / delete is logged in `map_point_changes` (before/after JSON;
+  `GET /api/admin/map/changes`) and "Recent changes" can undo any entry.
+  Admin tabs "Map reports" / "Map editor" show the open report count.
+- **"Show on map" in the AI chat (`features/locations/mapLinks.ts`, `MapLinks`).**
+  Under an answer, buttons for room codes in the question (F205, "F 205")
+  and, when the question asks where something is ("where", "где", "қайда"…),
+  places by name or alias (one place per alias word; Bochka A–D by letter).
+  Matched in the browser; the model is not involved.
 - **Auto-refresh.** React Query polling: feed 15 s, thread 10 s (1.5 s while
   a post is `checking`), admin queue 5 s, admin badge 10 s; paused in
   background tabs; never refetches over a like that is still saving.
@@ -333,7 +352,7 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
 - **Every public SQL read must hide held posts**: use `threadVisible` /
   `commentVisible` in `backend/internal/store/postgres.go`.
 - **Schema changes** are idempotent SQL applied on every start
-  (`001_init.sql` + `003_chat.sql` + `004_faq.sql` + `005_search.sql` + `006_chat_feedback.sql` + `007_forum_extras.sql` + `008_reputation.sql` + `009_profiles.sql` + `010_tags.sql` + `011_forum_answers.sql` + `012_chat_followups.sql` + `013_chat_trust_share.sql` + `014_edits.sql` + `015_saved_restrict.sql` + `016_notification_events.sql` + `017_chat_source_comment.sql` + `018_location_reports.sql` + `019_map_points.sql` in `Migrate`, `002_moderation.sql` in
+  (`001_init.sql` + `003_chat.sql` + `004_faq.sql` + `005_search.sql` + `006_chat_feedback.sql` + `007_forum_extras.sql` + `008_reputation.sql` + `009_profiles.sql` + `010_tags.sql` + `011_forum_answers.sql` + `012_chat_followups.sql` + `013_chat_trust_share.sql` + `014_edits.sql` + `015_saved_restrict.sql` + `016_notification_events.sql` + `017_chat_source_comment.sql` + `018_location_reports.sql` + `019_map_points.sql` + `020_map_extras.sql` in `Migrate`, `002_moderation.sql` in
   `MigrateModeration`): `CREATE ... IF NOT EXISTS` /
   `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`.
 - **Store interface**: adding a method to `store.Store` also needs a stub on

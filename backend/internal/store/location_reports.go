@@ -20,12 +20,17 @@ var LocationReportStatuses = []string{"open", "fixed", "rejected"}
 const maxLocationReports = 200
 
 const locationReportColumns = `r.id, r.user_id, COALESCE(u.display_name, ''), r.place_code, r.place_name,
-	r.entrance, r.text, r.status, r.created_at, r.resolved_at`
+	r.entrance, r.text, r.status, r.created_at, r.resolved_at, r.suggested_floor, r.suggested_x, r.suggested_y`
 
 func scanLocationReport(row pgx.Row) (models.LocationReport, error) {
 	var lr models.LocationReport
+	var floor string
+	var x, y *int
 	err := row.Scan(&lr.ID, &lr.UserID, &lr.ReporterName, &lr.PlaceCode, &lr.PlaceName,
-		&lr.Entrance, &lr.Text, &lr.Status, &lr.CreatedAt, &lr.ResolvedAt)
+		&lr.Entrance, &lr.Text, &lr.Status, &lr.CreatedAt, &lr.ResolvedAt, &floor, &x, &y)
+	if err == nil && floor != "" && x != nil && y != nil {
+		lr.Suggested = &models.MapSpot{Floor: floor, X: *x, Y: *y}
+	}
 	switch {
 	case errors.Is(err, pgx.ErrNoRows):
 		return lr, ErrNotFound
@@ -37,15 +42,20 @@ func scanLocationReport(row pgx.Row) (models.LocationReport, error) {
 
 // CreateLocationReport files a student's report about a place's directions.
 // ErrConflict if they already have an open report about that place.
-func (s *PostgresStore) CreateLocationReport(ctx context.Context, userID int64, placeCode, placeName, entrance, text string) (models.LocationReport, error) {
+func (s *PostgresStore) CreateLocationReport(ctx context.Context, userID int64, placeCode, placeName, entrance, text string, suggested *models.MapSpot) (models.LocationReport, error) {
+	floor := ""
+	var x, y *int
+	if suggested != nil {
+		floor, x, y = suggested.Floor, &suggested.X, &suggested.Y
+	}
 	return scanLocationReport(s.pool.QueryRow(ctx,
 		`WITH r AS (
-		     INSERT INTO location_reports (user_id, place_code, place_name, entrance, text)
-		     VALUES ($1, $2, $3, $4, $5)
+		     INSERT INTO location_reports (user_id, place_code, place_name, entrance, text, suggested_floor, suggested_x, suggested_y)
+		     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		     RETURNING *
 		 )
 		 SELECT `+locationReportColumns+` FROM r LEFT JOIN users u ON u.id = r.user_id`,
-		userID, placeCode, placeName, entrance, text))
+		userID, placeCode, placeName, entrance, text, floor, x, y))
 }
 
 // ListLocationReports returns reports with the given status ("" = all), newest first.

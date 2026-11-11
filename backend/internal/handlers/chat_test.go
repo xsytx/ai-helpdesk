@@ -132,7 +132,7 @@ func (s *chatTestStore) ListReports(context.Context, string, int, int) ([]models
 	return nil, 0, nil
 }
 func (s *chatTestStore) ResolveReport(context.Context, int64) error { return nil }
-func (s *chatTestStore) CreateLocationReport(context.Context, int64, string, string, string, string) (models.LocationReport, error) {
+func (s *chatTestStore) CreateLocationReport(context.Context, int64, string, string, string, string, *models.MapSpot) (models.LocationReport, error) {
 	return models.LocationReport{}, nil
 }
 func (s *chatTestStore) ListLocationReports(context.Context, string) ([]models.LocationReport, error) {
@@ -148,7 +148,10 @@ func (s *chatTestStore) CreateMapPoint(context.Context, models.MapPointInput, in
 func (s *chatTestStore) UpdateMapPoint(context.Context, int64, models.MapPointInput, int64) (models.MapPoint, error) {
 	return models.MapPoint{}, nil
 }
-func (s *chatTestStore) DeleteMapPoint(context.Context, int64) error { return nil }
+func (s *chatTestStore) DeleteMapPoint(context.Context, int64, int64) error { return nil }
+func (s *chatTestStore) ListMapPointChanges(context.Context) ([]models.MapPointChange, error) {
+	return nil, nil
+}
 func (s *chatTestStore) ListFAQs(context.Context) ([]models.FAQ, error) {
 	return nil, nil
 }

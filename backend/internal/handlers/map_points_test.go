@@ -21,6 +21,7 @@ func newMapPointsEnv(t *testing.T) *modEnv {
 	mux.Handle("POST /api/admin/map/points", authMw(http.HandlerFunc(e.h.CreateMapPoint)))
 	mux.Handle("PUT /api/admin/map/points/{id}", authMw(http.HandlerFunc(e.h.UpdateMapPoint)))
 	mux.Handle("DELETE /api/admin/map/points/{id}", authMw(http.HandlerFunc(e.h.DeleteMapPoint)))
+	mux.Handle("GET /api/admin/map/changes", authMw(http.HandlerFunc(e.h.ListMapPointChanges)))
 	e.srv.Close()
 	e.srv = httptest.NewServer(mux)
 	t.Cleanup(e.srv.Close)
@@ -92,5 +93,64 @@ func TestMapPoints(t *testing.T) {
 	}
 	if code, _ := e.call(admin, http.MethodDelete, fmt.Sprintf("/api/admin/map/points/%v", id), nil); code != http.StatusNotFound {
 		t.Fatalf("delete again: %d, want 404", code)
+	}
+
+	// The change log has the point's create, update and delete, newest first,
+	// with the point before and after (for undo). Students can't read it.
+	if code, _ := e.call(student, http.MethodGet, "/api/admin/map/changes", nil); code != http.StatusForbidden {
+		t.Fatalf("a student reading the change log: %d, want 403", code)
+	}
+	code, log := e.call(admin, http.MethodGet, "/api/admin/map/changes", nil)
+	if code != http.StatusOK {
+		t.Fatalf("change log: %d %v", code, log)
+	}
+	var actions []string
+	for _, c := range log["changes"].([]any) {
+		m := c.(map[string]any)
+		if m["point_id"] == id {
+			actions = append(actions, m["action"].(string))
+			switch m["action"] {
+			case "update":
+				before, after := m["before"].(map[string]any), m["after"].(map[string]any)
+				if before["x"] != float64(1200) || after["x"] != float64(1300) {
+					t.Fatalf("update entry before/after: %v → %v", before, after)
+				}
+			case "delete":
+				if m["after"] != nil || m["before"] == nil {
+					t.Fatalf("delete entry: %v", m)
+				}
+			case "create":
+				if m["before"] != nil || m["after"] == nil {
+					t.Fatalf("create entry: %v", m)
+				}
+			}
+		}
+	}
+	if fmt.Sprint(actions) != "[delete update create]" {
+		t.Fatalf("logged actions %v, want [delete update create]", actions)
+	}
+}
+
+func TestLocationReportSuggestedSpot(t *testing.T) {
+	e := newLocationReportEnv(t)
+	student := e.user("user")
+	body := map[string]any{"place_code": "F205", "text": "The room is on the other side", "suggested": map[string]any{"floor": "2", "x": 2500, "y": 600}}
+	code, rep := e.call(student, http.MethodPost, "/api/location-reports", body)
+	spot, _ := rep["suggested"].(map[string]any)
+	if code != http.StatusCreated || spot == nil || spot["floor"] != "2" || spot["x"] != float64(2500) {
+		t.Fatalf("report with a spot: %d %v", code, rep)
+	}
+	code, rep = e.call(student, http.MethodPost, "/api/location-reports", map[string]any{"place_code": "F206", "text": "No spot this time"})
+	if code != http.StatusCreated || rep["suggested"] != nil {
+		t.Fatalf("report without a spot: %d %v", code, rep)
+	}
+	for _, bad := range []map[string]any{
+		{"floor": "7", "x": 10, "y": 10},
+		{"floor": "1", "x": -1, "y": 10},
+		{"floor": "1", "x": 10, "y": 99999},
+	} {
+		if code, _ := e.call(student, http.MethodPost, "/api/location-reports", map[string]any{"place_code": "F207", "text": "Wrong place here", "suggested": bad}); code != http.StatusBadRequest {
+			t.Fatalf("bad spot %v: %d, want 400", bad, code)
+		}
 	}
 }
