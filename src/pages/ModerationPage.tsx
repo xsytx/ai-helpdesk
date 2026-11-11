@@ -15,6 +15,7 @@ import { FaqEditor } from "@/features/faq/components/FaqEditor";
 import { ChatInsightsSection } from "@/features/chat/components/ChatInsightsSection";
 import { ReportsSection } from "@/features/moderation/components/ReportsSection";
 import { LocationReportsSection } from "@/features/locations/components/LocationReportsSection";
+import { MapEditorSection } from "@/features/locations/components/MapEditorSection";
 import { useReports } from "@/features/moderation/reports";
 import type { FaqDraft } from "@/features/faq/api";
 import { useLocale } from "@/i18n/LocaleContext";
@@ -154,6 +155,7 @@ const SECTIONS = [
   { id: "chat", key: "adminSectionChat" },
   { id: "restrictions", key: "adminSectionRestrictions" },
   { id: "map-reports", key: "adminSectionMapReports" },
+  { id: "map-editor", key: "adminSectionMapEditor" },
 ] as const;
 
 type SectionId = (typeof SECTIONS)[number]["id"];
@@ -174,7 +176,7 @@ export function ModerationPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-4">
+    <div className={cn("mx-auto space-y-4", section === "map-editor" ? "max-w-6xl" : "max-w-3xl")}>
       <h1 className="text-xl font-bold text-primary">{t("adminPanel")}</h1>
       <nav className="flex gap-1 border-b border-border/60" aria-label={t("adminPanel")}>
         {SECTIONS.map((s) => (
@@ -203,6 +205,8 @@ export function ModerationPage() {
         <ReportsSection />
       ) : section === "map-reports" ? (
         <LocationReportsSection />
+      ) : section === "map-editor" ? (
+        <MapEditorSection />
       ) : section === "restrictions" ? (
         <RestrictionsSection />
       ) : section === "chat" ? (

@@ -1,0 +1,947 @@
+[
+{
+"code": "C104",
+"name": "",
+"type": "room",
+"floor": "1",
+"x": 585,
+"y": 1343,
+"place": ""
+},
+{
+"code": "C106",
+"name": "",
+"type": "room",
+"floor": "1",
+"x": 845,
+"y": 1367,
+"place": ""
+},
+{
+"code": "D101",
+"name": "",
+"type": "room",
+"floor": "1",
+"x": 1192,
+"y": 834,
+"place": ""
+},
+{
+"code": "D102",
+"name": "",
+"type": "room",
+"floor": "1",
+"x": 1196,
+"y": 752,
+"place": ""
+},
+{
+"code": "D103",
+"name": "",
+"type": "room",
+"floor": "1",
+"x": 1199,
+"y": 667,
+"place": ""
+},
+{
+"code": "D104",
+"name": "",
+"type": "room",
+"floor": "1",
+"x": 1193,
+"y": 577,
+"place": ""
+},
+{
+"code": "D105",
+"name": "",
+"type": "room",
+"floor": "1",
+"x": 1195,
+"y": 493,
+"place": ""
+},
+{
+"code": "D107",
+"name": "",
+"type": "room",
+"floor": "1",
+"x": 1370,
+"y": 638,
+"place": ""
+},
+{
+"code": "D108",
+"name": "",
+"type": "room",
+"floor": "1",
+"x": 1386,
+"y": 783,
+"place": ""
+},
+{
+"code": "D113",
+"name": "Lecture hall “Bochka C” (1st floor entrance)",
+"type": "room",
+"floor": "1",
+"x": 1660,
+"y": 1290,
+"place": "HALL_C"
+},
+{
+"code": "D116",
+"name": "Lecture hall “Bochka B” (1st floor entrance)",
+"type": "room",
+"floor": "1",
+"x": 1360,
+"y": 1194,
+"place": "HALL_B"
+},
+{
+"code": "D117",
+"name": "Lecture hall “Bochka A” (1st floor entrance)",
+"type": "room",
+"floor": "1",
+"x": 1180,
+"y": 1290,
+"place": "HALL_A"
+},
+{
+"code": "E101",
+"name": "",
+"type": "room",
+"floor": "1",
+"x": 1831,
+"y": 833,
+"place": ""
+},
+{
+"code": "E102",
+"name": "",
+"type": "room",
+"floor": "1",
+"x": 1834,
+"y": 745,
+"place": ""
+},
+{
+"code": "E103",
+"name": "",
+"type": "room",
+"floor": "1",
+"x": 1832,
+"y": 664,
+"place": ""
+},
+{
+"code": "E104",
+"name": "",
+"type": "room",
+"floor": "1",
+"x": 1835,
+"y": 578,
+"place": ""
+},
+{
+"code": "E105",
+"name": "",
+"type": "room",
+"floor": "1",
+"x": 1837,
+"y": 490,
+"place": ""
+},
+{
+"code": "E117",
+"name": "Lecture hall “Bochka D” (1st floor entrance)",
+"type": "room",
+"floor": "1",
+"x": 1952,
+"y": 1184,
+"place": "HALL_D"
+},
+{
+"code": "F101",
+"name": "",
+"type": "room",
+"floor": "1",
+"x": 2414,
+"y": 821,
+"place": ""
+},
+{
+"code": "F102",
+"name": "",
+"type": "room",
+"floor": "1",
+"x": 2422,
+"y": 741,
+"place": ""
+},
+{
+"code": "F103",
+"name": "",
+"type": "room",
+"floor": "1",
+"x": 2423,
+"y": 652,
+"place": ""
+},
+{
+"code": "F104",
+"name": "",
+"type": "room",
+"floor": "1",
+"x": 2422,
+"y": 564,
+"place": ""
+},
+{
+"code": "F105",
+"name": "",
+"type": "room",
+"floor": "1",
+"x": 2420,
+"y": 474,
+"place": ""
+},
+{
+"code": "F107",
+"name": "",
+"type": "room",
+"floor": "1",
+"x": 2610,
+"y": 619,
+"place": ""
+},
+{
+"code": "F108",
+"name": "",
+"type": "room",
+"floor": "1",
+"x": 2623,
+"y": 748,
+"place": ""
+},
+{
+"code": "F109",
+"name": "",
+"type": "room",
+"floor": "1",
+"x": 2761,
+"y": 956,
+"place": ""
+},
+{
+"code": "G101",
+"name": "",
+"type": "room",
+"floor": "1",
+"x": 3087,
+"y": 826,
+"place": ""
+},
+{
+"code": "G102",
+"name": "",
+"type": "room",
+"floor": "1",
+"x": 3079,
+"y": 738,
+"place": ""
+},
+{
+"code": "G103",
+"name": "",
+"type": "room",
+"floor": "1",
+"x": 3076,
+"y": 651,
+"place": ""
+},
+{
+"code": "G104",
+"name": "",
+"type": "room",
+"floor": "1",
+"x": 3075,
+"y": 565,
+"place": ""
+},
+{
+"code": "G105",
+"name": "",
+"type": "room",
+"floor": "1",
+"x": 3083,
+"y": 484,
+"place": ""
+},
+{
+"code": "G107",
+"name": "",
+"type": "room",
+"floor": "1",
+"x": 3261,
+"y": 610,
+"place": ""
+},
+{
+"code": "G108",
+"name": "",
+"type": "room",
+"floor": "1",
+"x": 3277,
+"y": 758,
+"place": ""
+},
+{
+"code": "H101",
+"name": "",
+"type": "room",
+"floor": "1",
+"x": 3734,
+"y": 781,
+"place": ""
+},
+{
+"code": "H102",
+"name": "",
+"type": "room",
+"floor": "1",
+"x": 3733,
+"y": 618,
+"place": ""
+},
+{
+"code": "H103",
+"name": "",
+"type": "room",
+"floor": "1",
+"x": 3732,
+"y": 476,
+"place": ""
+},
+{
+"code": "H104",
+"name": "",
+"type": "room",
+"floor": "1",
+"x": 3921,
+"y": 613,
+"place": ""
+},
+{
+"code": "H105",
+"name": "",
+"type": "room",
+"floor": "1",
+"x": 3938,
+"y": 776,
+"place": ""
+},
+{
+"code": "I101",
+"name": "",
+"type": "room",
+"floor": "1",
+"x": 4381,
+"y": 783,
+"place": ""
+},
+{
+"code": "I102",
+"name": "",
+"type": "room",
+"floor": "1",
+"x": 4374,
+"y": 610,
+"place": ""
+},
+{
+"code": "I103",
+"name": "",
+"type": "room",
+"floor": "1",
+"x": 4375,
+"y": 469,
+"place": ""
+},
+{
+"code": "I104",
+"name": "",
+"type": "room",
+"floor": "1",
+"x": 4558,
+"y": 610,
+"place": ""
+},
+{
+"code": "I105",
+"name": "",
+"type": "room",
+"floor": "1",
+"x": 4575,
+"y": 784,
+"place": ""
+},
+{
+"code": "I110/111",
+"name": "",
+"type": "room",
+"floor": "1",
+"x": 4479,
+"y": 1309,
+"place": ""
+},
+{
+"code": "I112",
+"name": "",
+"type": "room",
+"floor": "1",
+"x": 4238,
+"y": 1304,
+"place": ""
+},
+{
+"code": "I113",
+"name": "",
+"type": "room",
+"floor": "1",
+"x": 4198,
+"y": 950,
+"place": ""
+},
+{
+"code": "",
+"name": "",
+"type": "entrance",
+"floor": "1",
+"x": 135,
+"y": 683,
+"place": ""
+},
+{
+"code": "",
+"name": "Library stairs",
+"type": "stairs",
+"floor": "1",
+"x": 320,
+"y": 577,
+"place": ""
+},
+{
+"code": "",
+"name": "Library conference room",
+"type": "library",
+"floor": "1",
+"x": 374,
+"y": 920,
+"place": "LIBRARY"
+},
+{
+"code": "",
+"name": "Library group study room 1",
+"type": "library",
+"floor": "1",
+"x": 409,
+"y": 833,
+"place": "LIBRARY"
+},
+{
+"code": "",
+"name": "Library group study room 2",
+"type": "library",
+"floor": "1",
+"x": 411,
+"y": 868,
+"place": "LIBRARY"
+},
+{
+"code": "",
+"name": "Wi-Fi zone",
+"type": "wifi",
+"floor": "1",
+"x": 620,
+"y": 1168,
+"place": ""
+},
+{
+"code": "",
+"name": "Cloakroom",
+"type": "service",
+"floor": "1",
+"x": 756,
+"y": 1468,
+"place": ""
+},
+{
+"code": "",
+"name": "",
+"type": "stairs",
+"floor": "1",
+"x": 890,
+"y": 1087,
+"place": ""
+},
+{
+"code": "",
+"name": "SDU Store",
+"type": "shop",
+"floor": "1",
+"x": 1067,
+"y": 939,
+"place": ""
+},
+{
+"code": "",
+"name": "",
+"type": "stairs",
+"floor": "1",
+"x": 1105,
+"y": 1021,
+"place": ""
+},
+{
+"code": "",
+"name": "",
+"type": "toilet",
+"floor": "1",
+"x": 1200,
+"y": 933,
+"place": ""
+},
+{
+"code": "",
+"name": "",
+"type": "stairs",
+"floor": "1",
+"x": 1348,
+"y": 495,
+"place": ""
+},
+{
+"code": "",
+"name": "Staff toilet",
+"type": "staff_toilet",
+"floor": "1",
+"x": 1420,
+"y": 950,
+"place": ""
+},
+{
+"code": "",
+"name": "Advising desk",
+"type": "service",
+"floor": "1",
+"x": 1498,
+"y": 1216,
+"place": ""
+},
+{
+"code": "",
+"name": "Student Service Center (SSC)",
+"type": "service",
+"floor": "1",
+"x": 1566,
+"y": 986,
+"place": "SSC"
+},
+{
+"code": "",
+"name": "",
+"type": "stairs",
+"floor": "1",
+"x": 1602,
+"y": 1108,
+"place": ""
+},
+{
+"code": "",
+"name": "",
+"type": "entrance",
+"floor": "1",
+"x": 1718,
+"y": 917,
+"place": ""
+},
+{
+"code": "",
+"name": "",
+"type": "stairs",
+"floor": "1",
+"x": 1814,
+"y": 1259,
+"place": ""
+},
+{
+"code": "",
+"name": "",
+"type": "toilet",
+"floor": "1",
+"x": 1839,
+"y": 939,
+"place": ""
+},
+{
+"code": "",
+"name": "",
+"type": "stairs",
+"floor": "1",
+"x": 1985,
+"y": 493,
+"place": ""
+},
+{
+"code": "",
+"name": "Staff toilet",
+"type": "staff_toilet",
+"floor": "1",
+"x": 2064,
+"y": 950,
+"place": ""
+},
+{
+"code": "",
+"name": "Red Coffee",
+"type": "cafe",
+"floor": "1",
+"x": 2366,
+"y": 1101,
+"place": "RED_COFFEE"
+},
+{
+"code": "",
+"name": "",
+"type": "entrance",
+"floor": "1",
+"x": 2405,
+"y": 1456,
+"place": ""
+},
+{
+"code": "",
+"name": "",
+"type": "toilet",
+"floor": "1",
+"x": 2428,
+"y": 927,
+"place": ""
+},
+{
+"code": "",
+"name": "Canteen",
+"type": "canteen",
+"floor": "1",
+"x": 2431,
+"y": 1263,
+"place": "RED_CANTEEN"
+},
+{
+"code": "",
+"name": "",
+"type": "stairs",
+"floor": "1",
+"x": 2578,
+"y": 479,
+"place": ""
+},
+{
+"code": "",
+"name": "SDU FoodPoint",
+"type": "canteen",
+"floor": "1",
+"x": 2592,
+"y": 1417,
+"place": "FOODPOINT"
+},
+{
+"code": "",
+"name": "SDU FoodPoint",
+"type": "canteen",
+"floor": "1",
+"x": 2592,
+"y": 1169,
+"place": "FOODPOINT"
+},
+{
+"code": "",
+"name": "Staff toilet",
+"type": "staff_toilet",
+"floor": "1",
+"x": 2660,
+"y": 944,
+"place": ""
+},
+{
+"code": "",
+"name": "Minimarket",
+"type": "shop",
+"floor": "1",
+"x": 2784,
+"y": 1160,
+"place": ""
+},
+{
+"code": "",
+"name": "Canteen",
+"type": "canteen",
+"floor": "1",
+"x": 2784,
+"y": 1451,
+"place": "RED_CANTEEN"
+},
+{
+"code": "",
+"name": "",
+"type": "stairs",
+"floor": "1",
+"x": 2895,
+"y": 1252,
+"place": ""
+},
+{
+"code": "",
+"name": "",
+"type": "entrance",
+"floor": "1",
+"x": 2962,
+"y": 912,
+"place": ""
+},
+{
+"code": "",
+"name": "",
+"type": "stairs",
+"floor": "1",
+"x": 3059,
+"y": 1017,
+"place": ""
+},
+{
+"code": "",
+"name": "",
+"type": "toilet",
+"floor": "1",
+"x": 3085,
+"y": 921,
+"place": ""
+},
+{
+"code": "",
+"name": "",
+"type": "entrance",
+"floor": "1",
+"x": 3116,
+"y": 1559,
+"place": ""
+},
+{
+"code": "",
+"name": "Mini Red Hall",
+"type": "hall",
+"floor": "1",
+"x": 3158,
+"y": 1417,
+"place": ""
+},
+{
+"code": "",
+"name": "Biology lab",
+"type": "lab",
+"floor": "1",
+"x": 3217,
+"y": 1330,
+"place": ""
+},
+{
+"code": "",
+"name": "",
+"type": "stairs",
+"floor": "1",
+"x": 3233,
+"y": 478,
+"place": ""
+},
+{
+"code": "",
+"name": "Staff toilet",
+"type": "staff_toilet",
+"floor": "1",
+"x": 3309,
+"y": 942,
+"place": ""
+},
+{
+"code": "",
+"name": "Chemistry lab",
+"type": "lab",
+"floor": "1",
+"x": 3312,
+"y": 1263,
+"place": ""
+},
+{
+"code": "",
+"name": "",
+"type": "stairs",
+"floor": "1",
+"x": 3393,
+"y": 1126,
+"place": ""
+},
+{
+"code": "",
+"name": "Medical center",
+"type": "medical",
+"floor": "1",
+"x": 3413,
+"y": 942,
+"place": "MEDICAL"
+},
+{
+"code": "",
+"name": "Medical center",
+"type": "medical",
+"floor": "1",
+"x": 3523,
+"y": 946,
+"place": "MEDICAL"
+},
+{
+"code": "",
+"name": "",
+"type": "entrance",
+"floor": "1",
+"x": 3608,
+"y": 912,
+"place": ""
+},
+{
+"code": "",
+"name": "",
+"type": "toilet",
+"floor": "1",
+"x": 3740,
+"y": 927,
+"place": ""
+},
+{
+"code": "",
+"name": "",
+"type": "stairs",
+"floor": "1",
+"x": 3891,
+"y": 473,
+"place": ""
+},
+{
+"code": "",
+"name": "",
+"type": "stairs",
+"floor": "1",
+"x": 3905,
+"y": 1035,
+"place": ""
+},
+{
+"code": "",
+"name": "Staff toilet",
+"type": "staff_toilet",
+"floor": "1",
+"x": 3967,
+"y": 939,
+"place": ""
+},
+{
+"code": "",
+"name": "",
+"type": "entrance",
+"floor": "1",
+"x": 4279,
+"y": 911,
+"place": ""
+},
+{
+"code": "",
+"name": "",
+"type": "toilet",
+"floor": "1",
+"x": 4390,
+"y": 928,
+"place": ""
+},
+{
+"code": "",
+"name": "",
+"type": "stairs",
+"floor": "1",
+"x": 4531,
+"y": 482,
+"place": ""
+},
+{
+"code": "",
+"name": "",
+"type": "entrance",
+"floor": "1",
+"x": 4723,
+"y": 1112,
+"place": ""
+},
+{
+"code": "B206",
+"name": "Senate Hall",
+"type": "hall",
+"floor": "2",
+"x": 435,
+"y": 1017,
+"place": ""
+},
+{
+"code": "D214",
+"name": "Lecture hall “Bochka C” (2nd floor entrance)",
+"type": "room",
+"floor": "2",
+"x": 1660,
+"y": 1290,
+"place": "HALL_C"
+},
+{
+"code": "D217",
+"name": "Lecture hall “Bochka B” (2nd floor entrance)",
+"type": "room",
+"floor": "2",
+"x": 1440,
+"y": 1215,
+"place": "HALL_B"
+},
+{
+"code": "D218",
+"name": "Lecture hall “Bochka A” (2nd floor entrance)",
+"type": "room",
+"floor": "2",
+"x": 1180,
+"y": 1290,
+"place": "HALL_A"
+},
+{
+"code": "E221",
+"name": "Lecture hall “Bochka D” (2nd floor entrance)",
+"type": "room",
+"floor": "2",
+"x": 2060,
+"y": 1215,
+"place": "HALL_D"
+},
+{
+"code": "",
+"name": "",
+"type": "stairs",
+"floor": "2",
+"x": 3387,
+"y": 1123,
+"place": ""
+}
+]

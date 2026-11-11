@@ -223,6 +223,32 @@ type LocationReport struct {
 	ResolvedAt   *time.Time `json:"resolved_at,omitempty"`
 }
 
+// MapPoint is a room, stairs, toilet, entrance or service placed on a floor
+// plan image (X, Y in the image's pixels). Place links it to a place of the
+// Maps page ("RED_CANTEEN", "HALL_A"), or is "".
+type MapPoint struct {
+	ID        int64     `json:"id"`
+	Code      string    `json:"code"`
+	Name      string    `json:"name"`
+	Type      string    `json:"type"`
+	Floor     string    `json:"floor"`
+	X         int       `json:"x"`
+	Y         int       `json:"y"`
+	Place     string    `json:"place"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// MapPointInput is what an admin sends to create or change a point (also the seed's format).
+type MapPointInput struct {
+	Code  string `json:"code"`
+	Name  string `json:"name"`
+	Type  string `json:"type"`
+	Floor string `json:"floor"`
+	X     int    `json:"x"`
+	Y     int    `json:"y"`
+	Place string `json:"place"`
+}
+
 // FAQ is one question/answer entry, managed by moderators/admins and
 // shown on the public FAQ page in SortOrder (then ID) order. Question and
 // Answer are the English text; the _kz/_ru fields hold the translations.

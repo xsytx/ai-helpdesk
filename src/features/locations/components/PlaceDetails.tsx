@@ -7,6 +7,7 @@ import { Button } from "@/shared/ui/Button";
 import { Armchair, ArrowUp, BookOpen, Building2, CheckCircle2, Clock, ConciergeBell, DoorOpen, ExternalLink, Flag, Footprints, Info, Lightbulb, UtensilsCrossed } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { useReportLocation } from "../api";
+import { PlaceFloorPlan } from "./PlaceFloorPlan";
 import { TOUR_URL, blockPlace, type Entrance, type Place, type PlaceKind, type RoomCode, type SchemeBlock } from "../places";
 
 export const KIND_ICON: Record<PlaceKind, typeof Building2> = {
@@ -152,6 +153,8 @@ export function PlaceDetails({ target, from, onFrom }: { target: Place | RoomCod
           <p className="mt-1.5 text-xs text-label">{t("mapsTourHint")}</p>
         </div>
       )}
+
+      <PlaceFloorPlan target={target} />
 
       {/* key: a new place starts with a fresh form */}
       <ReportMistake key={room ? room.code : place!.code} placeCode={room ? room.code : place!.code} placeName={title} from={from} />

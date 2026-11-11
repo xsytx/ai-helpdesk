@@ -109,6 +109,12 @@ type Store interface {
 	ListLocationReports(ctx context.Context, status string) ([]models.LocationReport, error)
 	SetLocationReportStatus(ctx context.Context, id int64, status string, by int64) (models.LocationReport, error)
 
+	// Campus map points (floor plans). Create/Update: ErrConflict if the code is taken.
+	ListMapPoints(ctx context.Context) ([]models.MapPoint, error)
+	CreateMapPoint(ctx context.Context, p models.MapPointInput, by int64) (models.MapPoint, error)
+	UpdateMapPoint(ctx context.Context, id int64, p models.MapPointInput, by int64) (models.MapPoint, error)
+	DeleteMapPoint(ctx context.Context, id int64) error
+
 	// --- FAQ (public read, moderator/admin write — enforced at the
 	// handler layer, same as the other moderation actions) ---
 

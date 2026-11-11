@@ -141,6 +141,14 @@ func (s *chatTestStore) ListLocationReports(context.Context, string) ([]models.L
 func (s *chatTestStore) SetLocationReportStatus(context.Context, int64, string, int64) (models.LocationReport, error) {
 	return models.LocationReport{}, nil
 }
+func (s *chatTestStore) ListMapPoints(context.Context) ([]models.MapPoint, error) { return nil, nil }
+func (s *chatTestStore) CreateMapPoint(context.Context, models.MapPointInput, int64) (models.MapPoint, error) {
+	return models.MapPoint{}, nil
+}
+func (s *chatTestStore) UpdateMapPoint(context.Context, int64, models.MapPointInput, int64) (models.MapPoint, error) {
+	return models.MapPoint{}, nil
+}
+func (s *chatTestStore) DeleteMapPoint(context.Context, int64) error { return nil }
 func (s *chatTestStore) ListFAQs(context.Context) ([]models.FAQ, error) {
 	return nil, nil
 }

@@ -299,6 +299,24 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   → `POST /api/location-reports` (one open report per student and place);
   admin panel → "Map reports" (`/admin?section=map-reports`) marks them
   fixed / rejected (`018_location_reports.sql`, `handlers/location_reports.go`).
+- **Floor plans and the map editor (`019_map_points.sql`, `store/map_points.go`,
+  `handlers/map_points.go`, `features/locations/mapPoints.ts`).** Rooms,
+  stairs, toilets, entrances and services are points on the floor-plan images
+  (`public/maps/floor1.png`, `floor2.png`, `floor3.png`; floor `3B` uses
+  floor 3 faded). `x`, `y` are pixels of the image (never resize or crop the
+  images, or every point shifts). The table is filled once from
+  `migrations/map_points_seed.json` (105 points from the prototype editor)
+  while it is empty. `GET /api/map/points` for everyone signed in;
+  `POST/PUT/DELETE /api/admin/map/points[/{id}]` for staff (one point per room
+  code, any letter case). A place's card on the Maps page shows its floor
+  plan with the pin (`PlaceFloorPlan`; matched by room code or the point's
+  `place` = a `places.ts` code; a room not on the plan yet marks its block).
+  Admin panel → "Map editor" (`/admin?section=map-editor`, `MapEditorSection`):
+  click to edit, drag to move (saved on drop), add, delete, find by code;
+  open "Report a mistake" reports are red rings on their points, with Show /
+  Mark fixed / Reject. Students refetch the points on every visit. The
+  overview scheme with routes (`CampusScheme`) is still drawn from
+  `places.ts`. Point names are one language (as entered).
 - **Auto-refresh.** React Query polling: feed 15 s, thread 10 s (1.5 s while
   a post is `checking`), admin queue 5 s, admin badge 10 s; paused in
   background tabs; never refetches over a like that is still saving.
@@ -315,7 +333,7 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
 - **Every public SQL read must hide held posts**: use `threadVisible` /
   `commentVisible` in `backend/internal/store/postgres.go`.
 - **Schema changes** are idempotent SQL applied on every start
-  (`001_init.sql` + `003_chat.sql` + `004_faq.sql` + `005_search.sql` + `006_chat_feedback.sql` + `007_forum_extras.sql` + `008_reputation.sql` + `009_profiles.sql` + `010_tags.sql` + `011_forum_answers.sql` + `012_chat_followups.sql` + `013_chat_trust_share.sql` + `014_edits.sql` + `015_saved_restrict.sql` + `016_notification_events.sql` + `017_chat_source_comment.sql` + `018_location_reports.sql` in `Migrate`, `002_moderation.sql` in
+  (`001_init.sql` + `003_chat.sql` + `004_faq.sql` + `005_search.sql` + `006_chat_feedback.sql` + `007_forum_extras.sql` + `008_reputation.sql` + `009_profiles.sql` + `010_tags.sql` + `011_forum_answers.sql` + `012_chat_followups.sql` + `013_chat_trust_share.sql` + `014_edits.sql` + `015_saved_restrict.sql` + `016_notification_events.sql` + `017_chat_source_comment.sql` + `018_location_reports.sql` + `019_map_points.sql` in `Migrate`, `002_moderation.sql` in
   `MigrateModeration`): `CREATE ... IF NOT EXISTS` /
   `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`.
 - **Store interface**: adding a method to `store.Store` also needs a stub on

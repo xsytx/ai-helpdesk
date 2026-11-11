@@ -98,8 +98,13 @@ func (s *PostgresStore) Migrate(ctx context.Context) error {
 	if _, err := s.pool.Exec(ctx, chatSourceCommentSQL); err != nil {
 		return err
 	}
-	_, err := s.pool.Exec(ctx, locationReportsSQL)
-	return err
+	if _, err := s.pool.Exec(ctx, locationReportsSQL); err != nil {
+		return err
+	}
+	if _, err := s.pool.Exec(ctx, mapPointsSQL); err != nil {
+		return err
+	}
+	return s.seedMapPoints(ctx)
 }
 
 // Close releases the underlying connection pool.
