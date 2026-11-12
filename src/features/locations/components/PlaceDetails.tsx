@@ -11,6 +11,9 @@ import { useReportLocation, type MapSpot } from "../api";
 import { toursFor } from "../tours";
 import { FLOOR_ORDER, floorOfRoom, isRightPart, pointsFor, useMapPoints, type MapFloor } from "../mapPoints";
 import { FloorPlan } from "./FloorPlan";
+import { PlacePhotos } from "./PlacePhotos";
+import { AddPhotoButton, checkPhotos, PhotoThumb } from "@/features/forum/components/Photos";
+import { uploadReportPhoto } from "../photos";
 import { PlaceFloorPlan } from "./PlaceFloorPlan";
 import { ENTRANCE_KEY, ENTRANCE_ORDER, blockPlace, type Entrance, type Place, type PlaceKind, type RoomCode, type SchemeBlock } from "../places";
 
@@ -152,6 +155,9 @@ export function PlaceDetails({ target, from, onFrom }: { target: Place | RoomCod
         </section>
       )}
 
+      {/* key: a new place starts with a fresh "add a photo" */}
+      <PlacePhotos key={room ? room.code : place!.code} target={target} />
+
       {tours.length > 0 && (
         <div>
           <a
@@ -233,12 +239,47 @@ function ReportMistake({ target, placeCode, placeName, from }: { target: Place |
   const matches = !points ? [] : asPlace?.point ? points.filter((p) => p.id === asPlace.point) : pointsFor(points, placeCode, asPlace?.rooms ?? []);
   const [floor, setFloor] = useState<MapFloor>((room ? floorOfRoom(room.floor, room.room) : undefined) ?? matches[0]?.floor ?? "1");
   const tooShort = text.trim().length < 5;
+  // An optional photo, uploaded right after the report is created.
+  const [photo, setPhoto] = useState<File>();
+  const [photoPreview, setPhotoPreview] = useState<string>();
+  const [photoProblem, setPhotoProblem] = useState<TranslationKey>();
+  const [sending, setSending] = useState(false);
+  const [done, setDone] = useState<{ photoFailed: boolean }>();
+  useEffect(() => {
+    if (!photo) return setPhotoPreview(undefined);
+    const url = URL.createObjectURL(photo);
+    setPhotoPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [photo]);
 
-  if (report.isSuccess) {
+  const send = async () => {
+    setSending(true);
+    try {
+      const sent = await report.mutateAsync({ placeCode, placeName, entrance: from, text: text.trim(), suggested: spot });
+      let photoFailed = false;
+      if (photo) {
+        try {
+          await uploadReportPhoto(sent.id, photo);
+        } catch {
+          photoFailed = true;
+        }
+      }
+      setDone({ photoFailed });
+    } catch {
+      // Shown from report.error below.
+    } finally {
+      setSending(false);
+    }
+  };
+
+  if (done) {
     return (
-      <div className="flex items-center gap-3 rounded-xl bg-green-50 px-3 py-2.5 text-sm text-green-700">
-        <Mascot mood="happy" size="sm" />
-        {t("mapsReportThanks")}
+      <div className="space-y-1 rounded-xl bg-green-50 px-3 py-2.5 text-sm text-green-700">
+        <p className="flex items-center gap-3">
+          <Mascot mood="happy" size="sm" />
+          {t("mapsReportThanks")}
+        </p>
+        {done.photoFailed ? <p className="text-error">{t("mapsReportPhotoFailed")}</p> : null}
       </div>
     );
   }
@@ -256,7 +297,7 @@ function ReportMistake({ target, placeCode, placeName, from }: { target: Place |
       className="space-y-2 rounded-2xl border border-border bg-background-2/50 p-3"
       onSubmit={(e) => {
         e.preventDefault();
-        if (!tooShort) report.mutate({ placeCode, placeName, entrance: from, text: text.trim(), suggested: spot });
+        if (!tooShort && !sending) void send();
       }}
     >
       <label htmlFor="map-report" className="block text-sm font-semibold text-primary">{t("mapsReportTitle")}</label>
@@ -316,9 +357,29 @@ function ReportMistake({ target, placeCode, placeName, from }: { target: Place |
           </button>
         )
       ) : null}
+      <div className="space-y-1.5">
+        <p className="text-xs font-semibold text-primary">{t("mapsReportPhoto")}</p>
+        <div className="flex items-center gap-3">
+          {photo && photoPreview ? (
+            <PhotoThumb src={photoPreview} label={photo.name} onRemove={() => setPhoto(undefined)} />
+          ) : (
+            <AddPhotoButton
+              onFiles={(files) => {
+                const { ok, problem } = checkPhotos(files, 1);
+                // Several files picked: the first one is taken.
+                setPhotoProblem(problem === "photoTooMany" ? undefined : problem);
+                if (ok[0]) setPhoto(ok[0]);
+              }}
+            />
+          )}
+          <p className={cn("text-xs", photoProblem ? "text-error" : "text-label")}>
+            {photoProblem ? t(photoProblem) : t("mapsReportPhotoHint")}
+          </p>
+        </div>
+      </div>
       {status === 409 ? <p className="text-sm text-error">{t("mapsReportAlready")}</p> : report.isError ? <p className="text-sm text-error">{t("mapsReportFailed")}</p> : null}
       <div className="flex flex-wrap gap-2">
-        <Button type="submit" size="sm" disabled={tooShort || report.isPending}>{t("mapsReportSend")}</Button>
+        <Button type="submit" size="sm" disabled={tooShort || sending}>{t("mapsReportSend")}</Button>
         <Button type="button" size="sm" variant="ghost" onClick={() => setOpen(false)}>{t("cancel")}</Button>
       </div>
     </form>

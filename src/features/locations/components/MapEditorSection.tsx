@@ -11,7 +11,7 @@ import { getErrorStatus } from "@/shared/api/client";
 import { cn } from "@/shared/lib/cn";
 import { formatRelativeTime } from "@/shared/lib/format";
 import { Button } from "@/shared/ui/Button";
-import { Check, Crosshair, History, MapPin, Plus, Search, Trash2, Undo2, Wand2, X } from "lucide-react";
+import { Check, Crosshair, History, Images, MapPin, Plus, Search, Trash2, Undo2, Wand2, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useLocationReports, useSetLocationReportStatus, type LocationReport } from "../api";
 import {
@@ -21,6 +21,9 @@ import {
 import { PLACES, parseRoomCode } from "../places";
 import { FloorPlan } from "./FloorPlan";
 import { pointIdOf } from "../pointPlaces";
+import { photoCodesOf, photoCodesOfPoint } from "../photos";
+import { PhotoManager, ReportPhoto } from "./PhotoManager";
+import { BulkPhotoUpload, PhotoSuggestions } from "./PhotoBulk";
 
 const placeRooms = (code: string) => PLACES.find((p) => p.code === code)?.rooms ?? [];
 
@@ -62,6 +65,9 @@ export function MapEditorSection() {
   const [query, setQuery] = useState("");
   const [message, setMessage] = useState<{ ok: boolean; text: string }>();
   const [showLog, setShowLog] = useState(false);
+  /** A place of places.ts whose photos are edited while no point is selected. */
+  const [photoPlace, setPhotoPlace] = useState("");
+  const [showBulk, setShowBulk] = useState(false);
 
   const all = useMemo(() => points ?? [], [points]);
   const reportInfo = useMemo(() => reports.map((r) => ({ report: r, ...reportTarget(r, all) })), [reports, all]);
@@ -240,6 +246,13 @@ export function MapEditorSection() {
   if (isPending) return <p className="text-sm text-label">{t("loading")}</p>;
   if (isError) return <p className="text-sm text-error">{t("insightsLoadFailed")}</p>;
 
+  /** A photo's place code as people know it: a place's name, a room code, a map point's code or name. */
+  const placeLabel = (code: string) => {
+    const pointId = pointIdOf(code);
+    const point = pointId ? all.find((p) => p.id === pointId) : undefined;
+    if (point) return point.name || point.code || t(TYPE_META[point.type].key);
+    return PLACES.find((p) => p.code === code)?.name[locale] ?? code;
+  };
   const field = "w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm text-primary outline-none focus:border-brand";
   const onThisFloor = all.filter((p) => p.floor === floor).length;
   const changeName = (c: MapPointChange) => {
@@ -288,6 +301,10 @@ export function MapEditorSection() {
         <Button size="sm" variant={showLog ? "primary" : "secondary"} aria-pressed={showLog} onClick={() => setShowLog((v) => !v)}>
           <History className="h-4 w-4" />
           {t("mapEditorChanges")}
+        </Button>
+        <Button size="sm" variant={showBulk ? "primary" : "secondary"} aria-pressed={showBulk} onClick={() => setShowBulk((v) => !v)}>
+          <Images className="h-4 w-4" />
+          {t("mapBulkTitle")}
         </Button>
         <form onSubmit={find} className="flex min-w-[12rem] flex-1 items-center gap-1.5 rounded-xl border border-border bg-surface px-2.5 py-1">
           <Search className="h-4 w-4 shrink-0 text-label" />
@@ -432,6 +449,35 @@ export function MapEditorSection() {
             </div>
           )}
 
+          {form && selectedId && selectedId !== "new" && all.some((p) => p.id === selectedId) ? (
+            <PhotoManager
+              key={selectedId}
+              codes={photoCodesOf(photoCodesOfPoint(all.find((p) => p.id === selectedId)!)[0]!, all)}
+              title={t("mapPhotosOf").replace("{name}", form.code || form.name || t(TYPE_META[form.type].key))}
+            />
+          ) : !form ? (
+            <div className="space-y-2">
+              <label className="block text-xs font-semibold text-label">
+                {t("mapPhotosTitle")} · {t("mapPhotosPickPlace")}
+                <select className={cn(field, "mt-1")} value={photoPlace} onChange={(e) => setPhotoPlace(e.target.value)}>
+                  <option value="">{t("mapPhotosChoose")}</option>
+                  {PLACES.map((p) => (
+                    <option key={p.code} value={p.code}>{p.name[locale]}</option>
+                  ))}
+                </select>
+              </label>
+              {photoPlace ? (
+                <PhotoManager
+                  key={photoPlace}
+                  codes={photoCodesOf(photoPlace, all)}
+                  title={t("mapPhotosOf").replace("{name}", PLACES.find((p) => p.code === photoPlace)?.name[locale] ?? photoPlace)}
+                />
+              ) : null}
+            </div>
+          ) : null}
+
+          {showBulk ? <BulkPhotoUpload points={all} onClose={() => setShowBulk(false)} /> : null}
+
           {showLog ? (
             <section>
               <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-label">{t("mapEditorChanges")}</h3>
@@ -479,6 +525,7 @@ export function MapEditorSection() {
                     <span className="font-mono text-xs font-normal text-label">{i.report.placeCode}</span>
                   </p>
                   <p className="mt-0.5 whitespace-pre-wrap text-primary">{i.report.text}</p>
+                  <ReportPhoto report={i.report} />
                   <p className="mt-0.5 text-xs text-label">
                     {i.report.reporterName} · {formatRelativeTime(i.report.createdAt, locale)}
                     {i.report.suggested ? ` · ${t("mapEditorHasSpot")}` : ""}
@@ -518,6 +565,8 @@ export function MapEditorSection() {
               ))}
             </ul>
           </section>
+
+          <PhotoSuggestions placeName={placeLabel} />
         </aside>
       </div>
     </div>

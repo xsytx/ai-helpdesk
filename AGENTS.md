@@ -367,6 +367,33 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   update / delete is logged in `map_point_changes` (before/after JSON;
   `GET /api/admin/map/changes`) and "Recent changes" can undo any entry.
   Admin tabs "Map reports" / "Map editor" show the open report count.
+- **Place photos (`021_location_photos.sql`, `store/location_photos.go`,
+  `handlers/location_photos.go`, `features/locations/photos.ts`).** A gallery
+  per place code (a `places.ts` code, a room code, or `PT_<point id>`):
+  `location_photos` (file under `/uploads/places/`, caption, `sort_order`,
+  `uploaded_by`, `status` pending/approved, `report_id`). The place card
+  shows it above the 3D tour (`PlacePhotos`, the forum's `PhotoGallery` +
+  full-size `Lightbox`, captions); `GET /api/map/photos?codes=A,B` (approved
+  only, max 10 codes). Which code a point's/card's photos live under is one
+  rule in `photoCodesOf` / `photoCodesOfPoint` (linked place → place the
+  room opens → room code → `PT_<id>`); keep the editor and the Maps page on
+  it. Map editor (`PhotoManager`): upload (shrunk in the browser like forum
+  photos), caption, reorder, delete for the selected point, or a place picked
+  from the list when no point is selected; max 12 per code
+  (`POST /api/admin/map/photos`, `PATCH|DELETE …/{id}`, `PUT …/order` with
+  every photo of the code). "Report a mistake" takes one optional photo
+  (`POST /api/location-reports/{id}/photo`, the reporter, open report, not
+  muted), shown to admins on the report (`ReportPhoto`): "Add to gallery"
+  (`POST /api/admin/map/photos/{id}/approve`) or remove; rejecting the
+  report deletes a photo still pending.
+  Any student may also send a photo from a place card ("Add a photo of this
+  place"; `POST /api/location-photos`, pending, one per student and place,
+  max 5 waiting, not muted); admins see them in the editor under "Photos from
+  students" (`GET /api/admin/map/photos/suggestions`) and approve/delete
+  them the same way. Bulk upload (editor → "Bulk upload", `PhotoBulk.tsx`):
+  photos named by room or place code (`F205.jpg`, `F205-2.jpg`,
+  `RED_CANTEEN.jpg`; `bulkPhotoTarget`) go to that code's gallery one by one;
+  files without a code are listed and skipped.
 - **Maps search (`placeSearch.ts`, `pointPlaces.ts`).** Like the forum's:
   every typed word must match a word start; typos (1 slip in 4+ letters, 2 in
   8+, letter swaps), Russian/Kazakh endings and dashed words ("wifi") match;
@@ -408,7 +435,7 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
 - **Every public SQL read must hide held posts**: use `threadVisible` /
   `commentVisible` in `backend/internal/store/postgres.go`.
 - **Schema changes** are idempotent SQL applied on every start
-  (`001_init.sql` + `003_chat.sql` + `004_faq.sql` + `005_search.sql` + `006_chat_feedback.sql` + `007_forum_extras.sql` + `008_reputation.sql` + `009_profiles.sql` + `010_tags.sql` + `011_forum_answers.sql` + `012_chat_followups.sql` + `013_chat_trust_share.sql` + `014_edits.sql` + `015_saved_restrict.sql` + `016_notification_events.sql` + `017_chat_source_comment.sql` + `018_location_reports.sql` + `019_map_points.sql` + `020_map_extras.sql` in `Migrate`, `002_moderation.sql` in
+  (`001_init.sql` + `003_chat.sql` + `004_faq.sql` + `005_search.sql` + `006_chat_feedback.sql` + `007_forum_extras.sql` + `008_reputation.sql` + `009_profiles.sql` + `010_tags.sql` + `011_forum_answers.sql` + `012_chat_followups.sql` + `013_chat_trust_share.sql` + `014_edits.sql` + `015_saved_restrict.sql` + `016_notification_events.sql` + `017_chat_source_comment.sql` + `018_location_reports.sql` + `019_map_points.sql` + `020_map_extras.sql` + `021_location_photos.sql` in `Migrate`, `002_moderation.sql` in
   `MigrateModeration`): `CREATE ... IF NOT EXISTS` /
   `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`.
 - **Store interface**: adding a method to `store.Store` also needs a stub on

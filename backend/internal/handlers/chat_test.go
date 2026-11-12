@@ -141,6 +141,30 @@ func (s *chatTestStore) ListLocationReports(context.Context, string) ([]models.L
 func (s *chatTestStore) SetLocationReportStatus(context.Context, int64, string, int64) (models.LocationReport, error) {
 	return models.LocationReport{}, nil
 }
+func (s *chatTestStore) GetLocationReport(context.Context, int64) (models.LocationReport, error) {
+	return models.LocationReport{}, store.ErrNotFound
+}
+func (s *chatTestStore) ListLocationPhotos(context.Context, []string) ([]models.LocationPhoto, error) {
+	return nil, nil
+}
+func (s *chatTestStore) CreateLocationPhoto(context.Context, models.LocationPhoto, int) (models.LocationPhoto, error) {
+	return models.LocationPhoto{}, nil
+}
+func (s *chatTestStore) UpdateLocationPhotoCaption(context.Context, int64, string) (models.LocationPhoto, error) {
+	return models.LocationPhoto{}, nil
+}
+func (s *chatTestStore) ReorderLocationPhotos(context.Context, string, []int64) error { return nil }
+func (s *chatTestStore) ApproveLocationPhoto(context.Context, int64, string, int) (models.LocationPhoto, error) {
+	return models.LocationPhoto{}, nil
+}
+func (s *chatTestStore) DeleteLocationPhoto(context.Context, int64) (string, error) { return "", nil }
+func (s *chatTestStore) ListPhotoSuggestions(context.Context) ([]models.LocationPhoto, error) {
+	return nil, nil
+}
+func (s *chatTestStore) CountPendingPhotoSuggestions(context.Context, int64) (int, error) { return 0, nil }
+func (s *chatTestStore) DeletePendingReportPhotos(context.Context, int64) ([]string, error) {
+	return nil, nil
+}
 func (s *chatTestStore) ListMapPoints(context.Context) ([]models.MapPoint, error) { return nil, nil }
 func (s *chatTestStore) CreateMapPoint(context.Context, models.MapPointInput, int64) (models.MapPoint, error) {
 	return models.MapPoint{}, nil

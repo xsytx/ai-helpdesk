@@ -108,6 +108,22 @@ type Store interface {
 	CreateLocationReport(ctx context.Context, userID int64, placeCode, placeName, entrance, text string, suggested *models.MapSpot) (models.LocationReport, error)
 	ListLocationReports(ctx context.Context, status string) ([]models.LocationReport, error)
 	SetLocationReportStatus(ctx context.Context, id int64, status string, by int64) (models.LocationReport, error)
+	GetLocationReport(ctx context.Context, id int64) (models.LocationReport, error)
+
+	// Photos of campus places (021_location_photos.sql). ListLocationPhotos: gallery
+	// (approved) photos only. CreateLocationPhoto: ErrConflict if the report has a photo.
+	ListLocationPhotos(ctx context.Context, codes []string) ([]models.LocationPhoto, error)
+	// CreateLocationPhoto / ApproveLocationPhoto: ErrPhotoLimit over limit, ErrReportClosed for a closed report.
+	CreateLocationPhoto(ctx context.Context, p models.LocationPhoto, limit int) (models.LocationPhoto, error)
+	UpdateLocationPhotoCaption(ctx context.Context, id int64, caption string) (models.LocationPhoto, error)
+	// ReorderLocationPhotos: ErrInvalidTarget unless ids are exactly the place's gallery.
+	ReorderLocationPhotos(ctx context.Context, placeCode string, ids []int64) error
+	ApproveLocationPhoto(ctx context.Context, id int64, caption string, limit int) (models.LocationPhoto, error)
+	DeleteLocationPhoto(ctx context.Context, id int64) (path string, err error)
+	DeletePendingReportPhotos(ctx context.Context, reportID int64) (paths []string, err error)
+	// Students' photo suggestions (pending, not from a report).
+	ListPhotoSuggestions(ctx context.Context) ([]models.LocationPhoto, error)
+	CountPendingPhotoSuggestions(ctx context.Context, userID int64) (int, error)
 
 	// Campus map points (floor plans). Create/Update: ErrConflict if the code is taken.
 	ListMapPoints(ctx context.Context) ([]models.MapPoint, error)

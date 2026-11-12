@@ -107,6 +107,9 @@ func (s *PostgresStore) Migrate(ctx context.Context) error {
 	if _, err := s.pool.Exec(ctx, mapExtrasSQL); err != nil {
 		return err
 	}
+	if _, err := s.pool.Exec(ctx, locationPhotosSQL); err != nil {
+		return err
+	}
 	return s.seedMapPoints(ctx)
 }
 

@@ -177,8 +177,15 @@ export function PhotoEditor({
   );
 }
 
+/** A photo to show; a caption (place photos) is the image's text and is shown full size. */
+export interface GalleryPhoto {
+  id: string;
+  url: string;
+  caption?: string;
+}
+
 /** A post's photos as a grid (small: for answers); a click opens them full size. */
-export function PhotoGallery({ photos, small = false }: { photos: { id: string; url: string }[]; small?: boolean }) {
+export function PhotoGallery({ photos, small = false }: { photos: GalleryPhoto[]; small?: boolean }) {
   const { t } = useLocale();
   const [open, setOpen] = useState<number | null>(null);
   if (photos.length === 0) return null;
@@ -190,7 +197,8 @@ export function PhotoGallery({ photos, small = false }: { photos: { id: string; 
             key={p.id}
             type="button"
             onClick={() => setOpen(i)}
-            aria-label={`${t("photoOpen")} ${i + 1}`}
+            aria-label={p.caption || `${t("photoOpen")} ${i + 1}`}
+            title={p.caption || undefined}
             className={
               small
                 ? "h-20 w-20 overflow-hidden rounded-lg border border-border/60 bg-background-2 transition-opacity hover:opacity-90"
@@ -206,16 +214,28 @@ export function PhotoGallery({ photos, small = false }: { photos: { id: string; 
   );
 }
 
-function Lightbox({ photos, start, onClose }: { photos: { id: string; url: string }[]; start: number; onClose: () => void }) {
+export function Lightbox({ photos, start, onClose }: { photos: GalleryPhoto[]; start: number; onClose: () => void }) {
   const { t } = useLocale();
-  const [i, setI] = useState(start);
-  const go = (by: number) => setI((x) => (x + by + photos.length) % photos.length);
+  // Follow the photo by id: a live list (admin panel) may lose or reorder photos while it is open.
+  const [currentId, setCurrentId] = useState(photos[start]?.id);
+  const lastIndex = useRef(start);
+  let i = photos.findIndex((p) => p.id === currentId);
+  if (i < 0) i = Math.max(0, Math.min(lastIndex.current, photos.length - 1));
+  lastIndex.current = i;
+  const go = (by: number) => {
+    if (photos.length > 0) setCurrentId(photos[(i + by + photos.length) % photos.length]!.id);
+  };
+  const goRef = useRef(go);
+  goRef.current = go;
 
+  useEffect(() => {
+    if (photos.length === 0) onClose();
+  }, [photos.length, onClose]);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
-      else if (e.key === "ArrowRight") setI((x) => (x + 1) % photos.length);
-      else if (e.key === "ArrowLeft") setI((x) => (x - 1 + photos.length) % photos.length);
+      else if (e.key === "ArrowRight") goRef.current(1);
+      else if (e.key === "ArrowLeft") goRef.current(-1);
     };
     document.body.style.overflow = "hidden";
     window.addEventListener("keydown", onKey);
@@ -223,7 +243,10 @@ function Lightbox({ photos, start, onClose }: { photos: { id: string; url: strin
       document.body.style.overflow = "";
       window.removeEventListener("keydown", onKey);
     };
-  }, [onClose, photos.length]);
+  }, [onClose]);
+
+  const photo = photos[i];
+  if (!photo) return null;
 
   // On <body>: the page area is its own layer (page transitions) and would trap it.
   return createPortal(
@@ -234,12 +257,19 @@ function Lightbox({ photos, start, onClose }: { photos: { id: string; url: strin
       aria-label={t("photoOpen")}
       onClick={onClose}
     >
-      <img
-        src={photos[i]!.url}
-        alt=""
-        className="max-h-[85dvh] max-w-full rounded-lg object-contain shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      />
+      <figure className="flex max-h-full max-w-full flex-col items-center gap-2" onClick={(e) => e.stopPropagation()}>
+        <img
+          src={photo.url}
+          alt={photo.caption ?? ""}
+          className={`${photo.caption ? "max-h-[70dvh]" : "max-h-[85dvh]"} max-w-full rounded-lg object-contain shadow-2xl`}
+        />
+        {photo.caption ? (
+          // A long caption (up to 200 letters, maybe without spaces) wraps and scrolls instead of leaving the screen.
+          <figcaption className="max-h-[12dvh] w-full max-w-xl overflow-y-auto px-10 text-center text-sm text-white/90 [overflow-wrap:anywhere]">
+            {photo.caption}
+          </figcaption>
+        ) : null}
+      </figure>
       <button
         type="button"
         onClick={onClose}

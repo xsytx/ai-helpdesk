@@ -26,6 +26,14 @@ export interface LocationReport {
   createdAt: string;
   /** Where the student says it really is, if they tapped the plan. */
   suggested?: MapSpot;
+  /** The photo the student attached: waiting for an admin, or added to the gallery. */
+  photo?: ReportPhoto;
+}
+
+export interface ReportPhoto {
+  id: string;
+  url: string;
+  status: "pending" | "approved";
 }
 
 interface ApiLocationReport {
@@ -38,6 +46,7 @@ interface ApiLocationReport {
   status: LocationReportStatus;
   created_at: string;
   suggested?: MapSpot | null;
+  photo?: { id: number; url: string; status: ReportPhoto["status"] } | null;
 }
 
 const toReport = (r: ApiLocationReport): LocationReport => ({
@@ -50,6 +59,7 @@ const toReport = (r: ApiLocationReport): LocationReport => ({
   status: r.status,
   createdAt: r.created_at,
   suggested: r.suggested ?? undefined,
+  photo: r.photo ? { ...r.photo, id: String(r.photo.id) } : undefined,
 });
 
 const locationReportKeys = {

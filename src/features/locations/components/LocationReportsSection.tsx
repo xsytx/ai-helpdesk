@@ -8,6 +8,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useLocationReports, useSetLocationReportStatus, type LocationReport, type LocationReportStatus } from "../api";
 import { ENTRANCE_KEY, parseRoomCode } from "../places";
+import { ReportPhoto } from "./PhotoManager";
 
 const TABS: { status: LocationReportStatus; key: TranslationKey }[] = [
   { status: "open", key: "reportsOpen" },
@@ -77,6 +78,7 @@ function MapReportCard({ report }: { report: LocationReport }) {
         </span>
       </div>
       <p className="mt-2 whitespace-pre-wrap text-sm text-primary">{report.text}</p>
+      <ReportPhoto report={report} />
       <div className="mt-3 flex flex-wrap gap-2">
         <Button asChild size="sm" variant="ghost">
           <Link to={mapLink(report.placeCode)} target="_blank" rel="noreferrer">

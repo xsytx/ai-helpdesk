@@ -223,6 +223,34 @@ type LocationReport struct {
 	ResolvedAt   *time.Time `json:"resolved_at,omitempty"`
 	// The spot the student tapped on the floor plan ("it's actually here"), if any.
 	Suggested *MapSpot `json:"suggested,omitempty"`
+	// The photo the student attached, if any (pending until an admin adds it to the gallery).
+	Photo *ReportPhoto `json:"photo,omitempty"`
+}
+
+// ReportPhoto is the photo attached to a location report.
+type ReportPhoto struct {
+	ID     int64  `json:"id"`
+	URL    string `json:"url"`
+	Status string `json:"status"` // pending, approved
+}
+
+// LocationPhoto is a photo in a campus place's gallery (or a student's
+// photo waiting in a report).
+type LocationPhoto struct {
+	ID          int64     `json:"id"`
+	PlaceCode   string    `json:"place_code"`
+	URL         string    `json:"url"`
+	Path        string    `json:"-"`
+	ContentType string    `json:"-"`
+	SizeBytes   int64     `json:"-"`
+	Caption     string    `json:"caption"`
+	SortOrder   int       `json:"sort_order"`
+	Status      string    `json:"status"` // pending, approved
+	ReportID    *int64    `json:"report_id,omitempty"`
+	UploadedBy  *int64    `json:"-"`
+	CreatedAt   time.Time `json:"created_at"`
+	// Admin list of suggestions only: who sent it.
+	UploaderName string `json:"uploader_name,omitempty"`
 }
 
 // MapSpot is a position on a floor plan (pixels of the plan image).

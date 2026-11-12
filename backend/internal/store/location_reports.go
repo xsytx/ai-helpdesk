@@ -20,16 +20,27 @@ var LocationReportStatuses = []string{"open", "fixed", "rejected"}
 const maxLocationReports = 200
 
 const locationReportColumns = `r.id, r.user_id, COALESCE(u.display_name, ''), r.place_code, r.place_name,
-	r.entrance, r.text, r.status, r.created_at, r.resolved_at, r.suggested_floor, r.suggested_x, r.suggested_y`
+	r.entrance, r.text, r.status, r.created_at, r.resolved_at, r.suggested_floor, r.suggested_x, r.suggested_y,
+	ph.id, ph.path, ph.status`
+
+// locationReportJoins follow "FROM <reports> r": the reporter and the attached photo.
+const locationReportJoins = ` LEFT JOIN users u ON u.id = r.user_id
+	LEFT JOIN location_photos ph ON ph.report_id = r.id`
 
 func scanLocationReport(row pgx.Row) (models.LocationReport, error) {
 	var lr models.LocationReport
 	var floor string
 	var x, y *int
+	var photoID *int64
+	var photoPath, photoStatus *string
 	err := row.Scan(&lr.ID, &lr.UserID, &lr.ReporterName, &lr.PlaceCode, &lr.PlaceName,
-		&lr.Entrance, &lr.Text, &lr.Status, &lr.CreatedAt, &lr.ResolvedAt, &floor, &x, &y)
+		&lr.Entrance, &lr.Text, &lr.Status, &lr.CreatedAt, &lr.ResolvedAt, &floor, &x, &y,
+		&photoID, &photoPath, &photoStatus)
 	if err == nil && floor != "" && x != nil && y != nil {
 		lr.Suggested = &models.MapSpot{Floor: floor, X: *x, Y: *y}
+	}
+	if err == nil && photoID != nil && photoPath != nil && photoStatus != nil {
+		lr.Photo = &models.ReportPhoto{ID: *photoID, URL: "/uploads/" + *photoPath, Status: *photoStatus}
 	}
 	switch {
 	case errors.Is(err, pgx.ErrNoRows):
@@ -54,7 +65,7 @@ func (s *PostgresStore) CreateLocationReport(ctx context.Context, userID int64, 
 		     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		     RETURNING *
 		 )
-		 SELECT `+locationReportColumns+` FROM r LEFT JOIN users u ON u.id = r.user_id`,
+		 SELECT `+locationReportColumns+` FROM r`+locationReportJoins+``,
 		userID, placeCode, placeName, entrance, text, floor, x, y))
 }
 
@@ -62,7 +73,7 @@ func (s *PostgresStore) CreateLocationReport(ctx context.Context, userID int64, 
 func (s *PostgresStore) ListLocationReports(ctx context.Context, status string) ([]models.LocationReport, error) {
 	rows, err := s.pool.Query(ctx,
 		`SELECT `+locationReportColumns+`
-		 FROM location_reports r LEFT JOIN users u ON u.id = r.user_id
+		 FROM location_reports r`+locationReportJoins+`
 		 WHERE $1 = '' OR r.status = $1
 		 ORDER BY r.created_at DESC, r.id DESC
 		 LIMIT $2`, status, maxLocationReports)
@@ -93,6 +104,12 @@ func (s *PostgresStore) SetLocationReportStatus(ctx context.Context, id int64, s
 		     WHERE id = $1
 		     RETURNING *
 		 )
-		 SELECT `+locationReportColumns+` FROM r LEFT JOIN users u ON u.id = r.user_id`,
+		 SELECT `+locationReportColumns+` FROM r`+locationReportJoins+``,
 		id, status, by))
+}
+
+// GetLocationReport returns one report.
+func (s *PostgresStore) GetLocationReport(ctx context.Context, id int64) (models.LocationReport, error) {
+	return scanLocationReport(s.pool.QueryRow(ctx,
+		`SELECT `+locationReportColumns+` FROM location_reports r`+locationReportJoins+` WHERE r.id = $1`, id))
 }

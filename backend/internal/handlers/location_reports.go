@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"errors"
+	"log"
 	"net/http"
 	"regexp"
 	"slices"
@@ -133,6 +134,22 @@ func (h *Handlers) SetLocationReportStatus(w http.ResponseWriter, r *http.Reques
 	if err != nil {
 		writeStoreErr(w, err, "could not update the report")
 		return
+	}
+	// A rejected report's photo never reaches the gallery: delete it with its file.
+	// Always asked (not only when rep.Photo is set): a photo whose upload finished
+	// while this update waited for the report's lock is not in rep yet.
+	if req.Status == "rejected" {
+		paths, err := h.Store.DeletePendingReportPhotos(r.Context(), rep.ID)
+		if err != nil {
+			log.Printf("delete photo of rejected location report %d: %v", rep.ID, err)
+		} else {
+			for _, p := range paths {
+				h.removeUpload(p)
+			}
+			if rep.Photo != nil && rep.Photo.Status == "pending" {
+				rep.Photo = nil
+			}
+		}
 	}
 	writeJSON(w, http.StatusOK, rep)
 }
