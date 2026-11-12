@@ -163,7 +163,19 @@ export function pointLabel(p: MapPoint, t: (k: TranslationKey) => string): strin
   return p.name || p.code || t(TYPE_META[p.type].key);
 }
 
-/** A room code's floor as a plan ("F205" → "2"), if there is a plan for it. */
-export function floorOfRoom(floor: number | undefined): MapFloor | undefined {
+/**
+ * The wings are split-level: the left part (rooms 01–06) has floors 1–3, the
+ * right part (rooms 07 and up) floors 1–4 at half-levels — its floor 3 is
+ * between the left part's floors 2 and 3 (the 3B plan), its floor 4 just
+ * above the left part's floor 3 (the floor 3 plan).
+ */
+export const isRightPart = (room: string | undefined) => room !== undefined && Number(room) >= 7;
+
+/** A room code's floor as a plan ("F205" → "2", "F307" → "3B", "F407" → "3"), if there is one. */
+export function floorOfRoom(floor: number | undefined, room?: string): MapFloor | undefined {
+  if (isRightPart(room)) {
+    if (floor === 3) return "3B";
+    if (floor === 4) return "3";
+  }
   return floor === 1 || floor === 2 || floor === 3 ? (String(floor) as MapFloor) : undefined;
 }

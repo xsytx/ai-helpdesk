@@ -344,6 +344,17 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   too (`PT_<id>`, their pin on the floor plan; reports about them sit on that
   point in the editor). Suggestions under the box while typing (↑/↓, Enter,
   Esc); a category chip clears the search text.
+- **Split-level wings.** Rooms 01–06 are the left part (floors 1–3), rooms
+  07+ the right part (floors 1–4 at half-levels): F3xx (07+) is on the 3B
+  plan, F4xx on the floor 3 plan, a little above it (`floorOfRoom`,
+  `isRightPart` in `mapPoints.ts`; the steps say so).
+- **The AI knows where places are.** `ai_ml/data/raw/faq.csv` has `LOC_*`
+  rows (a "Where is …?" Q&A per place in en/ru/kk, short everyday questions,
+  the room code rule) generated from `places.ts` by
+  `node scripts/location-faq.mjs`. After changing a place's location: run it,
+  rebuild the index with the real folder mounted
+  (`docker compose run --rm -v "<repo>/ai_ml/data:/app/data" ai_ml python -m kb.cli index`;
+  the image carries its own copy of `data/`) and `docker compose up -d --build ai_ml`.
 - **"Show on map" in the AI chat (`features/locations/mapLinks.ts`, `MapLinks`).**
   Under an answer, buttons for room codes in the question (F205, "F 205")
   and, when the question asks where something is ("where", "где", "қайда"…),

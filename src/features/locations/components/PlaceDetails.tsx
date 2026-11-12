@@ -9,7 +9,7 @@ import { Armchair, ArrowUp, BookOpen, Building2, Check, CheckCircle2, Clock, Con
 import { useEffect, useState, type ReactNode } from "react";
 import { useReportLocation, type MapSpot } from "../api";
 import { toursFor } from "../tours";
-import { FLOOR_ORDER, floorOfRoom, pointsFor, useMapPoints, type MapFloor } from "../mapPoints";
+import { FLOOR_ORDER, floorOfRoom, isRightPart, pointsFor, useMapPoints, type MapFloor } from "../mapPoints";
 import { FloorPlan } from "./FloorPlan";
 import { PlaceFloorPlan } from "./PlaceFloorPlan";
 import { ENTRANCE_KEY, ENTRANCE_ORDER, blockPlace, type Entrance, type Place, type PlaceKind, type RoomCode, type SchemeBlock } from "../places";
@@ -32,7 +32,7 @@ const fill = (s: string, vars: Record<string, string | number>) =>
 
 interface Step { icon: ReactNode; title: string; note?: string; done?: boolean }
 
-function steps(t: (k: TranslationKey) => string, block: string | undefined, floor: number | undefined, from: Entrance, last: string, spotName?: string): Step[] {
+function steps(t: (k: TranslationKey) => string, block: string | undefined, floor: number | undefined, from: Entrance, last: string, spotName?: string, rightPart = false): Step[] {
   const out: Step[] = [
     { icon: <DoorOpen className="h-4 w-4" />, title: fill(t("mapsStepEnter"), { e: from }) },
   ];
@@ -50,7 +50,13 @@ function steps(t: (k: TranslationKey) => string, block: string | undefined, floo
     out.push({ icon: <Info className="h-4 w-4" />, title: fill(t("mapsStepUnknownBlock"), { block }) });
   }
   if (floor && floor > 1) {
-    out.push({ icon: <ArrowUp className="h-4 w-4" />, title: fill(t("mapsStepStairs"), { floor }) });
+    // The right part of a wing is split-level (rooms 07 and up).
+    const split = rightPart && block && WINGS.has(block) && floor >= 3;
+    out.push({
+      icon: <ArrowUp className="h-4 w-4" />,
+      title: fill(t("mapsStepStairs"), { floor }),
+      note: split ? t(floor === 3 ? "mapsStepSplit3" : "mapsStepSplit4") : undefined,
+    });
   }
   out.push({ icon: <CheckCircle2 className="h-4 w-4" />, title: last, done: true });
   return out;
@@ -73,6 +79,7 @@ export function PlaceDetails({ target, from, onFrom }: { target: Place | RoomCod
           t, block, room?.floor ?? place?.floor, from,
           room ? fill(t("mapsStepRoom"), { room: room.room }) : fill(t("mapsStepHere"), { name: place!.name[locale] }),
           spot ? place!.name[locale] : undefined,
+          isRightPart(room?.room),
         )
       : null;
 
@@ -224,7 +231,7 @@ function ReportMistake({ target, placeCode, placeName, from }: { target: Place |
   const room = "room" in target ? target : null;
   const asPlace = room ? null : (target as Place);
   const matches = !points ? [] : asPlace?.point ? points.filter((p) => p.id === asPlace.point) : pointsFor(points, placeCode, asPlace?.rooms ?? []);
-  const [floor, setFloor] = useState<MapFloor>((room ? floorOfRoom(room.floor) : undefined) ?? matches[0]?.floor ?? "1");
+  const [floor, setFloor] = useState<MapFloor>((room ? floorOfRoom(room.floor, room.room) : undefined) ?? matches[0]?.floor ?? "1");
   const tooShort = text.trim().length < 5;
 
   if (report.isSuccess) {

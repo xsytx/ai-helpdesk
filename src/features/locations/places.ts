@@ -83,8 +83,12 @@ export const PLACES: Place[] = [
   },
   {
     code: "SSC", kind: "service", popular: true, contact: "SSC@sdu.edu.kz · ext. 333, 335",
-    name: { en: "Student Service Center", kz: "Студенттерге қызмет көрсету орталығы", ru: "Центр обслуживания студентов" },
-    where: { en: "Main building", kz: "Бас ғимарат", ru: "Главный корпус" },
+    name: { en: "Student Service Center (SSC)", kz: "Студенттерге қызмет көрсету орталығы (SSC)", ru: "Центр обслуживания студентов (SSC)" },
+    where: {
+      en: "1st floor, by the main corridor between blocks D and E",
+      kz: "1-қабат, D және E блоктарының арасындағы бас дәліздің жанында",
+      ru: "1 этаж, у главного коридора между блоками D и E",
+    },
     aliases: ["ssc", "справка", "анықтама", "certificate", "documents", "документы", "құжат"],
   },
   {

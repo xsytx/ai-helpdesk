@@ -44,7 +44,11 @@ class IndexTests(unittest.TestCase):
     def test_shipped_index_loads(self):
         from kb.config import resolve_path
         index = VectorIndex.load(resolve_path('data/index'))
-        self.assertEqual(len(index), 941)
+        # One vector per prepared question: the index must match the data it was built from.
+        with open(resolve_path('data/processed/qa_clean.jsonl'), encoding='utf-8') as stream:
+            prepared = sum(1 for line in stream if line.strip())
+        self.assertEqual(len(index), prepared)
+        self.assertGreaterEqual(len(index), 941)
 
 
 class RetrieverTests(unittest.TestCase):

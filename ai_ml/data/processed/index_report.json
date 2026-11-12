@@ -1,17 +1,17 @@
 {
-  "total": 1005,
-  "accepted": 941,
+  "total": 1137,
+  "accepted": 1073,
   "excluded": 64,
   "exclusion_reasons": {
     "empty_answer": 26,
     "ambiguous_alignment": 38
   },
   "accepted_languages": {
-    "en": 260,
-    "kk": 431,
-    "ru": 250
+    "en": 304,
+    "kk": 475,
+    "ru": 294
   },
   "approval_basis": "Author confirmed the answers in the conversation.",
   "category_note": "Original category text, not normalized topic labels.",
-  "source_sha256": "dbc66dcbfd274a1ff3c7fd38e84acecb8f986c4f2339a4daa06aae8b07304a69"
+  "source_sha256": "cddcaed20e330bc6164c6915e27125d4d19a2fdfd5b82b36b1004530fcd8d465"
 }
