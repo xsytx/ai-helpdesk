@@ -2,3 +2,8 @@ node_modules/
 dist/
 .env
 *.tsbuildinfo
+
+# Saved SDU portal pages (Ctrl+S) may hold personal details (name, photo, IP): never commit them.
+curricula/
+*.htm
+*_files/
