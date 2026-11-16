@@ -232,16 +232,22 @@ export function Lightbox({ photos, start, onClose }: { photos: GalleryPhoto[]; s
     if (photos.length === 0) onClose();
   }, [photos.length, onClose]);
   useEffect(() => {
+    // Captured first and stopped: while the viewer is open, its keys belong to it
+    // (the map editor would otherwise also nudge the selected point with ←/→,
+    // and Esc would also close the mascot chat or the editor's selection).
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
       else if (e.key === "ArrowRight") goRef.current(1);
       else if (e.key === "ArrowLeft") goRef.current(-1);
+      else return;
+      e.preventDefault();
+      e.stopPropagation();
     };
     document.body.style.overflow = "hidden";
-    window.addEventListener("keydown", onKey);
+    window.addEventListener("keydown", onKey, true);
     return () => {
       document.body.style.overflow = "";
-      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("keydown", onKey, true);
     };
   }, [onClose]);
 

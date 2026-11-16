@@ -136,6 +136,8 @@ export function MapEditorSection() {
     const onKey = (e: KeyboardEvent) => {
       const el = e.target as HTMLElement | null;
       if (el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)) return;
+      // A full-size photo (or another dialog) is open on top: its keys aren't for the plan.
+      if (document.querySelector('[aria-modal="true"]')) return;
       if (e.key === "Escape") {
         setAdding(null);
         close();
