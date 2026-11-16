@@ -7,7 +7,9 @@
 import { useLocale } from "@/i18n/LocaleContext";
 import { cn } from "@/shared/lib/cn";
 import { Maximize2, Minus, Plus } from "lucide-react";
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
+import { COLOR } from "../campusShapes";
+import type { SchemeBlock } from "../places";
 import { FLOORS, PLAN_BLOCKS, TYPE_META, pointLabel, type MapFloor, type MapPoint } from "../mapPoints";
 
 interface View { x: number; y: number; w: number }
@@ -45,12 +47,17 @@ export interface FloorPlanProps {
   ghost?: { x: number; y: number; label?: string } | null;
   /** Zoom with the mouse wheel (the editor; on the students' page the wheel scrolls the page). */
   wheelZoom?: boolean;
+  /**
+   * Drawn over the plan image, under the pins (the campus layer on floor 1),
+   * given the plan pixels per screen pixel. It replaces the plain block letters.
+   */
+  layer?: (k: number) => ReactNode;
   className?: string;
 }
 
 export function FloorPlan({
   floor, points, highlight = [], secondary = [], selectedId, reported = {}, block, focus, onPointClick, onPlanClick, picking,
-  onPointMove, draft, onDraftMove, ghost, wheelZoom, className,
+  onPointMove, draft, onDraftMove, ghost, wheelZoom, layer, className,
 }: FloorPlanProps) {
   const { t } = useLocale();
   const plan = FLOORS[floor];
@@ -207,17 +214,19 @@ export function FloorPlan({
         onPointerDown={(e) => onDown(e)}
         onPointerMove={onMove}
         onPointerUp={(e) => onUp(e)}
-        role="img"
+        role={layer ? "group" : "img"}
         aria-label={t("mapsFloorTab").replace("{floor}", floor)}
       >
         <image href={plan.image} x="0" y="0" width={plan.w} height={plan.h} opacity={plan.faded ? 0.4 : 1} />
 
-        {PLAN_BLOCKS.map((b, i) => (
+        {layer?.(k)}
+
+        {!layer && PLAN_BLOCKS.map((b, i) => (
           <g key={i} style={{ pointerEvents: "none" }}>
             {block === b.block && (
               <circle cx={b.x} cy={b.y} r={Math.max(60, 26 * k)} fill="var(--color-accent)" fillOpacity="0.18" stroke="var(--color-accent)" strokeWidth={4 * k} />
             )}
-            <circle cx={b.x} cy={b.y} r={Math.max(30, 13 * k)} fill={block === b.block ? "var(--color-accent)" : "#1e2151"} fillOpacity={block === b.block ? 1 : 0.75} />
+            <circle cx={b.x} cy={b.y} r={Math.max(30, 13 * k)} fill={block === b.block ? "var(--color-accent)" : (COLOR[b.block as SchemeBlock] ?? "#1e2151")} fillOpacity={block === b.block ? 1 : 0.85} />
             <text x={b.x} y={b.y + Math.max(11, 5 * k)} fontSize={Math.max(32, 14 * k)} fontWeight="700" textAnchor="middle" fill="#fff">{b.block}</text>
           </g>
         ))}

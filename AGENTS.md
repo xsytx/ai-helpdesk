@@ -354,6 +354,18 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   overview scheme with routes (`CampusScheme`, titled "Route from the
   entrance") is still drawn from `places.ts`; the floor plan is "Exact spot".
   Point names are one language (as entered).
+- **Merging the two maps (in progress).** The block shapes (tints, coloured
+  letters, lecture halls, canteen, medical point) live in
+  `features/locations/campusShapes.ts`, in the old scheme's units;
+  `UNIT_TO_PLAN` / `planToUnit` convert to/from floor-plan pixels.
+  `CampusScheme` (route map) and `CampusLayer` (the same shapes drawn inside
+  `FloorPlan` through its `layer` prop) both use them. Step 1 is done: floor 1
+  of the place card's "Exact spot" plan (`PlaceFloorPlan`) shows the layer,
+  the found place outlined, clickable blocks/places (`placeAtPlan` hit test
+  via `onPlanClick`; letters count as their block) and a "Blocks" on/off
+  toggle (`ai_helpdesk_map_blocks`). Still to do: step 2 moves the route onto
+  that plan, puts it at the top of the page and removes `CampusScheme`;
+  step 3 adds the upstairs part of routes (stairs → room).
 - **Map extras (`020_map_extras.sql`).** Students: tap any pin to see what it
   is, "Nearest toilet / stairs" (closest point of that type on the floor),
   "Copy link" to a room or place, and in "Report a mistake" an optional tap

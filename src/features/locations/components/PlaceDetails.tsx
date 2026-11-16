@@ -65,7 +65,13 @@ function steps(t: (k: TranslationKey) => string, block: string | undefined, floo
   return out;
 }
 
-export function PlaceDetails({ target, from, onFrom }: { target: Place | RoomCode; from: Entrance; onFrom: (e: Entrance) => void }) {
+export function PlaceDetails({ target, from, onFrom, onPick }: {
+  target: Place | RoomCode;
+  from: Entrance;
+  onFrom: (e: Entrance) => void;
+  /** A block or place clicked on the floor plan. */
+  onPick?: (code: string) => void;
+}) {
   const { t, locale } = useLocale();
   const room = "room" in target ? target : null;
   const place = room ? null : (target as Place);
@@ -192,7 +198,7 @@ export function PlaceDetails({ target, from, onFrom }: { target: Place | RoomCod
         </div>
       )}
 
-      <PlaceFloorPlan target={target} />
+      <PlaceFloorPlan target={target} onPick={onPick} />
 
       {/* key: a new place starts with a fresh form */}
       <ReportMistake key={`report-${room ? room.code : place!.code}`} target={target} placeCode={room ? room.code : place!.code} placeName={title} from={from} />

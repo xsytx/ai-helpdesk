@@ -4,13 +4,16 @@
 // what it is; "Nearest toilet / stairs" marks the closest one on that floor.
 import { useLocale } from "@/i18n/LocaleContext";
 import { cn } from "@/shared/lib/cn";
-import { Footprints, X } from "lucide-react";
+import { Footprints, Layers, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
   FLOOR_ORDER, PLAN_BLOCKS, TYPE_META, floorOfRoom, pointLabel, pointsFor, useMapPoints,
   type MapFloor, type MapPoint, type PointType,
 } from "../mapPoints";
-import type { Place, RoomCode } from "../places";
+import type { Place, RoomCode, SchemeBlock } from "../places";
+import { placeAtPlan } from "../campusShapes";
+import { safeStorage } from "@/shared/lib/storage";
+import { CampusLayer } from "./CampusLayer";
 import { FloorPlan } from "./FloorPlan";
 
 const LEGEND: PointType[] = ["room", "toilet", "stairs", "entrance", "canteen", "medical"];
@@ -32,7 +35,14 @@ function nearest(points: MapPoint[], floor: MapFloor, from: { x: number; y: numb
   return best;
 }
 
-export function PlaceFloorPlan({ target }: { target: Place | RoomCode }) {
+/** Remembered choice: the campus layer (block colours, halls…) on floor 1. */
+const BLOCKS_KEY = "ai_helpdesk_map_blocks";
+
+export function PlaceFloorPlan({ target, onPick }: {
+  target: Place | RoomCode;
+  /** A block or place clicked on floor 1 (its code in places.ts). */
+  onPick?: (code: string) => void;
+}) {
   const { t } = useLocale();
   const { data: points } = useMapPoints();
   const room = "room" in target ? target : null;
@@ -45,6 +55,12 @@ export function PlaceFloorPlan({ target }: { target: Place | RoomCode }) {
   const [floor, setFloor] = useState<MapFloor | undefined>(startFloor);
   const [helper, setHelper] = useState<"toilet" | "stairs">();
   const [tapped, setTapped] = useState<MapPoint>();
+  const [showBlocks, setShowBlocks] = useState(() => safeStorage.get(BLOCKS_KEY) !== "off");
+  const toggleBlocks = () =>
+    setShowBlocks((v) => {
+      safeStorage.set(BLOCKS_KEY, v ? "off" : "on");
+      return !v;
+    });
   // Another place: start on its floor again, with nothing extra marked.
   useEffect(() => {
     setFloor(startFloor);
@@ -67,11 +83,29 @@ export function PlaceFloorPlan({ target }: { target: Place | RoomCode }) {
     focus = { x: (anchor.x + help.x) / 2, y: (anchor.y + help.y) / 2, w: dist(anchor, help) * 1.6 + 500, key: `${code}-${helper}-${help.id}` };
   }
   const missing = matches.length === 0 && room;
+  // Floor 1 carries the campus layer: block colours, halls, canteen, clickable places.
+  const campus = floor === "1" && showBlocks;
+  const schemeBlock = block && /^[A-I]$/.test(block) ? (block as SchemeBlock) : undefined;
 
   return (
     <section>
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-xs font-semibold uppercase tracking-wide text-label">{t("mapsFloorPlan").replace("{floor}", floor)}</h3>
+        <div className="flex flex-wrap items-center gap-2">
+        {floor === "1" ? (
+          <button
+            type="button"
+            aria-pressed={showBlocks}
+            onClick={toggleBlocks}
+            className={cn(
+              "inline-flex items-center gap-1.5 rounded-xl border px-2.5 py-1.5 text-xs font-semibold transition-colors",
+              showBlocks ? "border-brand bg-brand text-white" : "border-border bg-surface text-label hover:text-primary",
+            )}
+          >
+            <Layers className="h-3.5 w-3.5" />
+            {t("mapsShowBlocks")}
+          </button>
+        ) : null}
         <div className="inline-flex rounded-xl border border-border bg-surface p-0.5 text-xs font-semibold" role="group" aria-label={t("mapEditorFloor")}>
           {FLOOR_ORDER.map((f) => (
             <button
@@ -91,6 +125,7 @@ export function PlaceFloorPlan({ target }: { target: Place | RoomCode }) {
               {f}
             </button>
           ))}
+        </div>
         </div>
       </div>
       {anchor ? (
@@ -120,6 +155,15 @@ export function PlaceFloorPlan({ target }: { target: Place | RoomCode }) {
         block={here.length === 0 ? block : undefined}
         focus={focus}
         onPointClick={setTapped}
+        layer={campus ? (k) => <CampusLayer k={k} block={schemeBlock} spot={place?.spot} onPick={onPick} /> : undefined}
+        onPlanClick={
+          campus && onPick
+            ? (x, y) => {
+                const picked = placeAtPlan(x, y);
+                if (picked && picked !== code) onPick(picked);
+              }
+            : undefined
+        }
         className="h-[280px] md:h-[380px]"
       />
       {helper && anchor && !help ? <p className="mt-2 text-xs text-label">{t("mapsNoneOnFloor")}</p> : null}

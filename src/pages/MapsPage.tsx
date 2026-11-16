@@ -161,7 +161,7 @@ export function MapsPage() {
             <PlaceList places={results} selected={target?.code} onPick={(p) => update({ place: p.code })} />
           )}
           {target ? (
-            <PlaceDetails target={target} from={from} onFrom={setFrom} />
+            <PlaceDetails target={target} from={from} onFrom={setFrom} onPick={(code) => update({ q: null, cat: null, place: code })} />
           ) : q.trim() ? (
             <NotFound q={q} />
           ) : (

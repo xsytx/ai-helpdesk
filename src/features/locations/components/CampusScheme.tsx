@@ -12,56 +12,7 @@ import { Mascot } from "@/shared/ui/Mascot";
 import { ArrowDown, Eraser, X } from "lucide-react";
 import { useId, type KeyboardEvent, type ReactNode } from "react";
 import { ENTRANCE_KEY, PLACES, type Entrance, type SchemeBlock, type SchemeSpot } from "../places";
-
-type Pt = [number, number];
-interface Box { x: number; y: number; w: number; h: number }
-
-/**
- * The full plan image (4818 × 1689 px) in scheme units: plan pixel = PLAN_SCALE
- * × scheme unit + offset, measured on six wing passages and the lecture halls.
- * Room points (map_points) use plan pixels; this scheme uses the units.
- */
-const PLAN_SCALE = 2.3653;
-const PLAN_X = 0.6 / PLAN_SCALE;
-const PLAN_Y = -2 / PLAN_SCALE;
-const PLAN_W = 4818 / PLAN_SCALE;
-const PLAN_H = 1689 / PLAN_SCALE;
-/** The drawing area: wide enough for the east wall and Entrance I. */
-const W = 2040;
-const H = 714;
-
-/** One colour per block, as on the campus map. */
-const COLOR: Record<SchemeBlock, string> = {
-  A: "#c95a4f", B: "#b8975a", C: "#3f8a73", D: "#8a4aa8", E: "#9b3a3e",
-  F: "#3d4a96", G: "#5f8a3f", H: "#3b6fb5", I: "#e07a1a",
-};
-
-const box = (x1: number, y1: number, x2: number, y2: number): Box => ({ x: x1, y: y1, w: x2 - x1, h: y2 - y1 });
-const BLOCKS: Record<SchemeBlock, Box[]> = {
-  A: [box(100, 35, 335, 180)],
-  B: [box(30, 182, 302, 408)],
-  C: [box(180, 412, 425, 675)],
-  D: [box(466, 175, 607, 410)],
-  E: [box(738, 175, 887, 410)],
-  F: [box(986, 175, 1137, 410)],
-  G: [box(1261, 175, 1402, 410), box(1255, 458, 1475, 685)],
-  H: [box(1541, 175, 1687, 410), box(1476, 468, 1720, 625)],
-  I: [box(1811, 175, 1968, 410)],
-};
-/** Where each block's letter badge sits. */
-const BADGE: Record<SchemeBlock, Pt> = {
-  A: [70, 108], B: [58, 352], C: [138, 560],
-  D: [536, 140], E: [812, 140], F: [1061, 140], G: [1331, 140], H: [1614, 140], I: [1889, 140],
-};
-
-const HALLS: Record<"A" | "B" | "C" | "D", { cx: number; cy: number; r: number }> = {
-  A: { cx: 484, cy: 550, r: 53 },
-  B: { cx: 577, cy: 497, r: 38 },
-  C: { cx: 685, cy: 550, r: 51 },
-  D: { cx: 830, cy: 500, r: 39 },
-};
-const CANTEEN = box(962, 462, 1205, 610);
-const MED: Pt = [1447, 392];
+import { BADGE, BLOCKS, CANTEEN, COLOR, H, HALLS, MED, PLAN_H, PLAN_W, PLAN_X, PLAN_Y, W, type Pt } from "../campusShapes";
 
 // Walkways, traced on the plan image. The wings' bottom strip (y 370–415)
 // holds rooms (toilets, shop, medical point), so routes never run along it:
