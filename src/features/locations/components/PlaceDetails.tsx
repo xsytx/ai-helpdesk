@@ -156,7 +156,7 @@ export function PlaceDetails({ target, from, onFrom }: { target: Place | RoomCod
       )}
 
       {/* key: a new place starts with a fresh "add a photo" */}
-      <PlacePhotos key={room ? room.code : place!.code} target={target} />
+      <PlacePhotos key={`photos-${room ? room.code : place!.code}`} target={target} />
 
       {tours.length > 0 && (
         <div>
@@ -195,7 +195,7 @@ export function PlaceDetails({ target, from, onFrom }: { target: Place | RoomCod
       <PlaceFloorPlan target={target} />
 
       {/* key: a new place starts with a fresh form */}
-      <ReportMistake key={room ? room.code : place!.code} target={target} placeCode={room ? room.code : place!.code} placeName={title} from={from} />
+      <ReportMistake key={`report-${room ? room.code : place!.code}`} target={target} placeCode={room ? room.code : place!.code} placeName={title} from={from} />
     </div>
   );
 }
