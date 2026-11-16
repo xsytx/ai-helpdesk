@@ -248,3 +248,126 @@ export function useUpdateCourse() {
     onSettled: () => queryClient.invalidateQueries({ queryKey: ["courses"] }),
   });
 }
+
+// --- Reviews (stories 17-18) ---
+
+export type ReviewTerm = "fall" | "spring" | "summer";
+export type ReviewStatus = "checking" | "ok" | "held" | "rejected";
+
+export interface CourseReview {
+  id: number;
+  course_code: string;
+  course_name?: string;
+  difficulty: number;
+  workload: number;
+  usefulness: number;
+  recommend: boolean;
+  text: string;
+  taken_year: number;
+  taken_term: ReviewTerm;
+  status: ReviewStatus;
+  helpful: number;
+  helped_by_me: boolean;
+  mine: boolean;
+  created_at: string;
+  edited_at?: string;
+  /** Staff only (students never get these). */
+  author_id?: number;
+  author_name?: string;
+  moderation_reason?: string;
+  open_reports?: number;
+  report_reasons?: string[];
+}
+
+export interface ReviewSummary {
+  count: number;
+  difficulty: number;
+  workload: number;
+  usefulness: number;
+  recommend_pct: number;
+}
+
+export interface ReviewInput {
+  difficulty: number;
+  workload: number;
+  usefulness: number;
+  recommend: boolean;
+  text: string;
+  taken_year: number;
+  taken_term: ReviewTerm;
+}
+
+const reviewKeys = {
+  all: ["reviews"] as const,
+  course: (code: string, sort: string) => ["reviews", code, sort] as const,
+  admin: ["reviews", "admin"] as const,
+};
+
+export function useCourseReviews(code: string, sort: "new" | "helpful") {
+  return useQuery({
+    queryKey: reviewKeys.course(code, sort),
+    enabled: Boolean(code),
+    placeholderData: keepPreviousData,
+    // Reviews are checked by the AI in the background: look again shortly while your own is being
+    // checked, and every half minute otherwise (a review hidden by the moderation disappears).
+    refetchInterval: (q) => (q.state.data?.reviews.some((r) => r.mine && r.status === "checking") ? 2000 : 30_000),
+    queryFn: async () =>
+      (await apiClient.get<{ summary: ReviewSummary; reviews: CourseReview[] }>(`/courses/${encodeURIComponent(courseSlug(code))}/reviews`, { params: { sort } })).data,
+  });
+}
+
+export function useSaveReview(code: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: ReviewInput) =>
+      (await apiClient.put<CourseReview>(`/courses/${encodeURIComponent(courseSlug(code))}/review`, input)).data,
+    onSettled: () => queryClient.invalidateQueries({ queryKey: reviewKeys.all }),
+  });
+}
+
+export function useDeleteReview(code: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      await apiClient.delete(`/courses/${encodeURIComponent(courseSlug(code))}/review`);
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: reviewKeys.all }),
+  });
+}
+
+export function useReviewHelpful() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, helpful }: { id: number; helpful: boolean }) =>
+      (await apiClient.put<{ helpful: number }>(`/reviews/${id}/helpful`, { helpful })).data.helpful,
+    onSettled: () => queryClient.invalidateQueries({ queryKey: reviewKeys.all }),
+  });
+}
+
+export function useReportReview() {
+  return useMutation({
+    mutationFn: async ({ id, reason }: { id: number; reason: string }) => {
+      await apiClient.post(`/reviews/${id}/report`, { reason });
+    },
+  });
+}
+
+/** Admin: reviews the moderation held, and reported ones. */
+export function useAdminReviews(enabled = true) {
+  return useQuery({
+    queryKey: reviewKeys.admin,
+    enabled,
+    refetchInterval: 30_000,
+    queryFn: async () => (await apiClient.get<{ reviews: CourseReview[] }>("/admin/reviews")).data.reviews,
+  });
+}
+
+export function useDecideReview() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    // text: the version the admin read (publish/keep refuse a review changed since: 409).
+    mutationFn: async ({ id, action, text }: { id: number; action: "publish" | "keep" | "reject"; text: string }) =>
+      (await apiClient.post<CourseReview>(`/admin/reviews/${id}/${action}`, { text })).data,
+    onSettled: () => queryClient.invalidateQueries({ queryKey: reviewKeys.all }),
+  });
+}

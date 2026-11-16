@@ -1,6 +1,6 @@
 // A course's card (story 16): code, name, credits and hours, the description,
-// and every program and semester where it is taught. Reviews (stories 17-18)
-// come next on this page.
+// every program and semester where it is taught, and student reviews
+// (stories 17-18).
 import { courseDescription, courseFromSlug, useCourse, type CoursePlace } from "@/features/courses/api";
 import { useLocale } from "@/i18n/LocaleContext";
 import { Button } from "@/shared/ui/Button";
@@ -9,6 +9,7 @@ import { Mascot } from "@/shared/ui/Mascot";
 import { ArrowLeft, MessagesSquare } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import { fill, kindKey, levelKey } from "@/features/courses/labels";
+import { CourseReviews } from "@/features/courses/components/CourseReviews";
 
 export function CoursePage() {
   const { t, locale } = useLocale();
@@ -121,6 +122,8 @@ export function CoursePage() {
           </ul>
         )}
       </Card>
+
+      <CourseReviews code={course.code} />
     </div>
   );
 }

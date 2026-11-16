@@ -1,3 +1,5 @@
+import { ReviewsAdminSection } from "@/features/courses/components/ReviewsAdminSection";
+import { useAdminReviews } from "@/features/courses/api";
 import { CoursesAdminSection } from "@/features/courses/components/CoursesAdminSection";
 import { RestrictionsSection } from "@/features/moderation/components/Restrictions";
 import { useAuth } from "@/app/AuthContext";
@@ -159,6 +161,7 @@ const SECTIONS = [
   { id: "map-reports", key: "adminSectionMapReports" },
   { id: "map-editor", key: "adminSectionMapEditor" },
   { id: "courses", key: "adminSectionCourses" },
+  { id: "reviews", key: "adminSectionReviews" },
 ] as const;
 
 type SectionId = (typeof SECTIONS)[number]["id"];
@@ -174,8 +177,9 @@ export function ModerationPage() {
   const pending = usePendingModerationCount().data ?? 0;
   const openReports = useReports("open", isStaffRole(user?.role)).data?.total ?? 0;
   const openMapReports = useLocationReports("open", isStaffRole(user?.role)).data?.length ?? 0;
+  const reviewsToCheck = useAdminReviews(isStaffRole(user?.role)).data?.length ?? 0;
   const badge = (id: SectionId) =>
-    id === "moderation" ? pending : id === "reports" ? openReports : id === "map-reports" || id === "map-editor" ? openMapReports : 0;
+    id === "moderation" ? pending : id === "reports" ? openReports : id === "map-reports" || id === "map-editor" ? openMapReports : id === "reviews" ? reviewsToCheck : 0;
 
   if (!isStaffRole(user?.role)) {
     return <p className="mx-auto max-w-3xl text-sm text-label">{t("moderationNoAccess")}</p>;
@@ -211,6 +215,8 @@ export function ModerationPage() {
         <LocationReportsSection />
       ) : section === "map-editor" ? (
         <MapEditorSection />
+      ) : section === "reviews" ? (
+        <ReviewsAdminSection />
       ) : section === "courses" ? (
         <CoursesAdminSection />
       ) : section === "restrictions" ? (

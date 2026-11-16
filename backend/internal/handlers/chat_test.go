@@ -159,7 +159,34 @@ func (s *chatTestStore) ApproveLocationPhoto(context.Context, int64, string, int
 	return models.LocationPhoto{}, nil
 }
 func (s *chatTestStore) DeleteLocationPhoto(context.Context, int64) (string, error) { return "", nil }
-func (s *chatTestStore) ListPrograms(context.Context) ([]models.Program, error)     { return nil, nil }
+func (s *chatTestStore) SaveCourseReview(context.Context, string, int64, models.CourseReviewInput, string) (models.CourseReview, error) {
+	return models.CourseReview{}, nil
+}
+func (s *chatTestStore) GetCourseReview(context.Context, int64, int64) (models.CourseReview, error) {
+	return models.CourseReview{}, store.ErrNotFound
+}
+func (s *chatTestStore) DeleteMyCourseReview(context.Context, string, int64) error { return nil }
+func (s *chatTestStore) ListCourseReviews(context.Context, string, int64, bool, string) ([]models.CourseReview, error) {
+	return nil, nil
+}
+func (s *chatTestStore) CourseReviewSummary(context.Context, string) (models.ReviewSummary, error) {
+	return models.ReviewSummary{}, nil
+}
+func (s *chatTestStore) SetReviewStatus(context.Context, int64, string, string, string, string) error {
+	return nil
+}
+func (s *chatTestStore) ReviewsBeingChecked(context.Context) ([]models.CourseReview, error) {
+	return nil, nil
+}
+func (s *chatTestStore) SetReviewHelpful(context.Context, int64, int64, bool) (int, error) {
+	return 0, nil
+}
+func (s *chatTestStore) ReportReview(context.Context, int64, int64, string) error { return nil }
+func (s *chatTestStore) ReviewsForAdmin(context.Context) ([]models.CourseReview, error) {
+	return nil, nil
+}
+func (s *chatTestStore) ResolveReviewReports(context.Context, int64, int64) error { return nil }
+func (s *chatTestStore) ListPrograms(context.Context) ([]models.Program, error)   { return nil, nil }
 func (s *chatTestStore) ImportCurriculum(context.Context, curricula.Curriculum, int64) (models.CurriculumInfo, error) {
 	return models.CurriculumInfo{}, nil
 }

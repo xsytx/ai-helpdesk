@@ -102,3 +102,66 @@ type UserProgram struct {
 	ProgramCode string `json:"program_code"`
 	EntryYear   int    `json:"entry_year"`
 }
+
+// CourseReview is a student's review of a course (stories 17-18). Students
+// see reviews without the author; AuthorID/AuthorName, ModerationReason and
+// the report fields are filled for staff only.
+type CourseReview struct {
+	ID         int64      `json:"id"`
+	CourseCode string     `json:"course_code"`
+	CourseName string     `json:"course_name,omitempty"`
+	Difficulty int        `json:"difficulty"`
+	Workload   int        `json:"workload"`
+	Usefulness int        `json:"usefulness"`
+	Recommend  bool       `json:"recommend"`
+	Text       string     `json:"text"`
+	TakenYear  int        `json:"taken_year"`
+	TakenTerm  string     `json:"taken_term"` // fall, spring, summer
+	Status     string     `json:"status"`     // checking, ok, held, rejected
+	Helpful    int        `json:"helpful"`
+	HelpedByMe bool       `json:"helped_by_me"`
+	Mine       bool       `json:"mine"`
+	CreatedAt  time.Time  `json:"created_at"`
+	EditedAt   *time.Time `json:"edited_at,omitempty"`
+	// Loaded for every review but never sent as such ("-"): ForStaff copies
+	// them into the fields below, which stay empty for students (anonymous reviews).
+	UserID  int64    `json:"-"`
+	Author  string   `json:"-"`
+	Reason  string   `json:"-"`
+	Reports int      `json:"-"`
+	Reasons []string `json:"-"`
+	// Staff only.
+	AuthorID         *int64   `json:"author_id,omitempty"`
+	AuthorName       string   `json:"author_name,omitempty"`
+	ModerationReason string   `json:"moderation_reason,omitempty"`
+	OpenReports      int      `json:"open_reports,omitempty"`
+	ReportReasons    []string `json:"report_reasons,omitempty"`
+}
+
+// ForStaff fills the fields only staff may see: who wrote it, why the
+// moderation held it, open reports.
+func (r CourseReview) ForStaff() CourseReview {
+	id := r.UserID
+	r.AuthorID, r.AuthorName, r.ModerationReason, r.OpenReports, r.ReportReasons = &id, r.Author, r.Reason, r.Reports, r.Reasons
+	return r
+}
+
+// CourseReviewInput is what a student sends.
+type CourseReviewInput struct {
+	Difficulty int    `json:"difficulty"`
+	Workload   int    `json:"workload"`
+	Usefulness int    `json:"usefulness"`
+	Recommend  bool   `json:"recommend"`
+	Text       string `json:"text"`
+	TakenYear  int    `json:"taken_year"`
+	TakenTerm  string `json:"taken_term"`
+}
+
+// ReviewSummary is the averages of a course's visible reviews.
+type ReviewSummary struct {
+	Count        int     `json:"count"`
+	Difficulty   float64 `json:"difficulty"`
+	Workload     float64 `json:"workload"`
+	Usefulness   float64 `json:"usefulness"`
+	RecommendPct int     `json:"recommend_pct"`
+}

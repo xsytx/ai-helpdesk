@@ -478,8 +478,31 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   typos via trigrams). A course card `/courses/MAT-101` (`CoursePage`, `GET
   /api/courses/{code}`) shows hours, description and every program/semester
   it is taught in (required, elective slot, or only in an elective list).
-  Main tracks first; other tracks and minors are just more imports. Reviews
-  (stories 17-18) are next.
+  Main tracks first; other tracks and minors are just more imports.
+- **Course reviews (stories 17-18; `023_course_reviews.sql`,
+  `store/course_reviews.go`, `handlers/course_reviews.go`,
+  `CourseReviews.tsx`, `ReviewsAdminSection.tsx`).** On a course card: one
+  review per student and course (`PUT/DELETE /api/courses/{code}/review`;
+  saving again replaces it and sets `edited_at`): difficulty, workload,
+  usefulness 1-5, recommend yes/no, text 20-2000, term taken (fall/spring/
+  summer + year). `GET /api/courses/{code}/reviews?sort=new|helpful` →
+  averages of visible reviews + the list. **Anonymous for students**: the
+  store loads the author into `json:"-"` fields and only `ForStaff()` copies
+  them out (author, moderation reason, open reports), used for staff only;
+  keep it that way. Moderation in its own small flow with the forum's AI
+  checks: the instant word filter refuses abuse before saving (422
+  `breaks_rules`); otherwise status `checking`, shown at once, and
+  `checkReview` runs the full check in the background → `ok` or `held` (it
+  only applies while the status is still checking and the text unchanged;
+  `ResumeReviewChecks` at startup). Held/rejected reviews are seen by their
+  author and staff only and aren't counted; a rejected review saved again
+  goes to `held` (never public by itself). "Helpful" (`PUT
+  /api/reviews/{id}/helpful`, not on your own) and "Report" (`POST
+  /api/reviews/{id}/report`, one open per student); both refused when banned.
+  Admin panel → "Reviews" (`GET /api/admin/reviews`: held or reported; `POST
+  /api/admin/reviews/{id}/publish|keep|reject {text}`: publish/keep apply only
+  to the text the admin read, else 409 `changed`), tab badge = how many wait.
+  The viewer's own review is always first in the list (never cut by the limit).
 - **Auto-refresh.** React Query polling: feed 15 s, thread 10 s (1.5 s while
   a post is `checking`), admin queue 5 s, admin badge 10 s; paused in
   background tabs; never refetches over a like that is still saving.
@@ -497,7 +520,7 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
 - **Every public SQL read must hide held posts**: use `threadVisible` /
   `commentVisible` in `backend/internal/store/postgres.go`.
 - **Schema changes** are idempotent SQL applied on every start
-  (`001_init.sql` + `003_chat.sql` + `004_faq.sql` + `005_search.sql` + `006_chat_feedback.sql` + `007_forum_extras.sql` + `008_reputation.sql` + `009_profiles.sql` + `010_tags.sql` + `011_forum_answers.sql` + `012_chat_followups.sql` + `013_chat_trust_share.sql` + `014_edits.sql` + `015_saved_restrict.sql` + `016_notification_events.sql` + `017_chat_source_comment.sql` + `018_location_reports.sql` + `019_map_points.sql` + `020_map_extras.sql` + `021_location_photos.sql` + `022_courses.sql` in `Migrate`, `002_moderation.sql` in
+  (`001_init.sql` + `003_chat.sql` + `004_faq.sql` + `005_search.sql` + `006_chat_feedback.sql` + `007_forum_extras.sql` + `008_reputation.sql` + `009_profiles.sql` + `010_tags.sql` + `011_forum_answers.sql` + `012_chat_followups.sql` + `013_chat_trust_share.sql` + `014_edits.sql` + `015_saved_restrict.sql` + `016_notification_events.sql` + `017_chat_source_comment.sql` + `018_location_reports.sql` + `019_map_points.sql` + `020_map_extras.sql` + `021_location_photos.sql` + `022_courses.sql` + `023_course_reviews.sql` in `Migrate`, `002_moderation.sql` in
   `MigrateModeration`): `CREATE ... IF NOT EXISTS` /
   `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`.
 - **Store interface**: adding a method to `store.Store` also needs a stub on
@@ -561,7 +584,8 @@ streaming answers with a stop button; reputation, levels and top
 helpers; photos on questions and answers; avatars on the server; public
 profile pages.
 
-Courses: story 16 (catalogue) done; reviews (17-18) next. Maps: the real floors
+Courses: story 16 (catalogue) and reviews (17-18) done; an AI summary of
+reviews was postponed by the user. Maps: the real floors
 are 1, 2, 3A, 3B, 4 (not yet in the site); routes upstairs wait until the
 map data is complete. Ideas: search suggestions, Ctrl+K
 search everywhere, PWA, admin stats page, database backups, CI checks on

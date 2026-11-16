@@ -138,6 +138,22 @@ type Store interface {
 	GetUserProgram(ctx context.Context, userID int64) (models.UserProgram, error)
 	SetUserProgram(ctx context.Context, userID int64, programCode string, entryYear int) (models.UserProgram, error)
 
+	// --- Course reviews (023_course_reviews.sql) ---
+	// SaveCourseReview: one per student and course (replaces it); ErrNotFound for an unknown course.
+	SaveCourseReview(ctx context.Context, code string, userID int64, in models.CourseReviewInput, status string) (models.CourseReview, error)
+	GetCourseReview(ctx context.Context, id, viewer int64) (models.CourseReview, error)
+	DeleteMyCourseReview(ctx context.Context, code string, userID int64) error
+	// ListCourseReviews: visible ones, the viewer's own, everything for staff.
+	ListCourseReviews(ctx context.Context, code string, viewer int64, staff bool, sort string) ([]models.CourseReview, error)
+	CourseReviewSummary(ctx context.Context, code string) (models.ReviewSummary, error)
+	SetReviewStatus(ctx context.Context, id int64, status, reason, onlyIf, onlyText string) error
+	ReviewsBeingChecked(ctx context.Context) ([]models.CourseReview, error)
+	// SetReviewHelpful / ReportReview: ErrForbidden for your own review, ErrNotFound for a hidden one.
+	SetReviewHelpful(ctx context.Context, id, userID int64, on bool) (int, error)
+	ReportReview(ctx context.Context, id, userID int64, reason string) error
+	ReviewsForAdmin(ctx context.Context) ([]models.CourseReview, error)
+	ResolveReviewReports(ctx context.Context, id, by int64) error
+
 	// Students' photo suggestions (pending, not from a report).
 	ListPhotoSuggestions(ctx context.Context) ([]models.LocationPhoto, error)
 	CountPendingPhotoSuggestions(ctx context.Context, userID int64) (int, error)

@@ -190,6 +190,7 @@ func main() {
 	}
 	// Finish AI checks interrupted by a restart (posts left in "checking").
 	go h.ResumeModerationChecks(ctx)
+	go h.ResumeReviewChecks(ctx)
 
 	// Unpinned AI chats are deleted after CHAT_RETENTION_DAYS without a
 	// message (0 keeps them forever).
@@ -313,6 +314,13 @@ func main() {
 	mux.Handle("GET /api/curriculum", authMw(http.HandlerFunc(h.GetCurriculum)))
 	mux.Handle("GET /api/courses", authMw(http.HandlerFunc(h.SearchCourses)))
 	mux.Handle("GET /api/courses/{code}", authMw(http.HandlerFunc(h.GetCourse)))
+	mux.Handle("GET /api/courses/{code}/reviews", authMw(http.HandlerFunc(h.ListCourseReviews)))
+	mux.Handle("PUT /api/courses/{code}/review", authMw(writeLimiter(http.HandlerFunc(h.SaveCourseReview))))
+	mux.Handle("DELETE /api/courses/{code}/review", authMw(writeLimiter(http.HandlerFunc(h.DeleteCourseReview))))
+	mux.Handle("PUT /api/reviews/{id}/helpful", authMw(writeLimiter(http.HandlerFunc(h.SetReviewHelpful))))
+	mux.Handle("POST /api/reviews/{id}/report", authMw(writeLimiter(http.HandlerFunc(h.ReportReview))))
+	mux.Handle("GET /api/admin/reviews", authMw(http.HandlerFunc(h.ListReviewsForAdmin)))
+	mux.Handle("POST /api/admin/reviews/{id}/{action}", authMw(writeLimiter(http.HandlerFunc(h.DecideReview))))
 	mux.Handle("GET /api/me/program", authMw(http.HandlerFunc(h.GetMyProgram)))
 	mux.Handle("PUT /api/me/program", authMw(writeLimiter(http.HandlerFunc(h.SetMyProgram))))
 	mux.Handle("POST /api/admin/curricula/preview", authMw(http.HandlerFunc(h.PreviewCurriculum)))
