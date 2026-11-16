@@ -293,3 +293,28 @@ func TestGapsAndMissingTotalsBlockTheImport(t *testing.T) {
 		t.Fatalf("the full page: %q %q", c.ImportProblem(), c.Warnings)
 	}
 }
+
+// Portal typos seen on 2026-10105 Mathematics: Cyrillic "ХХ" in a placeholder
+// code ("PED 4ХХ"), a Cyrillic "К" in a name, and options that give the
+// prefix only once ("MDE 012, 022, 112,113").
+func TestPortalTyposInCodesAndOptions(t *testing.T) {
+	text := "2026-10105 Mathematics (EN)\nMain Track\nBachelor\n1\n" +
+		"1\tPED 111\tLinear Algebra\t\t2\t1+0\t3\t5\n" +
+		"2\tPED 4ХХ\t* [ NAE ] Foreign language 2 (MDE 198, MDE 200)\t\t0\t3+0\t3\t5\n" +
+		"3\tPED 2XX\t* [ NAE ] Кazakh language 2 / Russian language 2 (MDE 012, 022, 112,113)\t\t0\t3+0\t3\t5\n" +
+		"Total ects: 15\nTOTAL ECTS: 15\n"
+	c, err := Parse(text)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(c.Warnings) != 0 || c.ImportProblem() != "" {
+		t.Fatalf("warnings %q, problem %q", c.Warnings, c.ImportProblem())
+	}
+	items := c.Semesters[0].Items
+	if len(items) != 3 || items[1].Slot == nil || !reflect.DeepEqual(items[1].Slot.Options, []string{"MDE 198", "MDE 200"}) {
+		t.Fatalf("Cyrillic XX placeholder: %+v", items)
+	}
+	if s := items[2].Slot; s.Label != "Kazakh language 2 / Russian language 2" || !reflect.DeepEqual(s.Options, []string{"MDE 012", "MDE 022", "MDE 112", "MDE 113"}) {
+		t.Fatalf("options with one prefix: %+v", s)
+	}
+}

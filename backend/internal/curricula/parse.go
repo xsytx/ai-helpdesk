@@ -176,7 +176,8 @@ func Parse(text string) (Curriculum, error) {
 	}
 
 	for _, raw := range strings.Split(text, "\n") {
-		line := strings.TrimSpace(spaceRx.ReplaceAllString(strings.ReplaceAll(raw, " ", " "), " "))
+		// Cyrillic look-alike letters typed into codes on the portal ("PED 4ХХ") become Latin.
+		line := CleanText(strings.TrimSpace(spaceRx.ReplaceAllString(strings.ReplaceAll(raw, " ", " "), " ")))
 		if line == "" {
 			continue
 		}
@@ -323,9 +324,16 @@ func splitOptions(s string) (string, []string) {
 	if open < 0 {
 		return s, options
 	}
+	// "(MDE 012, 022, 112)": a bare number takes the prefix of the code before it.
+	prefix := ""
 	for _, part := range regexp.MustCompile(`[,/]`).Split(s[open+1:len(s)-1], -1) {
+		part = strings.TrimSpace(CleanText(part))
+		if regexp.MustCompile(`^\d{3,4}$`).MatchString(part) && prefix != "" {
+			part = prefix + " " + part
+		}
 		if code, ok := NormalizeCode(part); ok {
 			options = append(options, code)
+			prefix = code[:strings.Index(code, " ")]
 		}
 	}
 	if len(options) == 0 {

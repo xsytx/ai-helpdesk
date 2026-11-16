@@ -96,8 +96,27 @@ function flatten(node: Node, out: string[]) {
   if (block) out.push("");
 }
 
-/** One line with all spaces (tabs too) squeezed: what the patterns check, and what is sent. */
-const squeeze = (line: string) => line.replace(/ /g, " ").replace(/\s+/g, " ").trim();
+/** Cyrillic letters that look like Latin ones (the same list as the backend's CleanText). */
+const LOOKALIKES: Record<string, string> = {
+  А: "A", В: "B", Е: "E", К: "K", М: "M", Н: "H", О: "O", Р: "P", С: "C", Т: "T", Х: "X",
+  а: "a", е: "e", о: "o", р: "p", с: "c", у: "y", х: "x",
+};
+
+/**
+ * In words that are otherwise Latin or digits, Cyrillic look-alikes become
+ * Latin: the portal has typos like "PED 4ХХ" (Cyrillic Х) and "Кazakh".
+ * Real Kazakh/Russian words stay as they are.
+ */
+function latinLookalikes(line: string): string {
+  return line.replace(/\S+/g, (word) => {
+    const cyrillic = word.match(/[Ѐ-ӿ]/g) ?? [];
+    if (cyrillic.length === 0 || !/[A-Za-z0-9]/.test(word) || cyrillic.some((ch) => !(ch in LOOKALIKES))) return word;
+    return word.replace(/[Ѐ-ӿ]/g, (ch) => LOOKALIKES[ch] ?? ch);
+  });
+}
+
+/** One line with all spaces (tabs too) squeezed and look-alike letters fixed: what the patterns check, and what is sent. */
+const squeeze = (line: string) => latinLookalikes(line.replace(/ /g, " ").replace(/\s+/g, " ").trim());
 
 /**
  * Keeps only certain curriculum lines. `trustedTrack`: the line after the
