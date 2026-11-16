@@ -1,0 +1,126 @@
+Curricula
+2026-10101 Mathematics (EN)
+Main Track
+ 	Bachelor
+1
+№ 	course code 	name 	     	teor 	pr 	qu 	ects
+1 	MAT 101 	Mathematical analysis 1 	 	2 	2+0 	4 	5
+2 	MAT 123 	Linear Algebra 	 	2 	2+0 	4 	5
+3 	MAT 125 	Discrete mathematics 	 	2 	2+0 	4 	5
+4 	MDE 160 	Community engagement and value based Society 1 	 	0 	1+0 	1 	0
+5 	MDE 171 	History of Kazakhstan 	 	2 	1+0 	3 	5
+6 	MDE 291 	Physical Education 1 	 	0 	1+0 	1 	2
+7 	XXX 1XX 	* [ NAE ] Foreign language 1 (MDE 190, MDE 192) 	   	0 	3+0 	3 	5
+Total ects: 27
+ 	
+2
+№ 	course code 	name 	     	teor 	pr 	qu 	ects
+1 	MAT 106 	Information and Communication Technologies 	 	1 	2+0 	3 	5
+2 	MAT 122 	Algorithms and programming 1 	 	2 	2+0 	4 	5
+3 	MAT 126 	Mathematical Statistics & Theory of Probability 1 	 	2 	2+0 	4 	5
+4 	MAT 141 	Mathematical analysis 2 	 	2 	2+0 	4 	6
+5 	MDE 170 	Community engagement and value based Society 2 	 	0 	1+0 	1 	0
+6 	MDE 172 	Philosophy 	 	2 	1+0 	3 	5
+7 	MDE 292 	Physical Education 2 	 	0 	1+0 	1 	2
+8 	XXX 1XX 	* [ NAE ] Foreign language 2 (MDE 191, MDE 194) 	   	0 	3+0 	3 	5
+Total ects: 33
+3
+№ 	course code 	name 	     	teor 	pr 	qu 	ects
+1 	MAT 108 	Algebra 	 	2 	1+0 	3 	5
+2* 	MAT 124 	Algorithms and programming 2 	 	2 	2+0 	4 	5
+3* 	MAT 203 	Mathematical analysis 3 	 	2 	2+0 	4 	5
+4* 	MAT 205 	Ordinary differential equations 	 	2 	2+0 	4 	5
+5 	MAT 442 	Mathematical Statistics & Theory of Probability 2 	 	2 	2+0 	4 	5
+6 	MDE 293 	Physical Education 3 	 	0 	1+0 	1 	2
+7 	XXX 2XX 	* [ NAE ] Kazakh / Russian language 1 (MDE 011, MDE 021, MDE 111, MDE 112, MDE 113, MDE 115, MDE 117, MDE 121, MDE 123, MDE 125, MDE 127) 	   	0 	3+0 	3 	5
+Total ects: 32
+ 	
+4
+№ 	course code 	name 	     	teor 	pr 	qu 	ects
+1 	MAT 202 	Mathematical analysis 4 	 	2 	2+0 	4 	6
+2 	MAT 211 	Abstract Algebra 	 	2 	1+0 	3 	5
+3 	MAT 221 	Classical mechanics 	 	2 	2+0 	4 	5
+4 	MDE 294 	Physical Education 4 	 	0 	1+0 	1 	2
+5 	MAT XXX 	* [ AE ] Elective 1 (MAT 128, MCM 302) 	   	2 	1+0 	3 	5
+6 	XXX 2XX 	* [ NAE ] Kazakh / Russian language 2 (MDE 012, MDE 022, MDE 112, MDE 113, MDE 114, MDE 116, MDE 118, MDE 122, MDE 124, MDE 126, MDE 128) 	   	0 	3+0 	3 	5
+Total ects: 28
+5
+№ 	course code 	name 	     	teor 	pr 	qu 	ects
+1 	MAT 133 	Equations of mathematical physics 	 	2 	2+0 	4 	6
+2 	MAT 142 	Real analysis 	 	2 	2+0 	4 	6
+3 	MAT 514 	Introduction to Topology 	 	2 	1+0 	3 	5
+4 	MDE 152 	Module of Social and Political Knowledge (Sociology) 	 	1 	0+0 	1 	2
+5 	MDE 154 	Module of Social and Political Knowledge (Psychology) 	 	1 	0+0 	1 	2
+6 	MAT XXX 	* [ AE ] Elective 2 (MAT 127, MAT 341, MAT 425) 	   	2 	1+0 	3 	5
+7 	XXX XXX 	* [ AE ] Elective 1 (CSS 324, MAT 433, MAT 145) 	   	2 	1+0 	3 	5
+Total ects: 31
+ 	
+6
+№ 	course code 	name 	     	teor 	pr 	qu 	ects
+1 	MAT 307 	Complex analysis 	 	2 	1+0 	3 	5
+2* 	MAT 330 	Functional analysis 	 	2 	2+0 	4 	5
+3 	MDE 151 	Module of Social and Political Knowledge (Political Science) 	 	1 	0+0 	1 	2
+4 	MDE 153 	Module of Social and Political Knowledge (Cultural Studies) 	 	1 	0+0 	1 	2
+5 	MAT xxx 	* [ AE ] Elective 3 (MAT 315, MAT 434, MAT 146) 	   	2 	1+0 	3 	5
+6 	MAT xxx 	* [ AE ] Elective 4 (MAT 443, INF 423, MAT 149) 	   	2 	1+0 	3 	5
+7 	XXX XXX 	* [ NAE ] Elective (MDE 289, MDE 161, MDE 162, MDE 166) 	   	2 	1+0 	3 	5
+Total ects: 29
+7
+№ 	course code 	name 	     	teor 	pr 	qu 	ects
+1 	MAT 370 	Methods of Scientific research 	 	2 	1+0 	3 	5
+2 	MAT 464 	Industrial practise 1 	 	0 	3+0 	3 	5
+3 	MAT 4XX 	* [ AE ] Elective 5 (MAT 448, MAT 364, SDS 417) 	   	2 	1+0 	3 	5
+4 	XXX 4XX 	* [ AE ] Elective 7 (MAT 478, MAT 382, MAT 449) 	   	2 	2+0 	4 	5
+5 	XXX XXX 	* [ AE ] Elective 7 (MAT 470 / MAT 474 / MAT 450) 	   	2 	2+0 	4 	5
+6 	XXX xxx 	* [ AE ] Elective 8 (MAT 472, MAT 465, MAT 451, SDS 208) 	   	2 	2+0 	4 	5
+Total ects: 30
+ 	
+8
+№ 	course code 	name 	     	teor 	pr 	qu 	ects
+1 	MAT 140 	Academic writing 	 	2 	2+0 	4 	6
+2 	MAT 409 	Pregraduational practice 	 	0 	8+0 	8 	12
+3 	MAT XXX 	* [ NTE ] Thesis defense /Project defense (MAT 402/MAT 439) 	   	0 	6+0 	6 	12
+Total ects: 30
+TOTAL ECTS: 240   
+
+
+ ELECTIVE COURSES
+
+ AE - Area elective
+№ 	course code 	name 	teor 	pr 	qu 	ects 	 
+1 	MAT 128 	Number theory 	2 	1+0 	3 	5 	 
+2 	MAT 129 	Symbolic logic 	2 	1+0 	3 	5 	 
+3 	MCM 302 	Numerical methods 	2 	1+0 	3 	5 	 
+4 	CSS 324 	Introduction to Machine Learning 	2 	2+0 	4 	5 	 
+5 	MAT 127 	Additional chapters of mathematical analysis 	2 	2+0 	4 	5 	 
+6 	MAT 425 	Galois Theory 	2 	1+0 	3 	5 	 
+7 	INF 423 	Statistics and Visualization for Data Analysis 	2 	1+0 	3 	5 	 
+8 	SDS 208 	Operations Research 	2 	2+0 	4 	5 	 
+9 	SDS 417 	Topological Data Analysis 	2 	2+0 	4 	5 	 
+ 
+ 
+
+ NAE - Non-area elective
+№ 	course code 	name 	teor 	pr 	qu 	ects 	 
+1 	MDE 192 	Foreign Language 1 (English for Academic Purposes - B2 level) 	0 	3+0 	3 	5 	 
+2 	MDE 021 	Russian Language 1 (А2 level) 	0 	3+0 	3 	5 	 
+3 	MDE 161 	Еconomy 	2 	1+0 	3 	5 	 
+4 	MDE 166 	Еntrepreneurship 	2 	1+0 	3 	5 	 
+ 
+ 
+
+ NTE - Non Theoretical Elective
+№ 	course code 	name 	teor 	pr 	qu 	ects 	 
+1 	MAT 402 	Graduation thesis 	0 	8+0 	8 	12 	 
+2 	MAT 439 	State exams 	0 	8+0 	8 	12 	 
+ 
+ 
+
+ RC - Requisite Courses
+№ 	course code 	name 	teor 	pr 	qu 	ects 	 
+1 	MDE 001 	General English (A1 level) 	0 	5+0 	5 	6 	 
+ 
+ 
+
+ SA - Social Activities
+№ 	course code 	name 	teor 	pr 	qu 	ects

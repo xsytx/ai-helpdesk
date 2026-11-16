@@ -1,7 +1,6 @@
 import { HomePage } from "@/pages/HomePage";
 import { LoginPage } from "@/pages/LoginPage";
 import { ErrorPage, NotFoundPage } from "@/pages/ErrorPages";
-import { PlaceholderPage } from "@/pages/PlaceholderPage";
 import { AppShell } from "@/shared/layout/AppShell";
 import { PageLoading } from "@/shared/ui/PageLoading";
 import { lazy, Suspense, type ComponentType } from "react";
@@ -64,10 +63,8 @@ export const router = createBrowserRouter([
                     path: "navigation",
                     element: lazyPage(() => import("@/pages/MapsPage"), "MapsPage"),
                   },
-                  {
-                    path: "courses",
-                    element: <PlaceholderPage titleKey="courses" descriptionKey="coursesSoon" />,
-                  },
+                  { path: "courses", element: lazyPage(() => import("@/pages/CoursesPage"), "CoursesPage") },
+                  { path: "courses/:code", element: lazyPage(() => import("@/pages/CoursePage"), "CoursePage") },
                   {
                     // Admin panel; moderation is its first section.
                     path: "admin",

@@ -1,0 +1,136 @@
+2026-10132 Applied Mathematics and Computer Modeling (EN)
+Main Track
+Bachelor
+1
+1	MAT 106	Information and Communication Technologies		1	2+0	3	5
+2	MAT 125	Discrete mathematics		2	2+0	4	5
+3	MDE 151	Module of Social and Political Knowledge (Political Science)		1	0+0	1	2
+4	MDE 152	Module of Social and Political Knowledge (Sociology)		1	0+0	1	2
+5	MDE 160	Community engagement and value based Society 1		0	1+0	1	0
+6	MDE 171	History of Kazakhstan		2	1+0	3	5
+7	MDE 291	Physical Education 1		0	1+0	1	2
+8	SDS 101	Calculus 1		2	2+0	4	5
+9	MDE 1XXX	* [ NAE ] Foreign language 1 (MDE 190, MDE 192)		0	3+0	3	5
+Total ects: 31
+2
+1	MAT 123	Linear Algebra		2	2+0	4	5
+2	MAT 126	Mathematical Statistics & Theory of Probability 1		2	2+0	4	5
+3	MCM 104	Algorithms and programming 1		2	2+0	4	5
+4	MDE 153	Module of Social and Political Knowledge (Cultural Studies)		1	0+0	1	2
+5	MDE 170	Community engagement and value based Society 2		0	1+0	1	0
+6	MDE 292	Physical Education 2		0	1+0	1	2
+7	SDS 102	Calculus 2		2	2+0	4	5
+8	XXX 2XXX	* [ NAE ] Foreign language 2 (MDE 191, MDE 194)		0	3+0	3	5
+Total ects: 29
+3
+1	MAT 205	Ordinary differential equations		2	2+0	4	5
+2	MAT 243	Mathematical Statistics & Theory of Probability 2		2	2+0	4	5
+3	MCM 205	Algorithms and programming 2		2	2+0	4	5
+4	MDE 293	Physical Education 3		0	1+0	1	2
+5	SDS 201	Calculus 3		2	2+0	4	5
+6	SDS 311	Data Wrangling, Analysis and Visualisation		2	2+0	4	5
+7	XXX 1XXX	* [ NAE ] Kazakh / Russian language 1 (MDE 111, MDE 113, MDE 115, MDE 117, MDE 121, MDE 123, MDE 125, MDE 127, MDE 011, MDE 021)		0	3+0	3	5
+Total ects: 32
+4
+1	CSS 324	Introduction to Machine Learning		2	2+0	4	5
+2	MAT 221	Classical mechanics		2	2+0	4	5
+3	MCM 106	Simulation modelling		2	2+0	4	6
+4	MCM 206	Formal Languages and Automata Theory		2	2+0	4	5
+5	MDE 294	Physical Education 4		0	1+0	1	2
+6	XXX 2XXX	* [ NAE ] Kazakh / Russian language 2 (MDE 112, MDE 114, MDE 116, MDE 118, MDE 122, MDE 124, MDE 126, MDE 128, MDE 012, MDE 022)		0	3+0	3	5
+Total ects: 28
+5
+1	MAT 304	Equations of mathematical physics		2	1+0	3	5
+2	MAT 330	Functional analysis		2	2+0	4	5
+3	MAT 344	Testing of statistical hypotheses		2	2+0	4	5
+4	MAT 405	Mathematical modelling of economic processes		2	1+0	3	5
+5	MDE XXX	* [ AE ] Area Elective Course (MDE 161, MDE 162, MDE 166, MDE 289)		2	1+0	3	5
+6	XXX 1XXX	* [ AE ] Elective 1 (MAT 426, MAT 445, MAT 443)		2	1+0	3	5
+Total ects: 30
+6
+1	MAT 370	Methods of Scientific research		2	1+0	3	5
+2	MCM 310	Numerical methods		2	2+0	4	5
+3	MCM 316	Industrial practice 1		0	2+0	2	3
+4	MDE 154	Module of Social and Political Knowledge (Psychology)		1	0+0	1	2
+5	MDE 172	Philosophy		2	1+0	3	5
+6	XXX 2XXX	* [ AE ] Elective 2 (MAT 326, MCM 311)		2	1+0	3	5
+7	XXX 3XXX	* [ AE ] Elective 3 (MAT 483, MCM 317, MAT 476)		2	2+0	4	5
+Total ects: 30
+7
+1	MCM 415	Industrial practice 2		0	3+0	3	4
+2	XXX 4XXX	* [ AE ] Elective 4 (INF 392, INF 337)		2	1+0	3	5
+3	XXX 5XXX	* [ AE ] Elective 5 (MAT 364, MAT 410)		2	1+0	3	5
+4	XXX 6XXX	* [ AE ] Elective 6 (CSS 434, MAT 406)		2	1+0	3	5
+5	XXX 7XXX	* [ AE ] Elective 7 (MAT 319, MAT 515)		2	1+0	3	5
+6	XXX 8XXX	* [ AE ] Elective 8 (MAT 484, MAT 478)		2	2+0	4	5
+7	XXX 9XXX	* [ AE ] Elective 9 (INF 410, INF 376)		2	1+0	3	5
+Total ects: 34
+8
+1	MAT 412	Diploma preparation		2	2+0	4	6
+2	MCM XXX	* [ NTE ] Final assessment (MCM 409/ MCM 410)		0	6+0	6	8
+3	XXX XXX	* [ AE ] Elective (MAT 416, MAT 409)		0	8+0	8	12
+Total ects: 26
+TOTAL ECTS: 240
+ELECTIVE COURSES
+AE - Area elective
+1	CSS 727	Artificial Intelligence in Education	2	1+0	3	5
+2	MAT 426	Number theory	2	1+0	3	5
+3	MAT 443	Graph Theory	2	1+0	3	5
+4	MAT 445	Game theory	2	1+0	3	5
+5	MDE 161	Еconomy	2	1+0	3	5
+6	MDE 162	Law	2	1+0	3	5
+7	MDE 166	Еntrepreneurship	2	1+0	3	5
+8	MDE 289	Financial literacy	2	1+0	3	5
+9	PED 465	Inclusive education	2	1+0	3	5
+10	MAT 326	Logic and Model theory	2	1+0	3	5
+11	MAT 476	Mathematical Finance: An Introduction to Option Pricing	2	2+0	4	5
+12	MAT 483	Simulation and modeling of natural processes	2	2+0	4	5
+13	MCM 311	Optimization methods	2	2+0	4	5
+14	MCM 317	Database Management Systems	2	2+0	4	5
+15	CSS 434	Business analytics	1	2+0	3	5
+16	INF 337	Deep Learning	2	1+0	3	5
+17	INF 376	Natural Language Processing	2	1+0	3	5
+18	INF 392	Blockchain technology	2	1+0	3	5
+19	INF 410	Introduction to Building Information Modelling	2	1+0	3	5
+20	MAT 319	Numerical methods of mathematical physics	2	0+1	3	5
+21	MAT 364	Cryptography	2	1+0	3	5
+22	MAT 406	Theory of interest rates and random processes in life insurance	2	1+0	3	5
+23	MAT 410	Enumerative Combinatorics	2	1+0	3	5
+24	MAT 478	Representation Theory	2	2+0	4	5
+25	MAT 484	Design Of Experiments	2	2+0	4	5
+26	MAT 515	Partial differential equations and its applications	2	1+0	3	5
+27	MAT 409	Pregraduational practice	0	8+0	8	12
+28	MCM 416	Industrial internship	0	6+0	6	12
+NAE - Non-area elective
+1	MDE 192	Foreign Language 1 (English for Academic Purposes - B2 level)	0	3+0	3	5
+2	MDE 194	Foreign Language 2 (English for Specific Purposes - B2+ level)	0	3+0	3	5
+3	MDE 011	Kazakh Language 1 (A2 level)	0	3+0	3	5
+4	MDE 021	Russian Language 1 (А2 level)	0	3+0	3	5
+5	MDE 111	Kazakh Language 1 (А1 level/ for foreigners)	0	3+0	3	5
+6	MDE 115	Kazakh Language 1 (B2 level)	0	3+0	3	5
+7	MDE 117	Kazakh Language 1 (C1 level)	0	3+0	3	5
+8	MDE 121	Russian Language 1 (А1 level/ for foreigners)	0	3+0	3	5
+9	MDE 125	Russian Language 1 (B2 level)	0	3+0	3	5
+10	MDE 127	Russian Language 1 (C1 level)	0	3+0	3	5
+11	MDE 012	Kazakh Language 2 (B1 level)	0	3+0	3	5
+12	MDE 022	Russian Language 2 (B1 level)	0	3+0	3	5
+13	MDE 114	Kazakh Language 2 (B1 level)	0	3+0	3	5
+14	MDE 116	Kazakh Language 2 (B2 level)	0	3+0	3	5
+15	MDE 118	Kazakh Language 2 (C1 level)	0	3+0	3	5
+16	MDE 124	Russian Language 2 (B1 level)	0	3+0	3	5
+17	MDE 126	Russian Language 2 (B2 level)	0	3+0	3	5
+18	MDE 128	Russian Language 2 (C1 level)	0	3+0	3	5
+19	MDE 112	Kazakh Language 2 (А2 level/for foreigners)	0	3+0	3	5
+20	MDE 113	Kazakh Language 1 (B1 level)	0	3+0	3	5
+21	MDE 122	Russian Language 2 (А2 level/ for foreigners)	0	3+0	3	5
+22	MDE 123	Russian Language 1 (B1 level)	0	3+0	3	5
+23	MDE 190	Foreign Language 1 (English for Academic Purposes - B1 level )	0	3+0	3	5
+24	MDE 191	Foreign Language 2 (English for Academic Purposes - B1+ level )	0	3+0	3	5
+NTE - Non Theoretical Elective
+1	MCM 409	Thesis defense	0	6+0	6	8
+2	MCM 410	Project defense	0	6+0	6	8
+RC - Requisite Courses
+1	MDE 001	General English (A1 level)	0	5+0	5	6
+2	MDE 002	General English (A2 level)	0	5+0	5	6
+3	MDE 003	General English (B1 level)	0	5+0	5	6
+SA - Social Activities

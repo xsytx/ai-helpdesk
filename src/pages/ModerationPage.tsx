@@ -1,3 +1,4 @@
+import { CoursesAdminSection } from "@/features/courses/components/CoursesAdminSection";
 import { RestrictionsSection } from "@/features/moderation/components/Restrictions";
 import { useAuth } from "@/app/AuthContext";
 import {
@@ -157,6 +158,7 @@ const SECTIONS = [
   { id: "restrictions", key: "adminSectionRestrictions" },
   { id: "map-reports", key: "adminSectionMapReports" },
   { id: "map-editor", key: "adminSectionMapEditor" },
+  { id: "courses", key: "adminSectionCourses" },
 ] as const;
 
 type SectionId = (typeof SECTIONS)[number]["id"];
@@ -209,6 +211,8 @@ export function ModerationPage() {
         <LocationReportsSection />
       ) : section === "map-editor" ? (
         <MapEditorSection />
+      ) : section === "courses" ? (
+        <CoursesAdminSection />
       ) : section === "restrictions" ? (
         <RestrictionsSection />
       ) : section === "chat" ? (

@@ -431,6 +431,55 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   and, when the question asks where something is ("where", "где", "қайда"…),
   places by name or alias (one place per alias word; Bochka A–D by letter).
   Matched in the browser; the model is not involved.
+- **Courses (Sprint 6, story 16; `022_courses.sql`, `internal/curricula`,
+  `store/courses.go`, `handlers/courses.go`, `features/courses/`).** The data
+  comes from the SDU portal's public "Curricula" pages, given to admin panel
+  → "Courses" (`CoursesAdminSection`) as saved pages (Ctrl+S on a program's
+  track page, several .htm at once) or pasted text (Ctrl+A, Ctrl+C). Either
+  way `features/courses/portalPage.ts` runs in the browser first: a saved
+  page is read by its structure only (the title block and semesters = the
+  form around `#tblMufredatProg`, the "TOTAL ECTS" line, the "ELECTIVE
+  COURSES" block), and every line, pasted or saved, must match a strict
+  pattern (title, a track: with the word "Track" when pasted, a level word,
+  semester number, "Total ects", one of the five elective headings AE / NAE /
+  NTE / RC / SA, or a complete row whose code uses a real SDU prefix,
+  `PREFIXES`, and whose name has no e-mail, long number or IP). A row-like line
+  that fails is shown to the admin locally and blocks the import, never sent.
+  So the admin's name, photo, ID, IP, advisor and last login on the portal
+  page never reach the server: keep it that way (a new department prefix goes
+  into `PREFIXES`). "Check" (`POST
+  /api/admin/curricula/preview`) then "Import" (`POST /api/admin/curricula`;
+  the same program + entry year + track again replaces it). `curricula.Parse` reads the
+  header ("2026-10101 Mathematics (EN)", track, level), semesters (a number on
+  its own line, then rows: code, name, theory, practice "2+0", hours, ECTS),
+  elective slots ("XXX 1XX * [ NAE ] Foreign language 1 (MDE 190, MDE 192)"
+  → kind, label, options; only the number part "1XX" marks a placeholder:
+  prefixes like EXT contain an X), and the elective lists (AE, NAE, NTE, RC,
+  SA); rows starred on the portal ("2*", or "2 *" in saved pages) keep
+  `marked`; placeholders may have four characters ("MDE 1XXX"). The page's
+  own totals ("Total ects: 27" per semester, "TOTAL ECTS: 240") are read and
+  an import whose rows don't add up is refused (`ImportProblem`:
+  unreadable_rows, empty_semester, ects_mismatch), so a row the parser misses
+  can never silently replace a good import. `CleanText` turns
+  Cyrillic look-alike letters in Latin words into Latin ("Еconomy"). Test samples
+  in `internal/curricula/testdata/` (a pasted page and a saved page's
+  curriculum lines). Tables:
+  `programs` (portal code "10107", title, level B/M/DR/DS, tag DD/MBA/EMBA,
+  language, faculty F_ENG/F_PHIL/F_LAW; 103 seeded from the portal lists),
+  `courses` (by code "MAT 101"; names from the portal, English only;
+  descriptions in 3 languages written by admins and kept on re-import),
+  `curricula`, `curriculum_items` (a course or a slot with `options`),
+  `curriculum_electives`, `user_programs` (a student's program + entry year).
+  `/courses` (`CoursesPage`) opens on the student's program and current
+  semester (`currentSemester`: autumn odd, spring even; first visit = choose
+  program and entry year, `PUT /api/me/program`); the entry year's curriculum
+  if imported, else the newest with a note; other programs via
+  `?program=`; course search by code or name (`GET /api/courses?q=`,
+  typos via trigrams). A course card `/courses/MAT-101` (`CoursePage`, `GET
+  /api/courses/{code}`) shows hours, description and every program/semester
+  it is taught in (required, elective slot, or only in an elective list).
+  Main tracks first; other tracks and minors are just more imports. Reviews
+  (stories 17-18) are next.
 - **Auto-refresh.** React Query polling: feed 15 s, thread 10 s (1.5 s while
   a post is `checking`), admin queue 5 s, admin badge 10 s; paused in
   background tabs; never refetches over a like that is still saving.
@@ -440,14 +489,15 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
 - **Every UI text in all three languages.** Add keys to `en`, `kz` and `ru`
   in `src/i18n/translations.ts` (TypeScript complains if one is missing).
   Counts use `plural(count, "key")` with `keyOne/Few/Many/Other` forms
-  (Russian needs all four). Kazakh is `kk` for `Intl`/`<html lang>`.
+  (Russian needs all four). So a key ending in `One`, `Few` or `Many` counts
+  as a plural form and needs the other three: don't name a plain key that way. Kazakh is `kk` for `Intl`/`<html lang>`.
   Watch for mixed alphabets in texts (a Cyrillic "С" + Latin letters).
 - **Backend is the source of truth for who may register** — the frontend only
   checks the email format (`isValidEmail`), never the domain.
 - **Every public SQL read must hide held posts**: use `threadVisible` /
   `commentVisible` in `backend/internal/store/postgres.go`.
 - **Schema changes** are idempotent SQL applied on every start
-  (`001_init.sql` + `003_chat.sql` + `004_faq.sql` + `005_search.sql` + `006_chat_feedback.sql` + `007_forum_extras.sql` + `008_reputation.sql` + `009_profiles.sql` + `010_tags.sql` + `011_forum_answers.sql` + `012_chat_followups.sql` + `013_chat_trust_share.sql` + `014_edits.sql` + `015_saved_restrict.sql` + `016_notification_events.sql` + `017_chat_source_comment.sql` + `018_location_reports.sql` + `019_map_points.sql` + `020_map_extras.sql` + `021_location_photos.sql` in `Migrate`, `002_moderation.sql` in
+  (`001_init.sql` + `003_chat.sql` + `004_faq.sql` + `005_search.sql` + `006_chat_feedback.sql` + `007_forum_extras.sql` + `008_reputation.sql` + `009_profiles.sql` + `010_tags.sql` + `011_forum_answers.sql` + `012_chat_followups.sql` + `013_chat_trust_share.sql` + `014_edits.sql` + `015_saved_restrict.sql` + `016_notification_events.sql` + `017_chat_source_comment.sql` + `018_location_reports.sql` + `019_map_points.sql` + `020_map_extras.sql` + `021_location_photos.sql` + `022_courses.sql` in `Migrate`, `002_moderation.sql` in
   `MigrateModeration`): `CREATE ... IF NOT EXISTS` /
   `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`.
 - **Store interface**: adding a method to `store.Store` also needs a stub on
@@ -511,7 +561,9 @@ streaming answers with a stop button; reputation, levels and top
 helpers; photos on questions and answers; avatars on the server; public
 profile pages.
 
-Planned next: maps and courses (future sprints — don't start them unasked); ideas: search suggestions, Ctrl+K
+Courses: story 16 (catalogue) done; reviews (17-18) next. Maps: the real floors
+are 1, 2, 3A, 3B, 4 (not yet in the site); routes upstairs wait until the
+map data is complete. Ideas: search suggestions, Ctrl+K
 search everywhere, PWA, admin stats page, database backups, CI checks on
 GitHub. Optional: stop admins approving their own flagged
 posts. The 4B model is weak in Kazakh (a Kazakh follow-up understood the

@@ -9,6 +9,7 @@ import (
 	"errors"
 	"time"
 
+	"campus-forum/internal/curricula"
 	"campus-forum/internal/models"
 )
 
@@ -121,6 +122,22 @@ type Store interface {
 	ApproveLocationPhoto(ctx context.Context, id int64, caption string, limit int) (models.LocationPhoto, error)
 	DeleteLocationPhoto(ctx context.Context, id int64) (path string, err error)
 	DeletePendingReportPhotos(ctx context.Context, reportID int64) (paths []string, err error)
+	// --- Courses (022_courses.sql) ---
+	ListPrograms(ctx context.Context) ([]models.Program, error)
+	// ImportCurriculum replaces an earlier import of the same program, year and
+	// track; ErrInvalidTarget if a semester number repeats.
+	ImportCurriculum(ctx context.Context, cur curricula.Curriculum, by int64) (models.CurriculumInfo, error)
+	ListCurricula(ctx context.Context) ([]models.CurriculumInfo, error)
+	DeleteCurriculum(ctx context.Context, id int64) error
+	// GetCurriculum: year 0 = the newest imported; track "" = the main track.
+	GetCurriculum(ctx context.Context, programCode string, year int, track string) (models.CurriculumView, error)
+	SearchCourses(ctx context.Context, q string) ([]models.Course, error)
+	GetCourse(ctx context.Context, code string) (models.CourseDetail, error)
+	UpdateCourseDescription(ctx context.Context, code, en, kz, ru string) (models.Course, error)
+	// GetUserProgram: ErrNotFound until the student chooses. SetUserProgram: ErrNotFound for an unknown program.
+	GetUserProgram(ctx context.Context, userID int64) (models.UserProgram, error)
+	SetUserProgram(ctx context.Context, userID int64, programCode string, entryYear int) (models.UserProgram, error)
+
 	// Students' photo suggestions (pending, not from a report).
 	ListPhotoSuggestions(ctx context.Context) ([]models.LocationPhoto, error)
 	CountPendingPhotoSuggestions(ctx context.Context, userID int64) (int, error)

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"campus-forum/internal/auth"
+	"campus-forum/internal/curricula"
 	"campus-forum/internal/middleware"
 	"campus-forum/internal/mlclient"
 	"campus-forum/internal/models"
@@ -48,12 +49,12 @@ func (s *chatTestStore) UpdateChatConversation(context.Context, int64, int64, *s
 	return models.ChatConversation{}, store.ErrNotFound
 }
 func (s *chatTestStore) DeleteChatConversation(context.Context, int64, int64) error { return nil }
-func (s *chatTestStore) RateChatMessage(context.Context, int64, int64, int) error  { return nil }
+func (s *chatTestStore) RateChatMessage(context.Context, int64, int64, int) error   { return nil }
 func (s *chatTestStore) SimilarThreads(context.Context, string) ([]models.Thread, error) {
 	return nil, nil
 }
 func (s *chatTestStore) SetAcceptedAnswer(context.Context, int64, int64, *int64) error { return nil }
-func (s *chatTestStore) ResolveReportsFor(context.Context, string, int64) error       { return nil }
+func (s *chatTestStore) ResolveReportsFor(context.Context, string, int64) error        { return nil }
 func (s *chatTestStore) Reputation(context.Context, []int64) (map[int64]models.Reputation, error) {
 	return map[int64]models.Reputation{}, nil
 }
@@ -158,10 +159,38 @@ func (s *chatTestStore) ApproveLocationPhoto(context.Context, int64, string, int
 	return models.LocationPhoto{}, nil
 }
 func (s *chatTestStore) DeleteLocationPhoto(context.Context, int64) (string, error) { return "", nil }
+func (s *chatTestStore) ListPrograms(context.Context) ([]models.Program, error)     { return nil, nil }
+func (s *chatTestStore) ImportCurriculum(context.Context, curricula.Curriculum, int64) (models.CurriculumInfo, error) {
+	return models.CurriculumInfo{}, nil
+}
+func (s *chatTestStore) ListCurricula(context.Context) ([]models.CurriculumInfo, error) {
+	return nil, nil
+}
+func (s *chatTestStore) DeleteCurriculum(context.Context, int64) error { return nil }
+func (s *chatTestStore) GetCurriculum(context.Context, string, int, string) (models.CurriculumView, error) {
+	return models.CurriculumView{}, store.ErrNotFound
+}
+func (s *chatTestStore) SearchCourses(context.Context, string) ([]models.Course, error) {
+	return nil, nil
+}
+func (s *chatTestStore) GetCourse(context.Context, string) (models.CourseDetail, error) {
+	return models.CourseDetail{}, store.ErrNotFound
+}
+func (s *chatTestStore) UpdateCourseDescription(context.Context, string, string, string, string) (models.Course, error) {
+	return models.Course{}, nil
+}
+func (s *chatTestStore) GetUserProgram(context.Context, int64) (models.UserProgram, error) {
+	return models.UserProgram{}, store.ErrNotFound
+}
+func (s *chatTestStore) SetUserProgram(context.Context, int64, string, int) (models.UserProgram, error) {
+	return models.UserProgram{}, nil
+}
 func (s *chatTestStore) ListPhotoSuggestions(context.Context) ([]models.LocationPhoto, error) {
 	return nil, nil
 }
-func (s *chatTestStore) CountPendingPhotoSuggestions(context.Context, int64) (int, error) { return 0, nil }
+func (s *chatTestStore) CountPendingPhotoSuggestions(context.Context, int64) (int, error) {
+	return 0, nil
+}
 func (s *chatTestStore) DeletePendingReportPhotos(context.Context, int64) ([]string, error) {
 	return nil, nil
 }
@@ -189,7 +218,7 @@ func (s *chatTestStore) UpdateFAQ(context.Context, int64, store.FAQInput) (model
 	return models.FAQ{}, store.ErrNotFound
 }
 func (s *chatTestStore) ReorderFAQs(context.Context, []int64) error { return nil }
-func (s *chatTestStore) DeleteFAQ(context.Context, int64) error { return nil }
+func (s *chatTestStore) DeleteFAQ(context.Context, int64) error     { return nil }
 func (s *chatTestStore) ListFeed(context.Context, string, []string, int, int) ([]models.Thread, int, error) {
 	return nil, 0, nil
 }
@@ -203,13 +232,15 @@ func (s *chatTestStore) UnshareChatConversation(context.Context, int64, int64) e
 func (s *chatTestStore) SharedChat(context.Context, string) (models.ChatConversation, []models.ChatMessage, error) {
 	return models.ChatConversation{}, nil, store.ErrNotFound
 }
-func (s *chatTestStore) SetThreadSaved(context.Context, int64, int64, bool) error { return nil }
+func (s *chatTestStore) SetThreadSaved(context.Context, int64, int64, bool) error  { return nil }
 func (s *chatTestStore) IsThreadSaved(context.Context, int64, int64) (bool, error) { return false, nil }
 func (s *chatTestStore) ListSavedThreads(context.Context, int64, int) ([]models.Thread, error) {
 	return nil, nil
 }
-func (s *chatTestStore) RestrictUser(context.Context, int64, string, *time.Time, string) error { return nil }
-func (s *chatTestStore) LiftRestriction(context.Context, int64, string) error            { return nil }
+func (s *chatTestStore) RestrictUser(context.Context, int64, string, *time.Time, string) error {
+	return nil
+}
+func (s *chatTestStore) LiftRestriction(context.Context, int64, string) error { return nil }
 func (s *chatTestStore) ListRestrictedUsers(context.Context) ([]models.RestrictedUser, error) {
 	return nil, nil
 }
@@ -260,7 +291,7 @@ func (s *chatTestStore) ResetPassword(context.Context, string, string, string, s
 	return nil
 }
 func (s *chatTestStore) ChangePassword(context.Context, int64, string, string) error { return nil }
-func (s *chatTestStore) SetStaffRole(context.Context, int64, string) error            { return nil }
+func (s *chatTestStore) SetStaffRole(context.Context, int64, string) error           { return nil }
 
 func TestBuildChatAskResp(t *testing.T) {
 	faq := "official"
