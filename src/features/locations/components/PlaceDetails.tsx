@@ -14,7 +14,6 @@ import { FloorPlan } from "./FloorPlan";
 import { PlacePhotos } from "./PlacePhotos";
 import { AddPhotoButton, checkPhotos, PhotoThumb } from "@/features/forum/components/Photos";
 import { uploadReportPhoto } from "../photos";
-import { PlaceFloorPlan } from "./PlaceFloorPlan";
 import { ENTRANCE_KEY, ENTRANCE_ORDER, blockPlace, type Entrance, type Place, type PlaceKind, type RoomCode, type SchemeBlock } from "../places";
 
 export const KIND_ICON: Record<PlaceKind, typeof Building2> = {
@@ -65,13 +64,7 @@ function steps(t: (k: TranslationKey) => string, block: string | undefined, floo
   return out;
 }
 
-export function PlaceDetails({ target, from, onFrom, onPick }: {
-  target: Place | RoomCode;
-  from: Entrance;
-  onFrom: (e: Entrance) => void;
-  /** A block or place clicked on the floor plan. */
-  onPick?: (code: string) => void;
-}) {
+export function PlaceDetails({ target, from, onFrom }: { target: Place | RoomCode; from: Entrance; onFrom: (e: Entrance) => void }) {
   const { t, locale } = useLocale();
   const room = "room" in target ? target : null;
   const place = room ? null : (target as Place);
@@ -197,8 +190,6 @@ export function PlaceDetails({ target, from, onFrom, onPick }: {
           ) : null}
         </div>
       )}
-
-      <PlaceFloorPlan target={target} onPick={onPick} />
 
       {/* key: a new place starts with a fresh form */}
       <ReportMistake key={`report-${room ? room.code : place!.code}`} target={target} placeCode={room ? room.code : place!.code} placeName={title} from={from} />

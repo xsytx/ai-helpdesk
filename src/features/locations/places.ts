@@ -9,7 +9,7 @@ export type Entrance = "C" | "G" | "I";
 /** The entrances in the order the switch shows them, and their names. */
 export const ENTRANCE_ORDER: Entrance[] = ["C", "G", "I"];
 export const ENTRANCE_KEY: Record<Entrance, TranslationKey> = { C: "mapsEntranceC", G: "mapsEntranceG", I: "mapsEntranceI" };
-/** Blocks drawn on the campus scheme (see CampusScheme). */
+/** Blocks drawn on the campus map (see campusShapes.ts). */
 export type SchemeBlock = "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | "I";
 /** Points on the scheme that are not a block: the round lecture halls, the canteen, the medical point. */
 export type SchemeSpot = "hallA" | "hallB" | "hallC" | "hallD" | "canteen" | "med";

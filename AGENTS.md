@@ -322,11 +322,10 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   `features/locations/places.ts` for now (blocks A–I, lecture halls "bochkas",
   canteen, medical point, services; three languages). A room code like `F205`
   is decoded (block · floor · room); `D117` etc. open the bochka they belong to.
-  `CampusScheme` shows the full 1st-floor plan (`public/maps/floor1.png`, the
-  same image the floor plans use, drawn at 1/`PLAN_SCALE` = 1/2.3653 so the
-  scheme's units stay as traced) with block tints and letters drawn on top, clickable
-  places (a card on the map; × closes only the card, "Clear route" clears the
-  pick), and a route from Entrance C, G or I along walkable space only:
+  One map at the top ("Campus map", `CampusMap`, see "One campus map" below)
+  shows clickable places (a card on the map; × closes only the card, "Clear
+  route" clears the pick) and a route from Entrance C, G or I along walkable
+  space only (`routePoints` in `campusShapes.ts`):
   the hall just below the wings (`HALL_Y`; the wings' bottom strip is rooms),
   each wing entered through its passage between its two stairwells
   (`WING_DOOR_X`), B and A through the atrium's north glass door; the hall
@@ -344,28 +343,29 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   `migrations/map_points_seed.json` (105 points from the prototype editor)
   while it is empty. `GET /api/map/points` for everyone signed in;
   `POST/PUT/DELETE /api/admin/map/points[/{id}]` for staff (one point per room
-  code, any letter case). A place's card on the Maps page shows its floor
-  plan with the pin (`PlaceFloorPlan`; matched by room code or the point's
-  `place` = a `places.ts` code; a room not on the plan yet marks its block).
+  code, any letter case). The Maps page's map pins the place on its floor
+  (`CampusMap`; matched by room code or the point's `place` = a `places.ts`
+  code; a room not on the plan yet marks its block).
   Admin panel → "Map editor" (`/admin?section=map-editor`, `MapEditorSection`):
   click to edit, drag to move (saved on drop), add, delete, find by code;
   open "Report a mistake" reports are red rings on their points, with Show /
-  Mark fixed / Reject. Students refetch the points on every visit. The
-  overview scheme with routes (`CampusScheme`, titled "Route from the
-  entrance") is still drawn from `places.ts`; the floor plan is "Exact spot".
+  Mark fixed / Reject. Students refetch the points on every visit.
   Point names are one language (as entered).
-- **Merging the two maps (in progress).** The block shapes (tints, coloured
-  letters, lecture halls, canteen, medical point) live in
-  `features/locations/campusShapes.ts`, in the old scheme's units;
-  `UNIT_TO_PLAN` / `planToUnit` convert to/from floor-plan pixels.
-  `CampusScheme` (route map) and `CampusLayer` (the same shapes drawn inside
-  `FloorPlan` through its `layer` prop) both use them. Step 1 is done: floor 1
-  of the place card's "Exact spot" plan (`PlaceFloorPlan`) shows the layer,
-  the found place outlined, clickable blocks/places (`placeAtPlan` hit test
-  via `onPlanClick`; letters count as their block) and a "Blocks" on/off
-  toggle (`ai_helpdesk_map_blocks`). Still to do: step 2 moves the route onto
-  that plan, puts it at the top of the page and removes `CampusScheme`;
-  step 3 adds the upstairs part of routes (stairs → room).
+- **One campus map (`CampusMap`, `CampusLayer`, `campusShapes.ts`).** The
+  Maps page has one map at the top: the real floor plans (`FloorPlan`: zoom,
+  drag, floor tabs 1/2/3B/3). On floor 1 a campus layer is drawn inside it
+  through FloorPlan's `layer` prop: block tints and coloured letters, lecture
+  halls, canteen, medical point, the found place outlined, entrances and the
+  walking route. These shapes and the walkways are traced in "scheme units"
+  (`campusShapes.ts`; plan pixel = `PLAN_SCALE` × unit + (−0.6, 2), i.e.
+  `UNIT_TO_PLAN` / `planToUnit`); line widths and letters are scaled by the
+  zoom so they keep one size on screen. Clicking a block, hall, the canteen or
+  the medical point picks it (`placeAtPlan` via `onPlanClick`; a letter counts
+  as its block; pins win). A place on an upper floor opens on floor 1 (the way
+  in) with a "Floor N: where it is" button; "Way in: floor 1" goes back. The
+  "Blocks" toggle (`ai_helpdesk_map_blocks`) hides the layer. "Nearest toilet /
+  stairs" and tapping pins work on every floor. Still to do (step 3): the
+  upstairs part of the route (stairs → room) on the other floors.
 - **Map extras (`020_map_extras.sql`).** Students: tap any pin to see what it
   is, "Nearest toilet / stairs" (closest point of that type on the floor),
   "Copy link" to a room or place, and in "Report a mistake" an optional tap

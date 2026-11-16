@@ -4,9 +4,9 @@
 // Shapes are clickable places: a pointer click comes through FloorPlan's
 // onPlanClick (see placeAtPlan); keyboard users tab to them here.
 import { useLocale } from "@/i18n/LocaleContext";
-import { useId, type KeyboardEvent, type ReactNode } from "react";
-import { BADGE, BLOCKS, CANTEEN, COLOR, H, HALLS, MED, PLAN_SCALE, UNIT_TO_PLAN, W } from "../campusShapes";
-import { PLACES, type SchemeBlock, type SchemeSpot } from "../places";
+import { useId, type KeyboardEvent, type MouseEvent, type ReactNode } from "react";
+import { BADGE, BLOCKS, CANTEEN, COLOR, ENTRANCES, H, HALLS, MED, PLAN_SCALE, UNIT_TO_PLAN, W, type Pt } from "../campusShapes";
+import { ENTRANCE_KEY, PLACES, type Entrance, type SchemeBlock, type SchemeSpot } from "../places";
 
 /** The outlines of the found place (also cut out of the fade over the rest). */
 function targetShapes(block?: SchemeBlock, spot?: SchemeSpot): ReactNode[] {
@@ -20,20 +20,27 @@ function targetShapes(block?: SchemeBlock, spot?: SchemeSpot): ReactNode[] {
   return BLOCKS[block].map((b, i) => <rect key={i} x={b.x - 6} y={b.y - 6} width={b.w + 12} height={b.h + 12} rx="18" />);
 }
 
-export function CampusLayer({ k, block, spot, onPick }: {
+export function CampusLayer({ k, blocks = true, block, spot, route, from, onPick }: {
   /** FloorPlan's plan pixels per screen pixel (keeps letters readable at any zoom). */
   k: number;
+  /** Block colours, letters, halls and clickable places (off: only the route and entrances). */
+  blocks?: boolean;
   /** The place you look for: its block, or a spot (a lecture hall, the canteen, the medical point). */
   block?: SchemeBlock;
   spot?: SchemeSpot;
+  /** The walking route from the entrance (scheme units), if any. */
+  route?: Pt[] | null;
+  /** The entrance the route starts from (drawn bigger). */
+  from?: Entrance;
   /** A place picked with the keyboard (pointer clicks come through FloorPlan's onPlanClick). */
   onPick?: (code: string) => void;
 }) {
-  const { locale } = useLocale();
+  const { t, locale } = useLocale();
   const maskId = useId();
-  // Scheme units per screen pixel: letters never shrink below their drawn size.
+  // Scheme units per screen pixel: letters, lines and dots keep one size on screen at any zoom.
   const u = k / PLAN_SCALE;
-  const badge = Math.max(24, 10 * u);
+  const badge = 10 * u;
+  const end = route?.at(-1);
   const shapes = targetShapes(block, spot);
   const nameOf = (code: string) => PLACES.find((p) => p.code === code)?.name[locale] ?? code;
 
@@ -43,6 +50,10 @@ export function CampusLayer({ k, block, spot, onPick }: {
       role={onPick ? "button" : undefined}
       tabIndex={onPick ? 0 : undefined}
       aria-label={nameOf(code)}
+      // A pointer click is handled by FloorPlan (onPlanClick); detail 0 = a screen reader or keyboard "click".
+      onClick={(e: MouseEvent) => {
+        if (onPick && e.detail === 0) onPick(code);
+      }}
       onKeyDown={(e: KeyboardEvent) => {
         if (onPick && (e.key === "Enter" || e.key === " ")) {
           e.preventDefault();
@@ -63,6 +74,8 @@ export function CampusLayer({ k, block, spot, onPick }: {
 
   return (
     <g transform={UNIT_TO_PLAN}>
+      {blocks ? (
+        <>
       {/* Block tints, the canteen, the lecture halls and the medical point. */}
       <g pointerEvents="none">
         {(Object.keys(BLOCKS) as SchemeBlock[]).map((key) =>
@@ -96,10 +109,35 @@ export function CampusLayer({ k, block, spot, onPick }: {
             <g fill="black">{shapes}</g>
           </mask>
           <rect x={-50} y={-50} width={W + 100} height={H + 100} fill="#fff" opacity="0.45" mask={`url(#${maskId})`} />
-          <g fill="none" stroke="var(--color-accent)" strokeWidth={Math.max(7, 3 * u)}>{shapes}</g>
+          <g fill="none" stroke="var(--color-accent)" strokeWidth={2.5 * u}>{shapes}</g>
         </g>
       )}
 
+        </>
+      ) : null}
+
+      {route && (
+        <g pointerEvents="none">
+          <polyline points={route.map((p) => p.join(",")).join(" ")} fill="none" stroke="#fff" strokeWidth={6 * u} strokeLinejoin="round" strokeLinecap="round" />
+          <polyline
+            points={route.map((p) => p.join(",")).join(" ")} fill="none" stroke="var(--color-accent)" strokeWidth={3.5 * u}
+            strokeDasharray={`${7 * u} ${5 * u}`} strokeLinejoin="round" strokeLinecap="round"
+          />
+          {end && <circle cx={end[0]} cy={end[1]} r={6 * u} fill="var(--color-accent)" stroke="#fff" strokeWidth={2 * u} />}
+        </g>
+      )}
+
+      {(Object.keys(ENTRANCES) as Entrance[]).map((key) => {
+        const [x, y] = ENTRANCES[key].at;
+        return (
+          <circle key={key} cx={x} cy={y} r={(key === from ? 7 : 5) * u} fill="#dc2626" stroke="#fff" strokeWidth={2 * u} pointerEvents="none">
+            <title>{t(ENTRANCE_KEY[key])}</title>
+          </circle>
+        );
+      })}
+
+      {blocks ? (
+        <>
       {/* Letters on top of the fade, so every block stays easy to find. */}
       <g pointerEvents="none">
         {(Object.keys(BADGE) as SchemeBlock[]).map((key) => (
@@ -121,6 +159,8 @@ export function CampusLayer({ k, block, spot, onPick }: {
         )}
         {hit("MEDICAL", <circle cx={MED[0]} cy={MED[1]} r="30" />)}
       </g>
+        </>
+      ) : null}
     </g>
   );
 }

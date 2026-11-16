@@ -1,6 +1,6 @@
 import { Mascot } from "@/shared/ui/Mascot";
-import { CampusScheme } from "@/features/locations/components/CampusScheme";
-import { KIND_ICON, PlaceDetails, schemeBlockOf } from "@/features/locations/components/PlaceDetails";
+import { CampusMap } from "@/features/locations/components/CampusMap";
+import { KIND_ICON, PlaceDetails } from "@/features/locations/components/PlaceDetails";
 import { PLACES, parseRoomCode, placeForRoom, searchPlaces, type Entrance, type Place, type PlaceKind } from "@/features/locations/places";
 import { useMapPoints } from "@/features/locations/mapPoints";
 import { pointPlaces } from "@/features/locations/pointPlaces";
@@ -134,26 +134,18 @@ export function MapsPage() {
       {/* The map comes before the details: picking a place changes only what is below it, so the map stays put. */}
       <div className="space-y-6">
         <Card>
-          <details open className="group">
-            <summary className="flex cursor-pointer list-none items-center justify-between">
-              <h2 className="font-semibold text-primary">{t("mapsSchemeTitle")}</h2>
-              <span className="text-xs text-label">{t("mapsGroundFloor")}</span>
-            </summary>
-            <div className="mt-4">
-              <CampusScheme
-                block={target ? schemeBlockOf(target) : undefined}
-                spot={target && "spot" in target ? target.spot : undefined}
-                from={from}
-                // Clicking the picked place again clears it.
-                onPick={(code) => update({ q: null, cat: null, place: code === target?.code ? null : code }, code !== target?.code)}
-                popup={mapPick && picked ? { title: picked.name[locale], text: picked.where[locale] } : undefined}
-                onMore={() => document.getElementById("place-details")?.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth" })}
-                onClosePopup={() => setMapPick(false)}
-                onClear={() => update({ q: null, place: null })}
-                guide={guide}
-              />
-            </div>
-          </details>
+          <h2 className="mb-3 font-semibold text-primary">{t("mapsMapTitle")}</h2>
+          <CampusMap
+            target={target}
+            from={from}
+            // Clicking the picked place again clears it.
+            onPick={(code) => update({ q: null, cat: null, place: code === target?.code ? null : code }, code !== target?.code)}
+            popup={mapPick && picked ? { title: picked.name[locale], text: picked.where[locale] } : undefined}
+            onMore={() => document.getElementById("place-details")?.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth" })}
+            onClosePopup={() => setMapPick(false)}
+            onClear={() => update({ q: null, place: null })}
+            guide={guide}
+          />
         </Card>
 
         <Card id="place-details" className="scroll-mt-20 space-y-5">
@@ -161,7 +153,7 @@ export function MapsPage() {
             <PlaceList places={results} selected={target?.code} onPick={(p) => update({ place: p.code })} />
           )}
           {target ? (
-            <PlaceDetails target={target} from={from} onFrom={setFrom} onPick={(code) => update({ q: null, cat: null, place: code })} />
+            <PlaceDetails target={target} from={from} onFrom={setFrom} />
           ) : q.trim() ? (
             <NotFound q={q} />
           ) : (

@@ -2,9 +2,9 @@
 // colours, block letters, the lecture halls ("bochkas"), the canteen and the
 // medical point. They were traced in "scheme units" = the plan image's pixels
 // divided by PLAN_SCALE (plus a small offset); `UNIT_TO_PLAN` turns them into
-// plan pixels, so the same shapes sit on the floor plan (FloorPlan) and on the
-// route scheme (CampusScheme).
-import type { SchemeBlock } from "./places";
+// plan pixels, so they sit on the floor plan (CampusLayer inside FloorPlan),
+// together with the walkways and routes below.
+import type { Entrance, SchemeBlock, SchemeSpot } from "./places";
 
 export type Pt = [number, number];
 export interface Box { x: number; y: number; w: number; h: number }
@@ -55,6 +55,79 @@ export const HALLS: Record<"A" | "B" | "C" | "D", { cx: number; cy: number; r: n
 };
 export const CANTEEN = box(962, 462, 1205, 610);
 export const MED: Pt = [1447, 392];
+
+// Walkways, traced on the plan image. The wings' bottom strip (y 370–415)
+// holds rooms (toilets, shop, medical point), so routes never run along it:
+// the walkway is the hall just below it (HALL_Y), and each wing is entered
+// through its passage between its two stairwells (WING_DOOR_X).
+export const HALL_Y = 447;
+/** East of the H passage the hall runs a little lower, below the stairs in it. */
+export const HALL_Y_EAST = 458;
+export const HALL_EAST_FROM = 1570;
+export const hallY = (x: number) => (x >= HALL_EAST_FROM ? HALL_Y_EAST : HALL_Y);
+
+/** The passage up into each wing (between the wing's two stairwells). */
+export const WING_DOOR_X: Partial<Record<SchemeBlock, number>> = { D: 552, E: 824, F: 1074, G: 1350, H: 1628, I: 1899 };
+/** How far up the wing's own corridor the route goes. */
+export const WING_END_Y = 300;
+
+/** Atrium side: from the C entrance hall up to the hall (west end of the walkway). */
+export const C_TO_HALL: Pt[] = [[262, 612], [300, 578], [350, 505], [368, 496], [400, 478], [425, HALL_Y]];
+/** From the gap east of the atrium to block B's hall (through the atrium's north side and its glass door). */
+export const ATRIUM_TO_B: Pt[] = [[338, 483], [322, 452], [275, 430], [250, 417], [225, 395], [205, 330]];
+
+/** Each entrance and the way from it to the walkway. */
+export const ENTRANCES: Record<Entrance, { at: Pt; toHall: Pt[] }> = {
+  // Main entrance: the glass entrance hall of block C, then past the atrium.
+  C: { at: [228, 650], toHall: C_TO_HALL },
+  // Through the G building to the hall.
+  G: { at: [1316, 656], toHall: [[1312, 615], [1343, 560], [1343, 470], [1343, HALL_Y]] },
+  // East entrance: on the east wall of the big hall under blocks H and I.
+  I: { at: [1995, 469], toHall: [[1960, HALL_Y_EAST]] },
+};
+
+/** Along the walkway from x1 to x2 (a step down to the lower eastern part on the way). */
+export function alongHall(x1: number, x2: number): Pt[] {
+  const out: Pt[] = [];
+  const east = HALL_EAST_FROM;
+  if (x1 < east && x2 >= east) out.push([east - 15, HALL_Y], [east + 15, HALL_Y_EAST]);
+  if (x1 >= east && x2 < east) out.push([east + 15, HALL_Y_EAST], [east - 15, HALL_Y]);
+  out.push([x2, hallY(x2)]);
+  return out;
+}
+
+/** The route from an entrance to the place, along walkable space only. */
+export function routePoints(from: Entrance, block?: SchemeBlock, spot?: SchemeSpot): Pt[] | null {
+  const { at, toHall } = ENTRANCES[from];
+  const hallStart = toHall[toHall.length - 1];
+  /** From the entrance along the walkway to x. */
+  const toX = (x: number): Pt[] => [at, ...toHall, ...alongHall(hallStart[0], x)];
+  /** To the gap east of the atrium (where the ways to blocks A, B and C start). */
+  const toAtrium = (): Pt[] =>
+    from === "C" ? [at, ...C_TO_HALL.slice(0, 3)] : [...toX(425), [400, 478], [368, 496], [350, 505]];
+
+  if (spot?.startsWith("hall")) {
+    const h = HALLS[spot.slice(4) as keyof typeof HALLS];
+    return [...toX(h.cx), [h.cx, h.cy - h.r]];
+  }
+  // The canteen's door is on its north side, towards the walkway.
+  if (spot === "canteen") return [...toX(1032), [1032, 500]];
+  if (spot === "med") return [...toX(MED[0]), [MED[0], MED[1] + 6]];
+  if (!block) return null;
+
+  if (block === "H") {
+    // The hall's stairs sit right under H's passage: go round them on the west.
+    const door = WING_DOOR_X.H!;
+    return [...toX(1600), [1620, 425], [door, 410], [door, WING_END_Y]];
+  }
+  const door = WING_DOOR_X[block];
+  if (door !== undefined) return [...toX(door), [door, 412], [door, WING_END_Y]];
+
+  if (block === "C") return from === "C" ? [at, [262, 612], [300, 578], [318, 560]] : [...toAtrium(), [318, 560]];
+  if (block === "B") return [...toAtrium(), ...ATRIUM_TO_B];
+  // Block A: through block B's hall and north to the A building.
+  return [...toAtrium(), ...ATRIUM_TO_B, [200, 230], [215, 115]];
+}
 
 /** An SVG transform from scheme units to plan pixels (floor-plan coordinates). */
 export const UNIT_TO_PLAN = `matrix(${PLAN_SCALE} 0 0 ${PLAN_SCALE} -0.6 2)`;
