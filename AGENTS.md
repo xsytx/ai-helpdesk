@@ -342,7 +342,7 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   4th floor = the right part of each wing, rooms 4xx, drawn on floor3.png;
   it was called "3" until `024_floor4.sql` renamed it). `x`, `y` are pixels of the image (never resize or crop the
   images, or every point shifts). The table is filled once from
-  `migrations/map_points_seed.json` while it is empty (344 points: the
+  `migrations/map_points_seed.json` while it is empty (365 points: the
   prototype editor's export `maps/sdu-room-locations.json` merged with the
   site's own edits on 2026-11-17; existing databases are not re-seeded). `GET /api/map/points` for everyone signed in;
   `POST/PUT/DELETE /api/admin/map/points[/{id}]` for staff (one point per room
