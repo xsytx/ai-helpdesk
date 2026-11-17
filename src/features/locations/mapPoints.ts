@@ -7,7 +7,7 @@ import { apiClient } from "@/shared/api/client";
 import type { TranslationKey } from "@/i18n/translations";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-export type MapFloor = "1" | "2" | "3B" | "3";
+export type MapFloor = "1" | "2" | "3B" | "4";
 
 /** The plan image of each floor and its size in pixels (do not resize the images: points would shift). */
 export const FLOORS: Record<MapFloor, { image: string; w: number; h: number; faded?: boolean }> = {
@@ -15,9 +15,10 @@ export const FLOORS: Record<MapFloor, { image: string; w: number; h: number; fad
   "2": { image: "/maps/floor2.png", w: 4728, h: 1689 },
   // The half-floor between 2 and 3 has no plan of its own yet: floor 3's, faded.
   "3B": { image: "/maps/floor3.png", w: 4728, h: 1689, faded: true },
-  "3": { image: "/maps/floor3.png", w: 4728, h: 1689 },
+  // The 4th floor: the right part of each wing (rooms 4xx), drawn on the floor 3 image.
+  "4": { image: "/maps/floor3.png", w: 4728, h: 1689 },
 };
-export const FLOOR_ORDER: MapFloor[] = ["1", "2", "3B", "3"];
+export const FLOOR_ORDER: MapFloor[] = ["1", "2", "3B", "4"];
 
 /** Same list as store.MapPointTypes on the server. */
 export const POINT_TYPES = [
@@ -165,17 +166,15 @@ export function pointLabel(p: MapPoint, t: (k: TranslationKey) => string): strin
 
 /**
  * The wings are split-level: the left part (rooms 01–06) has floors 1–3, the
- * right part (rooms 07 and up) floors 1–4 at half-levels — its floor 3 is
- * between the left part's floors 2 and 3 (the 3B plan), its floor 4 just
- * above the left part's floor 3 (the floor 3 plan).
+ * right part (rooms 07 and up) floors 1–4 at half-levels. Every 3rd-floor
+ * room (3xx) is on the "3B" plan; the 4th floor (4xx, right part only) on
+ * the "4" plan.
  */
 export const isRightPart = (room: string | undefined) => room !== undefined && Number(room) >= 7;
 
-/** A room code's floor as a plan ("F205" → "2", "F307" → "3B", "F407" → "3"), if there is one. */
+/** A room code's floor as a plan ("F205" → "2", "F305" / "F307" → "3B", "F407" → "4"), if there is one. */
 export function floorOfRoom(floor: number | undefined, room?: string): MapFloor | undefined {
-  if (isRightPart(room)) {
-    if (floor === 3) return "3B";
-    if (floor === 4) return "3";
-  }
-  return floor === 1 || floor === 2 || floor === 3 ? (String(floor) as MapFloor) : undefined;
+  void room;
+  if (floor === 3) return "3B";
+  return floor === 1 || floor === 2 || floor === 4 ? (String(floor) as MapFloor) : undefined;
 }

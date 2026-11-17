@@ -337,10 +337,12 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
 - **Floor plans and the map editor (`019_map_points.sql`, `store/map_points.go`,
   `handlers/map_points.go`, `features/locations/mapPoints.ts`).** Rooms,
   stairs, toilets, entrances and services are points on the floor-plan images
-  (`public/maps/floor1.png`, `floor2.png`, `floor3.png`; floor `3B` uses
-  floor 3 faded). `x`, `y` are pixels of the image (never resize or crop the
+  (`public/maps/floor1.png`, `floor2.png`, `floor3.png`). Floors are `1`,
+  `2`, `3B` (every 3rd-floor room, drawn on floor3.png faded) and `4` (the
+  4th floor = the right part of each wing, rooms 4xx, drawn on floor3.png;
+  it was called "3" until `024_floor4.sql` renamed it). `x`, `y` are pixels of the image (never resize or crop the
   images, or every point shifts). The table is filled once from
-  `migrations/map_points_seed.json` while it is empty (368 points: the
+  `migrations/map_points_seed.json` while it is empty (344 points: the
   prototype editor's export `maps/sdu-room-locations.json` merged with the
   site's own edits on 2026-11-17; existing databases are not re-seeded). `GET /api/map/points` for everyone signed in;
   `POST/PUT/DELETE /api/admin/map/points[/{id}]` for staff (one point per room
@@ -354,7 +356,7 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   Point names are one language (as entered).
 - **One campus map (`CampusMap`, `CampusLayer`, `campusShapes.ts`).** The
   Maps page has one map at the top: the real floor plans (`FloorPlan`: zoom,
-  drag, floor tabs 1/2/3B/3). On floor 1 a campus layer is drawn inside it
+  drag, floor tabs 1/2/3B/4). On floor 1 a campus layer is drawn inside it
   through FloorPlan's `layer` prop: block tints and coloured letters, lecture
   halls, canteen, medical point, the found place outlined, entrances and the
   walking route. These shapes and the walkways are traced in "scheme units"
@@ -417,9 +419,11 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   point in the editor). Suggestions under the box while typing (↑/↓, Enter,
   Esc); a category chip clears the search text.
 - **Split-level wings.** Rooms 01–06 are the left part (floors 1–3), rooms
-  07+ the right part (floors 1–4 at half-levels): F3xx (07+) is on the 3B
-  plan, F4xx on the floor 3 plan, a little above it (`floorOfRoom`,
-  `isRightPart` in `mapPoints.ts`; the steps say so).
+  07+ the right part (floors 1–4 at half-levels). Every 3xx room is on the
+  3B plan, every 4xx room on the 4 plan (`floorOfRoom` in `mapPoints.ts`);
+  the route steps explain the half-levels (`isRightPart`). The real floors
+  are 1, 2, 3A (right part, offices), 3B (left part, study rooms) and 4: 3A
+  is not separated from 3B on the site yet.
 - **The AI knows where places are.** `ai_ml/data/raw/faq.csv` has `LOC_*`
   rows (a "Where is …?" Q&A per place in en/ru/kk, short everyday questions,
   the room code rule) generated from `places.ts` by
@@ -521,7 +525,7 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
 - **Every public SQL read must hide held posts**: use `threadVisible` /
   `commentVisible` in `backend/internal/store/postgres.go`.
 - **Schema changes** are idempotent SQL applied on every start
-  (`001_init.sql` + `003_chat.sql` + `004_faq.sql` + `005_search.sql` + `006_chat_feedback.sql` + `007_forum_extras.sql` + `008_reputation.sql` + `009_profiles.sql` + `010_tags.sql` + `011_forum_answers.sql` + `012_chat_followups.sql` + `013_chat_trust_share.sql` + `014_edits.sql` + `015_saved_restrict.sql` + `016_notification_events.sql` + `017_chat_source_comment.sql` + `018_location_reports.sql` + `019_map_points.sql` + `020_map_extras.sql` + `021_location_photos.sql` + `022_courses.sql` + `023_course_reviews.sql` in `Migrate`, `002_moderation.sql` in
+  (`001_init.sql` + `003_chat.sql` + `004_faq.sql` + `005_search.sql` + `006_chat_feedback.sql` + `007_forum_extras.sql` + `008_reputation.sql` + `009_profiles.sql` + `010_tags.sql` + `011_forum_answers.sql` + `012_chat_followups.sql` + `013_chat_trust_share.sql` + `014_edits.sql` + `015_saved_restrict.sql` + `016_notification_events.sql` + `017_chat_source_comment.sql` + `018_location_reports.sql` + `019_map_points.sql` + `020_map_extras.sql` + `021_location_photos.sql` + `022_courses.sql` + `023_course_reviews.sql` + `024_floor4.sql` in `Migrate`, `002_moderation.sql` in
   `MigrateModeration`): `CREATE ... IF NOT EXISTS` /
   `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`.
 - **Store interface**: adding a method to `store.Store` also needs a stub on
@@ -586,8 +590,8 @@ helpers; photos on questions and answers; avatars on the server; public
 profile pages.
 
 Courses: story 16 (catalogue) and reviews (17-18) done; an AI summary of
-reviews was postponed by the user. Maps: the real floors
-are 1, 2, 3A, 3B, 4 (not yet in the site); routes upstairs wait until the
+reviews was postponed by the user. Maps: floors on the site are 1, 2, 3B, 4
+(3A not separated from 3B yet); routes upstairs wait until the
 map data is complete. Ideas: search suggestions, Ctrl+K
 search everywhere, PWA, admin stats page, database backups, CI checks on
 GitHub. Optional: stop admins approving their own flagged

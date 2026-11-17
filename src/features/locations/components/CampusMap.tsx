@@ -72,7 +72,9 @@ export function CampusMap({ target, from, onPick, popup, onMore, onClosePopup, o
   const spot = place?.spot;
   const route = target && (schemeBlock || spot) ? routePoints(from, schemeBlock, spot) : null;
   /** The floor the place itself is on (its pin), if known. */
-  const declaredFloor: MapFloor | undefined = place?.floor ? (place.floor >= 3 ? "3" : place.floor === 2 ? "2" : "1") : undefined;
+  const declaredFloor: MapFloor | undefined = place?.floor
+    ? place.floor >= 4 ? "4" : place.floor === 3 ? "3B" : place.floor === 2 ? "2" : "1"
+    : undefined;
   const targetFloor: MapFloor | undefined =
     (room ? floorOfRoom(room.floor, room.room) : undefined) ?? matches[0]?.floor ?? declaredFloor;
   // Floor 1 first when there is a way in to show; otherwise straight to the place's floor.
