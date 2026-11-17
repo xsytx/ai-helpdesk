@@ -340,8 +340,9 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   (`public/maps/floor1.png`, `floor2.png`, `floor3.png`; floor `3B` uses
   floor 3 faded). `x`, `y` are pixels of the image (never resize or crop the
   images, or every point shifts). The table is filled once from
-  `migrations/map_points_seed.json` (105 points from the prototype editor)
-  while it is empty. `GET /api/map/points` for everyone signed in;
+  `migrations/map_points_seed.json` while it is empty (368 points: the
+  prototype editor's export `maps/sdu-room-locations.json` merged with the
+  site's own edits on 2026-11-17; existing databases are not re-seeded). `GET /api/map/points` for everyone signed in;
   `POST/PUT/DELETE /api/admin/map/points[/{id}]` for staff (one point per room
   code, any letter case). The Maps page's map pins the place on its floor
   (`CampusMap`; matched by room code or the point's `place` = a `places.ts`
