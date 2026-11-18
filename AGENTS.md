@@ -380,7 +380,11 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   the card's 3D tour buttons open the official tour (`tours.ts`) in a
   full-screen frame over the page (`TourViewer`; view tabs, "open in a new
   tab", Esc/× close; vrmir3d allows framing — if it ever starts sending
-  `X-Frame-Options`, go back to plain links); "Nearest toilet / stairs" (closest point of that type on the floor),
+  `X-Frame-Options`, go back to plain links). Admins attach more views to
+  any point in the editor ("3D tour": link + optional label, max 10;
+  `map_points.tours` JSONB, `026_map_tours.sql`); the server accepts only
+  `https://vrmir3d.com/SDU_University_VR/…` (they open in a frame), and the
+  card lists `tours.ts` views first, then those of its points; "Nearest toilet / stairs" (closest point of that type on the floor),
   "Copy link" to a room or place, and in "Report a mistake" an optional tap
   on the plan = the right spot (`location_reports.suggested_floor/x/y`,
   `suggested` in the API). Editor: a new point can be dragged before it is
@@ -428,10 +432,15 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   too (`PT_<id>`, their pin on the floor plan; reports about them sit on that
   point in the editor). Suggestions under the box while typing (↑/↓, Enter,
   Esc); a category chip clears the search text.
-- **Split-level wings.** Rooms 01–06 are the left part (floors 1–3), rooms
-  07+ the right part (floors 1–4 at half-levels). Every 3xx room is on the
-  3 plan, every 4xx room on the 4 plan (`floorOfRoom` in `mapPoints.ts`);
-  the route steps explain the half-levels (`isRightPart`).
+- **Split-level wings.** Students say floors 1, 2, 3A, 3B, 4: 3A is the
+  right part of a wing (rooms x06 and up on floor 3, F306–F312), 3B the left
+  part (F301–F305), 4 the right part only (`levelOf` in `mapPoints.ts`; the
+  texts, floor chip and Barys use it). Every 3xx room is on the 3 plan,
+  every 4xx room on the 4 plan (`floorOfRoom`). Each wing has an elevator
+  on floors 1–4 (map points, type `elevator`; floors 2–4 at the same pixels,
+  floor 1's plan is a different drawing): for an upstairs room in a wing the
+  floor-1 route ends at the wing's elevator (`nearWing` in `CampusMap`) and
+  the elevator is marked on floor 1 and on the room's floor.
 - **The AI knows where places are.** `ai_ml/data/raw/faq.csv` has `LOC_*`
   rows (a "Where is …?" Q&A per place in en/ru/kk, short everyday questions,
   the room code rule) generated from `places.ts` by
@@ -533,7 +542,7 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
 - **Every public SQL read must hide held posts**: use `threadVisible` /
   `commentVisible` in `backend/internal/store/postgres.go`.
 - **Schema changes** are idempotent SQL applied on every start
-  (`001_init.sql` + `003_chat.sql` + `004_faq.sql` + `005_search.sql` + `006_chat_feedback.sql` + `007_forum_extras.sql` + `008_reputation.sql` + `009_profiles.sql` + `010_tags.sql` + `011_forum_answers.sql` + `012_chat_followups.sql` + `013_chat_trust_share.sql` + `014_edits.sql` + `015_saved_restrict.sql` + `016_notification_events.sql` + `017_chat_source_comment.sql` + `018_location_reports.sql` + `019_map_points.sql` + `020_map_extras.sql` + `021_location_photos.sql` + `022_courses.sql` + `023_course_reviews.sql` + `024_floor4.sql` + `025_floor3.sql` in `Migrate`, `002_moderation.sql` in
+  (`001_init.sql` + `003_chat.sql` + `004_faq.sql` + `005_search.sql` + `006_chat_feedback.sql` + `007_forum_extras.sql` + `008_reputation.sql` + `009_profiles.sql` + `010_tags.sql` + `011_forum_answers.sql` + `012_chat_followups.sql` + `013_chat_trust_share.sql` + `014_edits.sql` + `015_saved_restrict.sql` + `016_notification_events.sql` + `017_chat_source_comment.sql` + `018_location_reports.sql` + `019_map_points.sql` + `020_map_extras.sql` + `021_location_photos.sql` + `022_courses.sql` + `023_course_reviews.sql` + `024_floor4.sql` + `025_floor3.sql` + `026_map_tours.sql` in `Migrate`, `002_moderation.sql` in
   `MigrateModeration`): `CREATE ... IF NOT EXISTS` /
   `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`.
 - **Store interface**: adding a method to `store.Store` also needs a stub on

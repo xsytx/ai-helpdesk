@@ -55,6 +55,9 @@ func TestMapPoints(t *testing.T) {
 	if code != http.StatusCreated || created["code"] != "Z901" || created["floor"] != "2" {
 		t.Fatalf("create: %d %v", code, created)
 	}
+	if tours, ok := created["tours"].([]any); !ok || len(tours) != 0 {
+		t.Fatalf("a new point's tours: %v, want []", created["tours"])
+	}
 	id := created["id"]
 	t.Cleanup(func() { e.call(admin, http.MethodDelete, fmt.Sprintf("/api/admin/map/points/%v", id), nil) })
 
@@ -68,6 +71,10 @@ func TestMapPoints(t *testing.T) {
 		{"type": "room", "floor": "9", "x": 10, "y": 10},
 		{"type": "room", "floor": "1", "x": -5, "y": 10},
 		{"type": "room", "floor": "1", "x": 10, "y": 10, "place": "drop table"},
+		// 3D tour links only to the official SDU tour (they open inside the page).
+		{"type": "room", "floor": "1", "x": 10, "y": 10, "tours": []map[string]any{{"url": "https://evil.example/SDU_University_VR/3/"}}},
+		{"type": "room", "floor": "1", "x": 10, "y": 10, "tours": []map[string]any{{"url": "javascript:alert(1)"}}},
+		{"type": "room", "floor": "1", "x": 10, "y": 10, "tours": []map[string]any{{"url": "http://vrmir3d.com/SDU_University_VR/3/"}}},
 	} {
 		if code, _ := e.call(admin, http.MethodPost, "/api/admin/map/points", bad); code != http.StatusBadRequest {
 			t.Fatalf("bad point %v: %d, want 400", bad, code)
@@ -75,10 +82,15 @@ func TestMapPoints(t *testing.T) {
 	}
 
 	// An admin moves it: the student's list shows the new position.
-	moved := map[string]any{"code": "Z901", "name": "Test room", "type": "lab", "floor": "3", "x": 1300, "y": 950, "place": "library"}
+	moved := map[string]any{"code": "Z901", "name": "Test room", "type": "lab", "floor": "3", "x": 1300, "y": 950, "place": "library",
+		"tours": []map[string]any{{"url": " https://vrmir3d.com/SDU_University_VR/3/#media=12 ", "label": " Atrium "}}}
 	code, upd := e.call(admin, http.MethodPut, fmt.Sprintf("/api/admin/map/points/%v", id), moved)
 	if code != http.StatusOK || upd["type"] != "lab" || upd["floor"] != "3" || upd["place"] != "LIBRARY" {
 		t.Fatalf("update: %d %v", code, upd)
+	}
+	if tours, _ := upd["tours"].([]any); len(tours) != 1 ||
+		tours[0].(map[string]any)["url"] != "https://vrmir3d.com/SDU_University_VR/3/#media=12" || tours[0].(map[string]any)["label"] != "Atrium" {
+		t.Fatalf("update tours: %v", upd["tours"])
 	}
 	_, list = e.call(student, http.MethodGet, "/api/map/points", nil)
 	if p := findPoint(list, id); p == nil || p["x"] != float64(1300) || p["y"] != float64(950) {

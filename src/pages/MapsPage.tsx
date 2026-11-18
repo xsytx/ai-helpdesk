@@ -2,7 +2,7 @@ import { Mascot } from "@/shared/ui/Mascot";
 import { CampusMap } from "@/features/locations/components/CampusMap";
 import { KIND_ICON, PlaceDetails } from "@/features/locations/components/PlaceDetails";
 import { PLACES, parseRoomCode, placeForRoom, searchPlaces, type Entrance, type Place, type PlaceKind } from "@/features/locations/places";
-import { useMapPoints, type MapPoint } from "@/features/locations/mapPoints";
+import { levelOf, useMapPoints, type MapPoint } from "@/features/locations/mapPoints";
 import { POINT_PLACE_PREFIX, pointPlaces } from "@/features/locations/pointPlaces";
 import { searchTerms } from "@/features/locations/placeSearch";
 import { highlight } from "@/shared/lib/highlight";
@@ -60,7 +60,8 @@ export function MapsPage() {
     if (!target) return undefined;
     const name = "room" in target ? target.code : target.kind === "block" && target.block ? fill(t("mapsBlock"), { block: target.block }) : target.name[locale];
     const floor = target.floor;
-    return floor && floor > 1 ? fill(t("mapsGuideFloor"), { name, floor }) : fill(t("mapsGuide"), { name });
+    const level = "room" in target ? levelOf(target.floor, target.room) : floor;
+    return floor && floor > 1 ? fill(t("mapsGuideFloor"), { name, floor: level ?? floor }) : fill(t("mapsGuide"), { name });
   })();
 
   // The card on the map shows only for a place picked on the map.

@@ -68,14 +68,20 @@ export interface MapPoint {
   y: number;
   /** The Maps page place it belongs to ("RED_CANTEEN", "HALL_A"), or "". */
   place: string;
+  /** Views of the official 3D tour an admin attached (vrmir3d links; label as typed). */
+  tours: PointTour[];
 }
+export interface PointTour { url: string; label: string }
+
+/** The server accepts only the official SDU tour (it opens inside the page). */
+export const isTourUrl = (url: string) => /^https:\/\/(www\.)?vrmir3d\.com\/SDU_University_VR\//.test(url.trim());
 export type MapPointDraft = Omit<MapPoint, "id">;
 
 interface ApiMapPoint extends MapPointDraft {
   id: number;
 }
 
-const toPoint = (p: ApiMapPoint): MapPoint => ({ ...p, id: String(p.id) });
+const toPoint = (p: ApiMapPoint): MapPoint => ({ ...p, id: String(p.id), tours: p.tours ?? [] });
 
 export const mapPointKeys = { all: ["map-points"] as const, changes: ["map-points", "changes"] as const };
 
@@ -167,12 +173,16 @@ export function pointLabel(p: MapPoint, t: (k: TranslationKey) => string): strin
 }
 
 /**
- * The wings are split-level: the left part (rooms 01–06) has floors 1–3, the
- * right part (rooms 07 and up) floors 1–4 at half-levels. Every 3rd-floor
- * room (3xx) is on the "3" plan; the 4th floor (4xx, right part only) on
- * the "4" plan.
+ * A floor as students say it: 1, 2, 3A (the right part of a wing on floor
+ * 3: rooms 06 and up, F306–F312), 3B (the left part: F301–F305) and 4 (the
+ * right part only). A place on floor 3 without a room number stays "3".
+ * Both 3A and 3B are on the "3" plan.
  */
-export const isRightPart = (room: string | undefined) => room !== undefined && Number(room) >= 7;
+export function levelOf(floor: number | undefined, room?: string): string | undefined {
+  if (!floor) return undefined;
+  if (floor === 3 && room !== undefined && /^\d+$/.test(room)) return Number(room) >= 6 ? "3A" : "3B";
+  return String(floor);
+}
 
 /** A room code's floor as a plan ("F205" → "2", "F305" / "F307" → "3", "F407" → "4"), if there is one. */
 export function floorOfRoom(floor: number | undefined, room?: string): MapFloor | undefined {

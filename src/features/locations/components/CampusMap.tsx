@@ -3,17 +3,18 @@
 // canteen, medical point, clickable places), the walking route from the
 // chosen entrance, and the place you look for pinned on its floor. Tap any
 // pin to see what it is; "Nearest toilet / stairs" marks the closest one.
-// For a place on an upper floor the map opens on floor 1 (the way in) and
-// offers to show its floor.
+// For a place on an upper floor the map opens on floor 1 (the way in), the
+// route ends at the wing's elevator, and the elevator is marked on the
+// place's floor too (where you come out).
 import { useLocale } from "@/i18n/LocaleContext";
 import { cn } from "@/shared/lib/cn";
 import { safeStorage } from "@/shared/lib/storage";
 import { Mascot } from "@/shared/ui/Mascot";
 import { ArrowDown, ArrowLeft, ArrowRight, Eraser, Footprints, Layers, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { PLAN_SCALE, placeAtPlan, routePoints, type Pt } from "../campusShapes";
+import { PLAN_SCALE, WING_DOOR_X, placeAtPlan, planToUnit, routePoints, type Pt } from "../campusShapes";
 import {
-  FLOOR_ORDER, PLAN_BLOCKS, TYPE_META, floorOfRoom, pointLabel, pointsFor, useMapPoints,
+  FLOOR_ORDER, PLAN_BLOCKS, TYPE_META, floorOfRoom, levelOf, pointLabel, pointsFor, useMapPoints,
   type MapFloor, type MapPoint, type PointType,
 } from "../mapPoints";
 import type { Entrance, Place, RoomCode, SchemeBlock } from "../places";
@@ -41,6 +42,12 @@ function nearest(points: MapPoint[], floor: MapFloor, from: { x: number; y: numb
     if (!best || dist(p, from) < dist(best, from)) best = p;
   }
   return best;
+}
+
+/** The elevator of a wing: the closest one to `at`, if it is in that wing (~a wing's width). */
+function nearWing(points: MapPoint[], floor: MapFloor, at: { x: number; y: number }) {
+  const lift = nearest(points, floor, at, ["elevator"]);
+  return lift && dist(lift, at) < 450 ? lift : undefined;
 }
 
 export interface MapPopup { title: string; text: string }
@@ -76,13 +83,20 @@ export function CampusMap({ target, from, onPick, onPointPick, popup, onMore, on
   const block = target?.block;
   const schemeBlock = block && /^[A-I]$/.test(block) ? (block as SchemeBlock) : undefined;
   const spot = place?.spot;
-  const route = target && (schemeBlock || spot) ? routePoints(from, schemeBlock, spot) : null;
+  const all = points ?? [];
+  const walk = target && (schemeBlock || spot) ? routePoints(from, schemeBlock, spot) : null;
   /** The floor the place itself is on (its pin), if known. */
   const declaredFloor: MapFloor | undefined = place?.floor
     ? place.floor >= 4 ? "4" : place.floor === 3 ? "3" : place.floor === 2 ? "2" : "1"
     : undefined;
   const targetFloor: MapFloor | undefined =
     (room ? floorOfRoom(room.floor, room.room) : undefined) ?? matches[0]?.floor ?? declaredFloor;
+  // Upstairs in a wing: the route ends at the wing's elevator (on its corridor,
+  // so the walk is the same), marked on floor 1 and on the place's floor.
+  const upstairs = walk && targetFloor && targetFloor !== "1" && schemeBlock && WING_DOOR_X[schemeBlock] !== undefined;
+  const liftDown = upstairs ? nearWing(all, "1", toPlan(walk[walk.length - 1])) : undefined;
+  const route: Pt[] | null = walk && liftDown ? [...walk.slice(0, -1), planToUnit(liftDown.x, liftDown.y)] : walk;
+  const level = room ? levelOf(room.floor, room.room) : place?.floor ? String(place.floor) : undefined;
   // Floor 1 first when there is a way in to show; otherwise straight to the place's floor.
   const startFloor: MapFloor = route ? "1" : (targetFloor ?? "1");
 
@@ -105,12 +119,14 @@ export function CampusMap({ target, from, onPick, onPointPick, popup, onMore, on
       return !v;
     });
 
-  const all = points ?? [];
   const here = matches.filter((p) => p.floor === floor);
   // Where "nearest" is measured from: the place's pin, else its block's letter.
   const blockSpot = block ? PLAN_BLOCKS.find((b) => b.block === block) : undefined;
   const anchor: { x: number; y: number } | undefined = here[0] ?? (target ? blockSpot : undefined);
   const help = helper && anchor ? nearest(all, floor, anchor, HELPERS.find((h) => h.id === helper)!.types) : undefined;
+  // The elevator you take (floor 1) and come out of (the place's floor).
+  const liftUp = upstairs && targetFloor && anchor && floor === targetFloor ? nearWing(all, targetFloor, anchor) : undefined;
+  const lift = floor === "1" ? liftDown : liftUp;
   const campus = floor === "1" && showBlocks;
   const showRoute = floor === "1" && route;
   // Floor 1 always carries the route and entrances; the blocks only when switched on.
@@ -208,7 +224,7 @@ export function CampusMap({ target, from, onPick, onPointPick, popup, onMore, on
             floor={floor}
             points={all}
             highlight={here.map((p) => p.id)}
-            secondary={help ? [help.id] : []}
+            secondary={[help?.id, lift?.id].filter((id): id is string => Boolean(id))}
             block={here.length === 0 ? block : undefined}
             focus={focus}
             onPointClick={(p) => {
@@ -255,7 +271,7 @@ export function CampusMap({ target, from, onPick, onPointPick, popup, onMore, on
                 }}
                 className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-2.5 py-1.5 text-xs font-semibold text-white shadow-md hover:bg-brand-hover"
               >
-                {t("mapsShowFloor").replace("{floor}", otherFloor)}
+                {t("mapsShowFloor").replace("{floor}", otherFloor === targetFloor && level ? level : otherFloor)}
                 <ArrowRight className="h-3.5 w-3.5" />
               </button>
             ) : null}
@@ -295,6 +311,12 @@ export function CampusMap({ target, from, onPick, onPointPick, popup, onMore, on
 
       {pointsFailed ? <p className="mt-2 text-xs text-error">{t("mapsPointsFailed")}</p> : null}
       {helper && anchor && !help ? <p className="mt-2 text-xs text-label">{t("mapsNoneOnFloor")}</p> : null}
+      {lift && !help ? (
+        <p className="mt-2 flex items-center gap-1.5 text-xs text-label">
+          <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: TYPE_META.elevator.color }} />
+          {t(floor === "1" ? "mapsLiftHere" : "mapsLiftOut").replace("{floor}", level ?? targetFloor ?? "")}
+        </p>
+      ) : null}
       {help ? (
         <p className="mt-2 flex items-center gap-1.5 text-xs text-label">
           <Footprints className="h-3.5 w-3.5" />

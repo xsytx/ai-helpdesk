@@ -23,6 +23,9 @@ var floor3SQL string
 //go:embed migrations/020_map_extras.sql
 var mapExtrasSQL string
 
+//go:embed migrations/026_map_tours.sql
+var mapToursSQL string
+
 // The points collected with the prototype editor (sdu-map-export/rooms.json),
 // loaded once into an empty map_points table.
 //
@@ -42,11 +45,11 @@ var (
 // maxMapChanges caps the editor's "recent changes" list.
 const maxMapChanges = 100
 
-const mapPointColumns = `id, code, name, type, floor, x, y, place, updated_at`
+const mapPointColumns = `id, code, name, type, floor, x, y, place, tours, updated_at`
 
 func scanMapPoint(row pgx.Row) (models.MapPoint, error) {
 	var p models.MapPoint
-	err := row.Scan(&p.ID, &p.Code, &p.Name, &p.Type, &p.Floor, &p.X, &p.Y, &p.Place, &p.UpdatedAt)
+	err := row.Scan(&p.ID, &p.Code, &p.Name, &p.Type, &p.Floor, &p.X, &p.Y, &p.Place, &p.Tours, &p.UpdatedAt)
 	switch {
 	case errors.Is(err, pgx.ErrNoRows):
 		return p, ErrNotFound
@@ -57,7 +60,15 @@ func scanMapPoint(row pgx.Row) (models.MapPoint, error) {
 }
 
 func pointInput(p models.MapPoint) *models.MapPointInput {
-	return &models.MapPointInput{Code: p.Code, Name: p.Name, Type: p.Type, Floor: p.Floor, X: p.X, Y: p.Y, Place: p.Place}
+	return &models.MapPointInput{Code: p.Code, Name: p.Name, Type: p.Type, Floor: p.Floor, X: p.X, Y: p.Y, Place: p.Place, Tours: p.Tours}
+}
+
+// tours never stores NULL: no views = an empty list.
+func tours(t []models.MapTour) []models.MapTour {
+	if t == nil {
+		return []models.MapTour{}
+	}
+	return t
 }
 
 // logMapChange records one change inside the caller's transaction.
@@ -119,10 +130,10 @@ func (s *PostgresStore) CreateMapPoint(ctx context.Context, p models.MapPointInp
 	}
 	defer tx.Rollback(ctx) //nolint:errcheck // a no-op after Commit
 	point, err := scanMapPoint(tx.QueryRow(ctx,
-		`INSERT INTO map_points (code, name, type, floor, x, y, place, updated_by)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		`INSERT INTO map_points (code, name, type, floor, x, y, place, updated_by, tours)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		 RETURNING `+mapPointColumns,
-		p.Code, p.Name, p.Type, p.Floor, p.X, p.Y, p.Place, by))
+		p.Code, p.Name, p.Type, p.Floor, p.X, p.Y, p.Place, by, tours(p.Tours)))
 	if err != nil {
 		return point, err
 	}
@@ -146,10 +157,10 @@ func (s *PostgresStore) UpdateMapPoint(ctx context.Context, id int64, p models.M
 	point, err := scanMapPoint(tx.QueryRow(ctx,
 		`UPDATE map_points
 		 SET code = $2, name = $3, type = $4, floor = $5, x = $6, y = $7, place = $8,
-		     updated_at = now(), updated_by = $9
+		     updated_at = now(), updated_by = $9, tours = $10
 		 WHERE id = $1
 		 RETURNING `+mapPointColumns,
-		id, p.Code, p.Name, p.Type, p.Floor, p.X, p.Y, p.Place, by))
+		id, p.Code, p.Name, p.Type, p.Floor, p.X, p.Y, p.Place, by, tours(p.Tours)))
 	if err != nil {
 		return point, err
 	}

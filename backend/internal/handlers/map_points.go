@@ -3,6 +3,7 @@ package handlers
 import (
 	"errors"
 	"net/http"
+	"net/url"
 	"slices"
 	"strings"
 	"unicode/utf8"
@@ -35,6 +36,17 @@ func (h *Handlers) ListMapPoints(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"points": points})
 }
 
+// Up to 10 views of the official 3D tour per point. Only vrmir3d's SDU tour:
+// the website opens these addresses inside the page.
+const maxPointTours = 10
+
+func tourURLOK(raw string) bool {
+	u, err := url.Parse(raw)
+	return err == nil && len(raw) <= 300 && u.Scheme == "https" &&
+		(u.Host == "vrmir3d.com" || u.Host == "www.vrmir3d.com") &&
+		strings.HasPrefix(u.Path, "/SDU_University_VR/")
+}
+
 // mapPointInput reads and checks a point from the request body ("" = fine).
 func mapPointInput(r *http.Request) (models.MapPointInput, string) {
 	var p models.MapPointInput
@@ -57,6 +69,18 @@ func mapPointInput(r *http.Request) (models.MapPointInput, string) {
 		return p, "the point is outside the plan"
 	case p.Place != "" && !placeCodeRx.MatchString(p.Place):
 		return p, "invalid place"
+	case len(p.Tours) > maxPointTours:
+		return p, "too many 3D tour links"
+	}
+	for i := range p.Tours {
+		p.Tours[i].URL = strings.TrimSpace(p.Tours[i].URL)
+		p.Tours[i].Label = strings.TrimSpace(p.Tours[i].Label)
+		if !tourURLOK(p.Tours[i].URL) {
+			return p, "a 3D tour link must be a vrmir3d.com/SDU_University_VR/ address"
+		}
+		if utf8.RuneCountInString(p.Tours[i].Label) > 80 {
+			return p, "a 3D tour label is too long"
+		}
 	}
 	return p, ""
 }

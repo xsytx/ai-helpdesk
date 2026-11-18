@@ -11,12 +11,12 @@ import { getErrorStatus } from "@/shared/api/client";
 import { cn } from "@/shared/lib/cn";
 import { formatRelativeTime } from "@/shared/lib/format";
 import { Button } from "@/shared/ui/Button";
-import { Check, Crosshair, History, Images, MapPin, Plus, Search, Trash2, Undo2, Wand2, X } from "lucide-react";
+import { Check, Crosshair, History, Images, MapPin, Plus, Rotate3d, Search, Trash2, Undo2, Wand2, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useLocationReports, useSetLocationReportStatus, type LocationReport } from "../api";
 import {
   FLOOR_ORDER, PLAN_BLOCKS, POINT_TYPES, TYPE_META, pointsFor, useDeleteMapPoint, useMapChanges, useMapPoints, useSaveMapPoint,
-  type MapFloor, type MapPoint, type MapPointChange, type MapPointDraft, type PointType,
+  isTourUrl, type MapFloor, type MapPoint, type MapPointChange, type MapPointDraft, type PointTour, type PointType,
 } from "../mapPoints";
 import { PLACES, parseRoomCode } from "../places";
 import { FloorPlan } from "./FloorPlan";
@@ -43,7 +43,7 @@ function nextCode(code: string): string {
   return m[1] + n;
 }
 
-const toDraft = (p: MapPoint): MapPointDraft => ({ code: p.code, name: p.name, type: p.type, floor: p.floor, x: p.x, y: p.y, place: p.place });
+const toDraft = (p: MapPoint): MapPointDraft => ({ code: p.code, name: p.name, type: p.type, floor: p.floor, x: p.x, y: p.y, place: p.place, tours: p.tours });
 
 export function MapEditorSection() {
   const { t, locale } = useLocale();
@@ -115,8 +115,14 @@ export function MapEditorSection() {
   const submit = (e: FormEvent) => {
     e.preventDefault();
     if (!form) return;
+    // Empty link rows are dropped; a wrong address is caught before the server refuses it.
+    const tours = form.tours.map((x) => ({ url: x.url.trim(), label: x.label.trim() })).filter((x) => x.url);
+    if (tours.some((x) => !isTourUrl(x.url))) {
+      setMessage({ ok: false, text: t("mapTourBadUrl") });
+      return;
+    }
     const isNew = selectedId === "new";
-    persist(form, isNew ? undefined : selectedId, (saved) => {
+    persist({ ...form, tours }, isNew ? undefined : selectedId, (saved) => {
       // "Add next": the following room code, same type and floor; a click on the plan places it.
       if (isNew) setAdding({ type: saved.type, floor: saved.floor, place: "", code: nextCode(saved.code) });
     });
@@ -215,6 +221,7 @@ export function MapEditorSection() {
           x: s.x,
           y: s.y,
           place: room ? "" : i.report.placeCode,
+          tours: [],
         };
     persist(draft, point?.id, () => {
       setReport.mutate({ id: i.report.id, status: "fixed" });
@@ -238,9 +245,11 @@ export function MapEditorSection() {
         onError,
       });
     } else if (c.action === "update" && c.before && exists(c.pointId)) {
-      save.mutate({ ...c.before, id: c.pointId }, { onSuccess: (p) => { select(p, true); onSuccess(); }, onError });
+      // Changes logged before points had 3D tour links carry none: keep the current ones.
+      const tours = c.before.tours ?? all.find((p) => p.id === c.pointId)?.tours ?? [];
+      save.mutate({ ...c.before, tours, id: c.pointId }, { onSuccess: (p) => { select(p, true); onSuccess(); }, onError });
     } else if (c.action === "delete" && c.before) {
-      save.mutate({ ...c.before }, { onSuccess: (p) => { select(p, true); onSuccess(); }, onError });
+      save.mutate({ ...c.before, tours: c.before.tours ?? [] }, { onSuccess: (p) => { select(p, true); onSuccess(); }, onError });
     }
   };
   const canUndo = (c: MapPointChange) => (c.action === "delete" ? Boolean(c.before) : exists(c.pointId));
@@ -342,7 +351,7 @@ export function MapEditorSection() {
             onPlanClick={(x, y) => {
               if (adding) {
                 setSelectedId("new");
-                setForm({ code: adding.code ?? "", name: "", type: adding.type ?? "room", floor, x, y, place: adding.place ?? "" });
+                setForm({ code: adding.code ?? "", name: "", type: adding.type ?? "room", floor, x, y, place: adding.place ?? "", tours: [] });
                 setAdding(null);
                 setMessage(undefined);
               } else if (selectedId !== "new") {
@@ -409,6 +418,7 @@ export function MapEditorSection() {
                   ))}
                 </select>
               </label>
+              <TourFields tours={form.tours} onChange={(tours) => setForm({ ...form, tours })} field={field} />
               <p className="flex items-start gap-1.5 text-xs text-label">
                 <Crosshair className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                 <span>
@@ -572,5 +582,60 @@ export function MapEditorSection() {
         </aside>
       </div>
     </div>
+  );
+}
+
+/** A point's 3D tour links (max 10): the address of a view and what it shows. */
+function TourFields({ tours, onChange, field }: { tours: PointTour[]; onChange: (tours: PointTour[]) => void; field: string }) {
+  const { t } = useLocale();
+  const set = (i: number, patch: Partial<PointTour>) => onChange(tours.map((x, k) => (k === i ? { ...x, ...patch } : x)));
+  return (
+    <fieldset className="space-y-1.5">
+      <legend className="flex items-center gap-1.5 text-xs font-semibold text-label">
+        <Rotate3d className="h-3.5 w-3.5" />
+        {t("mapTourTitle")}
+      </legend>
+      {tours.map((x, i) => (
+        <div key={i} className="space-y-1 rounded-xl bg-background-2 p-2">
+          <div className="flex items-center gap-1">
+            <input
+              className={cn(field, "min-w-0 flex-1 py-1.5 text-xs", x.url.trim() && !isTourUrl(x.url) && "border-error")}
+              value={x.url}
+              maxLength={300}
+              placeholder="https://vrmir3d.com/SDU_University_VR/3/#media=12"
+              aria-label={t("mapTourUrl")}
+              onChange={(e) => set(i, { url: e.target.value })}
+            />
+            <button
+              type="button"
+              onClick={() => onChange(tours.filter((_, k) => k !== i))}
+              aria-label={t("mapTourRemove")}
+              className="rounded-lg p-1 text-label hover:bg-surface"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+          <input
+            className={cn(field, "py-1.5 text-xs")}
+            value={x.label}
+            maxLength={80}
+            placeholder={t("mapTourLabel")}
+            aria-label={t("mapTourLabel")}
+            onChange={(e) => set(i, { label: e.target.value })}
+          />
+        </div>
+      ))}
+      {tours.length < 10 ? (
+        <button
+          type="button"
+          onClick={() => onChange([...tours, { url: "", label: "" }])}
+          className="inline-flex items-center gap-1 text-xs font-semibold text-brand hover:underline dark:text-primary"
+        >
+          <Plus className="h-3.5 w-3.5" />
+          {t("mapTourAdd")}
+        </button>
+      ) : null}
+      {tours.length === 0 ? <p className="text-[11px] text-label">{t("mapTourHint")}</p> : null}
+    </fieldset>
   );
 }

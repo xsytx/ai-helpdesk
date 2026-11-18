@@ -8,8 +8,8 @@ import { copyText } from "@/shared/lib/clipboard";
 import { Armchair, ArrowUp, BookOpen, Building2, Check, CheckCircle2, Clock, ConciergeBell, Crosshair, DoorOpen, Flag, Footprints, Info, Lightbulb, Link2, Rotate3d, UtensilsCrossed } from "lucide-react";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useReportLocation, type MapSpot } from "../api";
-import { toursFor } from "../tours";
-import { FLOOR_ORDER, floorOfRoom, isRightPart, pointsFor, useMapPoints, type MapFloor } from "../mapPoints";
+import { toursFor, type TourView } from "../tours";
+import { FLOOR_ORDER, floorOfRoom, levelOf, pointsFor, useMapPoints, type MapFloor } from "../mapPoints";
 import { FloorPlan } from "./FloorPlan";
 import { PlacePhotos } from "./PlacePhotos";
 import { TourViewer } from "./TourViewer";
@@ -35,7 +35,7 @@ const fill = (s: string, vars: Record<string, string | number>) =>
 
 interface Step { icon: ReactNode; title: string; note?: string; done?: boolean }
 
-function steps(t: (k: TranslationKey) => string, block: string | undefined, floor: number | undefined, from: Entrance, last: string, spotName?: string, rightPart = false): Step[] {
+function steps(t: (k: TranslationKey) => string, block: string | undefined, floor: number | undefined, from: Entrance, last: string, spotName?: string, level?: string): Step[] {
   const out: Step[] = [
     { icon: <DoorOpen className="h-4 w-4" />, title: fill(t("mapsStepEnter"), { e: from }) },
   ];
@@ -53,12 +53,18 @@ function steps(t: (k: TranslationKey) => string, block: string | undefined, floo
     out.push({ icon: <Info className="h-4 w-4" />, title: fill(t("mapsStepUnknownBlock"), { block }) });
   }
   if (floor && floor > 1) {
-    // The right part of a wing is split-level (rooms 07 and up).
-    const split = rightPart && block && WINGS.has(block) && floor >= 3;
+    // The wings are split-level: 3A = the right part, 3B = the left part, 4 = the right part only.
+    const wing = block && WINGS.has(block);
+    const note =
+      !wing ? undefined
+      : level === "3A" ? fill(t("mapsStep3A"), { block: block! })
+      : level === "3B" ? fill(t("mapsStep3B"), { block: block! })
+      : level === "4" ? t("mapsStepSplit4")
+      : undefined;
     out.push({
       icon: <ArrowUp className="h-4 w-4" />,
-      title: fill(t("mapsStepStairs"), { floor }),
-      note: split ? t(floor === 3 ? "mapsStepSplit3" : "mapsStepSplit4") : undefined,
+      title: fill(t(wing ? "mapsStepLift" : "mapsStepStairs"), { floor: level ?? floor }),
+      note,
     });
   }
   out.push({ icon: <CheckCircle2 className="h-4 w-4" />, title: last, done: true });
@@ -73,8 +79,21 @@ export function PlaceDetails({ target, from, onFrom }: { target: Place | RoomCod
   const faculty = room ? blockPlace(room.block) : null;
 
   const title = room ? fill(t("mapsRoomTitle"), { code: room.code }) : place!.name[locale];
+  // "3A" / "3B" for a room on floor 3 (the wing's right / left part).
+  const level = room ? levelOf(room.floor, room.room) : place?.floor ? String(place.floor) : undefined;
   // 3D tour views: a room by its code, a map point by its name, a place by its code.
-  const tours = room ? toursFor(room.code) : place!.point ? toursFor(place!.name.en) : toursFor(place!.code);
+  // …and the views admins attached to its points in the map editor.
+  const { data: points } = useMapPoints();
+  const own = !points ? [] : place?.point ? points.filter((p) => p.id === place.point) : pointsFor(points, room ? room.code : place!.code, place?.rooms ?? []);
+  const tours = [
+    ...(room ? toursFor(room.code) : place!.point ? toursFor(place!.name.en) : toursFor(place!.code)),
+    ...own.flatMap((p) =>
+      p.tours.map((x): TourView => {
+        const label = x.label || p.name || p.code || title;
+        return { url: x.url, label: { en: label, kz: label, ru: label } };
+      }),
+    ),
+  ].filter((v, i, list) => list.findIndex((w) => w.url === v.url) === i);
   // The 3D tour view open over the page, if any (closed when the place changes).
   const [tourAt, setTourAt] = useState<number>();
   const closeTour = useCallback(() => setTourAt(undefined), []);
@@ -87,7 +106,7 @@ export function PlaceDetails({ target, from, onFrom }: { target: Place | RoomCod
           t, block, room?.floor ?? place?.floor, from,
           room ? fill(t("mapsStepRoom"), { room: room.room }) : fill(t("mapsStepHere"), { name: place!.name[locale] }),
           spot ? place!.name[locale] : undefined,
-          isRightPart(room?.room),
+          level,
         )
       : null;
 
@@ -101,7 +120,7 @@ export function PlaceDetails({ target, from, onFrom }: { target: Place | RoomCod
           <h2 className="text-xl font-bold text-primary">{title}</h2>
           <div className="mt-2 flex flex-wrap gap-1.5 text-xs font-medium">
             {block && <Chip>{fill(t("mapsBlock"), { block })}</Chip>}
-            {(room?.floor ?? place?.floor) !== undefined && <Chip>{fill(t("mapsFloor"), { floor: room?.floor ?? place!.floor! })}</Chip>}
+            {level !== undefined && <Chip>{fill(t("mapsFloor"), { floor: level })}</Chip>}
             {room && <Chip>{fill(t("mapsRoom"), { room: room.room })}</Chip>}
             {faculty && <Chip tone="sky">{faculty.where[locale]}</Chip>}
           </div>

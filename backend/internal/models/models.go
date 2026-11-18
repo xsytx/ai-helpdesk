@@ -284,7 +284,15 @@ type MapPoint struct {
 	X         int       `json:"x"`
 	Y         int       `json:"y"`
 	Place     string    `json:"place"`
+	Tours     []MapTour `json:"tours"`
 	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// MapTour is a view of the official SDU 3D tour attached to a map point
+// (URL on vrmir3d.com; Label as the admin typed it, may be "").
+type MapTour struct {
+	URL   string `json:"url"`
+	Label string `json:"label"`
 }
 
 // MapPointInput is what an admin sends to create or change a point (also the seed's format).
@@ -296,6 +304,8 @@ type MapPointInput struct {
 	X     int    `json:"x"`
 	Y     int    `json:"y"`
 	Place string `json:"place"`
+	// Tours: nil when left out (the seed, old change-log entries) = none.
+	Tours []MapTour `json:"tours"`
 }
 
 // FAQ is one question/answer entry, managed by moderators/admins and
