@@ -414,6 +414,7 @@ export function CampusMap({ target, marked, from, onPick, onPointPick, popup, on
         <p className="mt-2 flex items-center gap-1.5 text-xs text-label">
           <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: TYPE_META.elevator.color }} />
           {t(floor === "1" ? (stairs ? "mapsLiftStairsHere" : "mapsLiftHere") : stairs ? "mapsLiftStairsOut" : "mapsLiftOut").replace("{floor}", level ?? targetFloor ?? "")}
+          {floor !== "1" && upPath ? ` ${t("mapsWalkLine")}` : ""}
         </p>
       ) : null}
       {help ? (

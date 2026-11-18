@@ -55,7 +55,7 @@ src/                 React 19 + TS website (Vite, Tailwind v4, React Router 7, T
 backend/             Go 1.26 JSON API + PostgreSQL schema   (see backend/AGENTS.md)
 ai_ml/               Python FastAPI service: FAQ search + LLM answers + moderation (Ollama)
 docker-compose.yml   web (nginx) + app (Go) + db (Postgres 16) + ai_ml
-nginx.conf           serves the site, proxies /api (read timeout 200s for slow AI answers)
+nginx.conf           serves the site, proxies /api (read timeout 200s for slow AI answers), gzip, caching
 .env / .env.example  settings for docker compose (root .env; ai_ml/.env is only for run.bat)
 ```
 
@@ -464,9 +464,12 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   end stairs; on the room's floor a dashed walk goes from the elevator to the
   room (`corridorPath` in `upstairs.ts`). The middle of each wing is a void
   (open to the floors below): the walk uses the corridor on its left or right
-  side (offsets measured on the plans, `CORRIDOR`). The elevator opens to the
-  left on 1, 2, 3B and to the right on 3A, 4 (`liftExit`); a room on the
-  other side is reached round the void's lower end. Stairs naming (map points, type `stairs`): no name = goes to
+  side (offsets measured on the plans, `CORRIDOR`): straight out of the
+  elevator to the room's side: 3A and 4 = right (floor 4's rooms 401–407 are
+  all on the right), 3B = left, floor 2 by number (01–05 left) (`levelSide`). A
+  room not beside the corridor (the strip under a wing, the hall below I,
+  floor 2's x12 off to the side) gets no line (`corridorPath` returns null),
+  never one through walls. Stairs naming (map points, type `stairs`): no name = goes to
   every floor (the stairs at the far end of each wing); others name their
   floors, lowest first: "Stairs 1-2", "Stairs 2-3A-3B" (near the wing
   entrance), "Stairs 3B-4", "Stairs 1-2-3", and a point on each floor they
@@ -610,6 +613,12 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
 - **Commit messages** have no AI co-author/attribution lines.
 
 ## Gotchas
+
+- `nginx.conf` compresses text (JS, CSS, JSON, SVG) but must never compress
+  the live streams (`text/event-stream`, `application/x-ndjson`): don't add
+  those to `gzip_types`. Uploads are cached for a month (every changed file
+  gets a new random name: keep it that way); `index.html` is always
+  re-checked so a deploy's new bundles load.
 
 - Windows checkout with `core.autocrlf=true`: files are CRLF in the working
   tree (Git stores LF). Editing tools that write LF create mixed endings;
