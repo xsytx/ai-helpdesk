@@ -461,10 +461,12 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   floor 1's plan is a different drawing): for an upstairs room in a wing the
   floor-1 route ends at the wing's elevator (`nearWing` in `CampusMap`) and
   the elevator is marked on floor 1 and on the room's floor, with the wing's
-  end stairs; on the room's floor a dashed walk goes from the elevator along
-  the wing's corridor to the room (`corridorPath` in `upstairs.ts`: the line
-  through the elevator with the wings' tilt `WING_SLOPE`, measured on the
-  floor 3 plan). Stairs naming (map points, type `stairs`): no name = goes to
+  end stairs; on the room's floor a dashed walk goes from the elevator to the
+  room (`corridorPath` in `upstairs.ts`). The middle of each wing is a void
+  (open to the floors below): the walk uses the corridor on its left or right
+  side (offsets measured on the plans, `CORRIDOR`). The elevator opens to the
+  left on 1, 2, 3B and to the right on 3A, 4 (`liftExit`); a room on the
+  other side is reached round the void's lower end. Stairs naming (map points, type `stairs`): no name = goes to
   every floor (the stairs at the far end of each wing); others name their
   floors, lowest first: "Stairs 1-2", "Stairs 2-3A-3B" (near the wing
   entrance), "Stairs 3B-4", "Stairs 1-2-3", and a point on each floor they

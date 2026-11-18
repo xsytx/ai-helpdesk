@@ -176,7 +176,7 @@ export function CampusMap({ target, marked, from, onPick, onPointPick, popup, on
   // …and the wing's stairs that go to every floor (at its far end).
   const stairs = lift ? nearWing(all, floor, lift, isFullStairs) : undefined;
   // On the room's floor: the walk from the elevator along the wing's corridor to it.
-  const upPath = liftUp && here[0] && schemeBlock ? corridorPath(all, floor, schemeBlock, liftUp, here[0]) : null;
+  const upPath = liftUp && here[0] && schemeBlock ? corridorPath(all, floor, schemeBlock, liftUp, here[0], level, room?.room) : null;
   const campus = floor === "1" && showBlocks;
   const showRoute = floor === "1" && route;
   // Floor 1 always carries the route and entrances; the blocks only when switched on.
