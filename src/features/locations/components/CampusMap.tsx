@@ -11,7 +11,7 @@ import { cn } from "@/shared/lib/cn";
 import { safeStorage } from "@/shared/lib/storage";
 import { Mascot } from "@/shared/ui/Mascot";
 import { ArrowDown, ArrowLeft, ArrowRight, Eraser, Footprints, Layers, X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { PLAN_SCALE, WING_DOOR_X, placeAtPlan, planToUnit, routePoints, type Pt } from "../campusShapes";
 import {
   FLOOR_ORDER, PLAN_BLOCKS, TYPE_META, floorOfRoom, levelOf, pointLabel, pointsFor, useMapPoints,
@@ -59,9 +59,11 @@ function nearWing(points: MapPoint[], floor: MapFloor, at: { x: number; y: numbe
 
 export interface MapPopup { title: string; text: string }
 
-export function CampusMap({ target, from, onPick, onPointPick, popup, onMore, onClosePopup, onClear, guide }: {
+export function CampusMap({ target, marked, from, onPick, onPointPick, popup, onMore, onClosePopup, onClear, guide }: {
   /** The room or place you look for (none = the whole campus). */
   target?: Place | RoomCode;
+  /** A category chip's places, marked on the map while nothing is picked. */
+  marked?: Place[];
   from: Entrance;
   /** A block or place clicked on the map (its code in places.ts). */
   onPick?: (code: string) => void;
@@ -111,6 +113,25 @@ export function CampusMap({ target, from, onPick, onPointPick, popup, onMore, on
   const [helper, setHelper] = useState<"toilet" | "stairs">();
   const [tapped, setTapped] = useState<MapPoint>();
   const [showBlocks, setShowBlocks] = useState(() => safeStorage.get(BLOCKS_KEY) !== "off");
+  // A category's places (their pins), while no single place is picked.
+  const markedPts = useMemo(() => {
+    if (target || !marked || !points) return [];
+    const ids = new Set<string>();
+    for (const pl of marked) {
+      for (const p of pl.point ? points.filter((x) => x.id === pl.point) : pointsFor(points, pl.code, pl.rooms)) ids.add(p.id);
+    }
+    return points.filter((p) => ids.has(p.id));
+  }, [target, marked, points]);
+  const markKey = markedPts.map((p) => p.id).join(",");
+  const markedOn = (f: MapFloor) => markedPts.filter((p) => p.floor === f).length;
+  // A new category: stay on this floor if it has some of them, else the floor with the most.
+  useEffect(() => {
+    if (!markKey) return;
+    setFloor((f) => {
+      const count = (x: MapFloor) => markedPts.filter((p) => p.floor === x).length;
+      return count(f) > 0 ? f : FLOOR_ORDER.reduce((best, x) => (count(x) > count(best) ? x : best), f);
+    });
+  }, [markKey]);
   // A place opened by tapping its pin stays on the floor it was tapped on.
   const tappedOn = useRef<{ code: string; floor: MapFloor }>(undefined);
   // Another place or entrance (or the points just loaded): start on its floor again, nothing extra marked.
@@ -127,6 +148,7 @@ export function CampusMap({ target, from, onPick, onPointPick, popup, onMore, on
     });
 
   const here = matches.filter((p) => p.floor === floor);
+  const markedHere = markedPts.filter((p) => p.floor === floor);
   // Where "nearest" is measured from: the place's pin, else its block's letter.
   const blockSpot = block ? PLAN_BLOCKS.find((b) => b.block === block) : undefined;
   const anchor: { x: number; y: number } | undefined = here[0] ?? (target ? blockSpot : undefined);
@@ -153,6 +175,12 @@ export function CampusMap({ target, from, onPick, onPointPick, popup, onMore, on
     focus = { x: (x1 + x2) / 2, y: (y1 + y2) / 2, w: Math.max(x2 - x1, (y2 - y1) * 2.4) * 1.25 + 300, key: `route-${code}-${from}` };
   } else if (here[0]) {
     focus = { x: here[0].x, y: here[0].y, key: `${code}-${here[0].id}-${here[0].x}-${here[0].y}` };
+  } else if (markedHere.length > 0) {
+    // Frame all of the category's pins on this floor.
+    const xs = markedHere.map((p) => p.x);
+    const ys = markedHere.map((p) => p.y);
+    const [x1, x2, y1, y2] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
+    focus = { x: (x1 + x2) / 2, y: (y1 + y2) / 2, w: Math.max(x2 - x1, (y2 - y1) * 2.4) * 1.2 + 500, key: `marked-${markKey}` };
   }
   const missing = target && points && matches.length === 0 && room;
   const otherFloor = targetFloor && targetFloor !== floor ? targetFloor : undefined;
@@ -221,6 +249,7 @@ export function CampusMap({ target, from, onPick, onPointPick, popup, onMore, on
                 )}
               >
                 {f}
+                {markedOn(f) > 0 && floor !== f ? <span className="ml-1 rounded-full bg-accent px-1.5 text-[10px] font-bold text-white">{markedOn(f)}</span> : null}
               </button>
             ))}
           </div>
@@ -233,7 +262,8 @@ export function CampusMap({ target, from, onPick, onPointPick, popup, onMore, on
             floor={floor}
             points={all}
             highlight={here.map((p) => p.id)}
-            secondary={[help?.id, lift?.id, stairs?.id].filter((id): id is string => Boolean(id))}
+            secondary={[help?.id, lift?.id, stairs?.id, ...markedHere.map((p) => p.id)].filter((id): id is string => Boolean(id))}
+            dimOthers={markedHere.length > 0}
             block={here.length === 0 ? block : undefined}
             focus={focus}
             onPointClick={(p) => {
@@ -319,6 +349,12 @@ export function CampusMap({ target, from, onPick, onPointPick, popup, onMore, on
       </div>
 
       {pointsFailed ? <p className="mt-2 text-xs text-error">{t("mapsPointsFailed")}</p> : null}
+      {markedPts.length > 0 ? (
+        <p className="mt-2 text-xs text-label">
+          {t("mapsMarkedHere").replace("{n}", String(markedHere.length)).replace("{floor}", floor)}
+          {markedHere.length < markedPts.length ? ` ${t("mapsMarkedOther")}` : ""}
+        </p>
+      ) : null}
       {helper && anchor && !help ? <p className="mt-2 text-xs text-label">{t("mapsNoneOnFloor")}</p> : null}
       {lift && !help ? (
         <p className="mt-2 flex items-center gap-1.5 text-xs text-label">

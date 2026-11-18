@@ -5,7 +5,7 @@ import { cn } from "@/shared/lib/cn";
 import { getErrorStatus } from "@/shared/api/client";
 import { Button } from "@/shared/ui/Button";
 import { copyText } from "@/shared/lib/clipboard";
-import { Armchair, ArrowUp, BookOpen, Building2, Check, CheckCircle2, Clock, ConciergeBell, Crosshair, DoorOpen, Flag, Footprints, Info, Lightbulb, Link2, Rotate3d, UtensilsCrossed } from "lucide-react";
+import { Armchair, ArrowUp, BookOpen, Building2, Check, CheckCircle2, Clock, ConciergeBell, Crosshair, DoorOpen, Flag, Footprints, Info, Lightbulb, Link2, Presentation, Rotate3d, UtensilsCrossed } from "lucide-react";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useReportLocation, type MapSpot } from "../api";
 import { toursFor, type TourView } from "../tours";
@@ -18,7 +18,7 @@ import { uploadReportPhoto } from "../photos";
 import { ENTRANCE_KEY, ENTRANCE_ORDER, blockPlace, type Entrance, type Place, type PlaceKind, type RoomCode, type SchemeBlock } from "../places";
 
 export const KIND_ICON: Record<PlaceKind, typeof Building2> = {
-  block: Building2, food: UtensilsCrossed, study: BookOpen, service: ConciergeBell, rest: Armchair, entrance: DoorOpen, tour: Rotate3d,
+  block: Building2, food: UtensilsCrossed, study: BookOpen, service: ConciergeBell, rest: Armchair, entrance: DoorOpen, tour: Rotate3d, room: Presentation,
 };
 
 const SCHEME_BLOCKS = new Set<string>(["A", "B", "C", "D", "E", "F", "G", "H", "I"]);

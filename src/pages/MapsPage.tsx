@@ -166,6 +166,8 @@ export function MapsPage() {
           <h2 className="mb-3 font-semibold text-primary">{t("mapsMapTitle")}</h2>
           <CampusMap
             target={target}
+            // A category chip marks all its places on the map (until one is picked).
+            marked={kind !== "all" ? results : undefined}
             from={from}
             // Clicking the picked place again clears it.
             onPick={(code) => update({ q: null, cat: null, place: code === target?.code ? null : code }, code !== target?.code)}

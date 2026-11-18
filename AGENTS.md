@@ -432,7 +432,13 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   too (`PT_<id>`, their pin on the floor plan; reports about them sit on that
   point in the editor). Their category chip comes from the point type
   (`kindOf` in `pointPlaces.ts`): "other" with 3D tour links = the "3D tour"
-  chip, a shop is Food only when it sells food (minimarket), else Services.
+  chip (or Study when its name says "study area"), a shop is Food only when
+  it sells food (minimarket), else Services. "Study" is only places anyone
+  can sit and study (the library, study areas); rooms, lecture halls and labs
+  are kind "room": no chip, found by search and on the map.
+  Choosing a chip (nothing picked) marks all its places' pins on the map
+  (`marked` on `CampusMap`: rings + names, other pins faded, framed; a floor
+  without any switches to the floor with the most; tabs show counts).
   Suggestions under the box while typing (↑/↓, Enter,
   Esc); a category chip clears the search text.
 - **Split-level wings.** Students say floors 1, 2, 3A, 3B, 4: 3A is the

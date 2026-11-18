@@ -25,6 +25,8 @@ export interface FloorPlanProps {
   highlight?: string[];
   /** Helper points to show labelled next to it (the nearest toilet or stairs). */
   secondary?: string[];
+  /** Fade every point that isn't highlighted, secondary or selected (a category is marked). */
+  dimOthers?: boolean;
   /** The point being edited (a ring; it can be dragged when onPointMove is given). */
   selectedId?: string;
   /** Points with open "Report a mistake" reports: a red mark and the count. */
@@ -56,7 +58,7 @@ export interface FloorPlanProps {
 }
 
 export function FloorPlan({
-  floor, points, highlight = [], secondary = [], selectedId, reported = {}, block, focus, onPointClick, onPlanClick, picking,
+  floor, points, highlight = [], secondary = [], dimOthers = false, selectedId, reported = {}, block, focus, onPointClick, onPlanClick, picking,
   onPointMove, draft, onDraftMove, ghost, wheelZoom, layer, className,
 }: FloorPlanProps) {
   const { t } = useLocale();
@@ -250,6 +252,7 @@ export function FloorPlan({
               onPointerUp={(e) => onUp(e, p)}
               className={onPointClick ? "cursor-pointer" : undefined}
               style={draggable(p.id) ? { cursor: "move" } : undefined}
+              opacity={dimOthers && !isHl && !isSec && !isSel ? 0.3 : undefined}
             >
               <title>{name}</title>
               {isHl && pulse && (

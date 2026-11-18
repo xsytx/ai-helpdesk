@@ -4,8 +4,13 @@ import type { Locale, TranslationKey } from "@/i18n/translations";
 import { searchPlaces as rankPlaces } from "./placeSearch";
 
 export type Text = Record<Locale, string>;
-/** "tour": a map point that is a view of the 3D tour (type "other" with tour links). */
-export type PlaceKind = "block" | "food" | "study" | "service" | "rest" | "entrance" | "tour";
+/**
+ * The category chip a place is listed under. "tour": a view of the 3D tour
+ * (a map point of type "other" with tour links). "room": rooms, lecture halls
+ * and labs: no chip (found by search and on the map), so "Study" keeps only
+ * places anyone can sit and study in (the library, study areas).
+ */
+export type PlaceKind = "block" | "food" | "study" | "service" | "rest" | "entrance" | "tour" | "room";
 export type Entrance = "C" | "G" | "I";
 /** The entrances in the order the switch shows them, and their names. */
 export const ENTRANCE_ORDER: Entrance[] = ["C", "G", "I"];
@@ -109,37 +114,37 @@ export const PLACES: Place[] = [
     aliases: ["advising", "advisor", "adviser", "advisory", "эдвайзер", "эдвайзинг", "куратор"],
   },
   {
-    code: "IELTS_CENTER", kind: "study", block: "E", floor: 1, rooms: ["E105"],
+    code: "IELTS_CENTER", kind: "room", block: "E", floor: 1, rooms: ["E105"],
     name: { en: "IDP IELTS test centre (E105)", kz: "IDP IELTS тест орталығы (E105)", ru: "Тестовый центр IDP IELTS (E105)" },
     where: { en: "Block E, 1st floor, room E105: IELTS on computer", kz: "E блогы, 1-қабат, E105: компьютерде IELTS", ru: "Блок E, 1 этаж, E105: IELTS на компьютере" },
     aliases: ["ielts", "idp", "test centre", "test center", "тестовый центр", "тест орталығы", "e105"],
   },
   {
-    code: "LANGUAGE_SCHOOL", kind: "study", block: "E", floor: 1, rooms: ["E107"],
+    code: "LANGUAGE_SCHOOL", kind: "room", block: "E", floor: 1, rooms: ["E107"],
     name: { en: "Language school, Extension Center (E107)", kz: "Тіл мектебі, Extension Center (E107)", ru: "Языковая школа при Extension Center (E107)" },
     where: { en: "Block E, 1st floor, room E107", kz: "E блогы, 1-қабат, E107", ru: "Блок E, 1 этаж, E107" },
     aliases: ["language school", "языковая школа", "тіл мектебі", "extension center", "extension centre", "e107"],
   },
   {
-    code: "DISTANCE_STUDIO", kind: "study", block: "F", floor: 1, rooms: ["F105"],
+    code: "DISTANCE_STUDIO", kind: "room", block: "F", floor: 1, rooms: ["F105"],
     name: { en: "Distance learning studio (F105)", kz: "Қашықтан оқыту студиясы (F105)", ru: "Студия дистанционного обучения (F105)" },
     where: { en: "Block F, 1st floor, room F105", kz: "F блогы, 1-қабат, F105", ru: "Блок F, 1 этаж, F105" },
     aliases: ["studio", "студия", "distance learning", "дистанционное обучение", "қашықтан оқыту", "f105"],
   },
   {
-    code: "AI_LAB", kind: "study", block: "I", floor: 1, rooms: ["I105"],
+    code: "AI_LAB", kind: "room", block: "I", floor: 1, rooms: ["I105"],
     name: { en: "AI Lab (I105)", kz: "AI Lab (I105)", ru: "AI Lab (I105)" },
     where: { en: "Block I, 1st floor, room I105", kz: "I блогы, 1-қабат, I105", ru: "Блок I, 1 этаж, I105" },
     aliases: ["ai lab", "artificial intelligence", "искусственный интеллект", "жасанды интеллект", "i105"],
   },
   {
-    code: "SENATE_HALL", kind: "study", block: "B", floor: 2, rooms: ["B206"],
+    code: "SENATE_HALL", kind: "room", block: "B", floor: 2, rooms: ["B206"],
     name: { en: "Senate Hall (B206)", kz: "Сенат залы (B206)", ru: "Сенатский зал (B206)" },
     where: { en: "Block B, 2nd floor, room B206", kz: "B блогы, 2-қабат, B206", ru: "Блок B, 2 этаж, B206" },
     aliases: ["senate", "сенат", "senate hall", "сенатский зал", "b206"],
   },
   {
-    code: "RED_HALL", kind: "study", block: "A", floor: 1,
+    code: "RED_HALL", kind: "room", block: "A", floor: 1,
     name: { en: "Red Hall", kz: "Қызыл зал", ru: "Красный зал" },
     where: { en: "Block A, 1st floor", kz: "A блогы, 1-қабат", ru: "Блок A, 1 этаж" },
     aliases: ["red hall", "красный зал", "қызыл зал"],
@@ -253,7 +258,7 @@ export const PLACES: Place[] = [
   ...(["A", "B", "C", "D"] as const).map((h): Place => {
     const rooms = { A: ["D117", "D218"], B: ["D116", "D217"], C: ["D113", "D214"], D: ["E117", "E221"] }[h];
     return {
-      code: `HALL_${h}`, kind: "study", spot: `hall${h}`, rooms,
+      code: `HALL_${h}`, kind: "room", spot: `hall${h}`, rooms,
       name: { en: `Lecture hall “Bochka ${h}”`, kz: `«${h}» бочка дәріс залы`, ru: `Лекционный зал «Бочка ${h}»` },
       where: {
         en: `Round hall off the main corridor: ${rooms[0]} on the 1st floor, ${rooms[1]} on the 2nd`,

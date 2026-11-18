@@ -11,7 +11,7 @@ const tr = (loc: Locale, key: keyof (typeof translations)["en"]) => translations
 
 /** Which category chip a point type belongs to (null = not a place to search for). */
 const KIND: Record<PointType, PlaceKind | null> = {
-  room: null, lab: "study", office: "service", hall: "study", library: "study", canteen: "food", cafe: "food",
+  room: null, lab: "room", office: "service", hall: "room", library: "study", canteen: "food", cafe: "food",
   shop: "food", medical: "service", service: "service", wifi: "rest", toilet: null, staff_toilet: null,
   stairs: null, elevator: null, entrance: null, other: "service",
 };
@@ -22,11 +22,12 @@ const WINGS: [SchemeBlock, number, number][] = [
 ];
 /**
  * A point's category chip: an "other" point with 3D tour links is a 3D view
- * ("Atrium: minimarket"), not a service; a shop is food only when it sells
- * food (the minimarket), else a service (SDU Store sells merch).
+ * ("Atrium: minimarket"), not a service, or a place to study when its name
+ * says so ("Atrium: study area above Bochka B"); a shop is food only when it
+ * sells food (the minimarket), else a service (SDU Store sells merch).
  */
 function kindOf(p: MapPoint): PlaceKind | null {
-  if (p.type === "other" && p.tours.length > 0) return "tour";
+  if (p.type === "other" && p.tours.length > 0) return /study|учеб|оқу/i.test(p.name) ? "study" : "tour";
   if (p.type === "shop") return /market|маркет|food|азық|продукт/i.test(p.name) ? "food" : "service";
   return KIND[p.type];
 }
