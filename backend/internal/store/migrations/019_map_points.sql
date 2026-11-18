@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS map_points (
 );
 
 DO $$ BEGIN
-    ALTER TABLE map_points ADD CONSTRAINT map_points_floor_check CHECK (floor IN ('1', '2', '3B', '4'));
+    ALTER TABLE map_points ADD CONSTRAINT map_points_floor_check CHECK (floor IN ('1', '2', '3', '4'));
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 

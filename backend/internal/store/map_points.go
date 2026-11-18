@@ -17,6 +17,9 @@ var mapPointsSQL string
 //go:embed migrations/024_floor4.sql
 var floor4SQL string
 
+//go:embed migrations/025_floor3.sql
+var floor3SQL string
+
 //go:embed migrations/020_map_extras.sql
 var mapExtrasSQL string
 
@@ -29,7 +32,7 @@ var mapPointsSeed []byte
 // MapFloors and MapPointTypes are the allowed values; the website has the
 // same lists (src/features/locations/mapPoints.ts).
 var (
-	MapFloors     = []string{"1", "2", "3B", "4"}
+	MapFloors     = []string{"1", "2", "3", "4"}
 	MapPointTypes = []string{
 		"room", "lab", "office", "hall", "library", "canteen", "cafe", "shop", "medical", "service",
 		"wifi", "toilet", "staff_toilet", "stairs", "elevator", "entrance", "other",

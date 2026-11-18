@@ -119,6 +119,9 @@ func (s *PostgresStore) Migrate(ctx context.Context) error {
 	if _, err := s.pool.Exec(ctx, floor4SQL); err != nil {
 		return err
 	}
+	if _, err := s.pool.Exec(ctx, floor3SQL); err != nil {
+		return err
+	}
 	return s.seedMapPoints(ctx)
 }
 

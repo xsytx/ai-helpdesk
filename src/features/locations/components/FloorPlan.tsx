@@ -217,7 +217,7 @@ export function FloorPlan({
         role={layer ? "group" : "img"}
         aria-label={t("mapsFloorTab").replace("{floor}", floor)}
       >
-        <image href={plan.image} x="0" y="0" width={plan.w} height={plan.h} opacity={plan.faded ? 0.4 : 1} />
+        <image href={plan.image} x="0" y="0" width={plan.w} height={plan.h} />
 
         {layer?.(k)}
 

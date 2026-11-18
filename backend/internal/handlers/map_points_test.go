@@ -75,9 +75,9 @@ func TestMapPoints(t *testing.T) {
 	}
 
 	// An admin moves it: the student's list shows the new position.
-	moved := map[string]any{"code": "Z901", "name": "Test room", "type": "lab", "floor": "3B", "x": 1300, "y": 950, "place": "library"}
+	moved := map[string]any{"code": "Z901", "name": "Test room", "type": "lab", "floor": "3", "x": 1300, "y": 950, "place": "library"}
 	code, upd := e.call(admin, http.MethodPut, fmt.Sprintf("/api/admin/map/points/%v", id), moved)
-	if code != http.StatusOK || upd["type"] != "lab" || upd["floor"] != "3B" || upd["place"] != "LIBRARY" {
+	if code != http.StatusOK || upd["type"] != "lab" || upd["floor"] != "3" || upd["place"] != "LIBRARY" {
 		t.Fatalf("update: %d %v", code, upd)
 	}
 	_, list = e.call(student, http.MethodGet, "/api/map/points", nil)

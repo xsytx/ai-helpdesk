@@ -49,7 +49,7 @@ export function pointPlaces(points: MapPoint[]): Place[] {
         ].filter(Boolean).join(" · "),
       ),
       block,
-      floor: p.floor === "3B" ? 3 : Number(p.floor),
+      floor: Number(p.floor),
       aliases: [...LOCALES.map(typeName), p.code].filter(Boolean),
     });
   }
