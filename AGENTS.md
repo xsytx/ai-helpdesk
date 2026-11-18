@@ -421,7 +421,7 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   (`POST /api/admin/map/photos/{id}/approve`) or remove; rejecting the
   report deletes a photo still pending.
   Any student may also send photos from a place card ("Add photos of this
-  place", several at once, sent one by one; `POST /api/location-photos`,
+  place": photos wait as previews until "Send", then go one by one; `POST /api/location-photos`,
   pending, up to `store.MaxSuggestionsPerPlace` (5) per student and place,
   max 20 waiting, not muted); admins see them in the editor under "Photos from
   students" (`GET /api/admin/map/photos/suggestions`) and approve/delete
