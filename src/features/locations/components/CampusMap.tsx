@@ -10,8 +10,9 @@ import { useLocale } from "@/i18n/LocaleContext";
 import { cn } from "@/shared/lib/cn";
 import { safeStorage } from "@/shared/lib/storage";
 import { Mascot } from "@/shared/ui/Mascot";
-import { ArrowDown, ArrowLeft, ArrowRight, Eraser, Footprints, Layers, X } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowRight, ChevronDown, Eraser, Expand, Footprints, Layers, Shrink, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { PLAN_SCALE, WING_DOOR_X, placeAtPlan, planToUnit, routePoints, type Pt } from "../campusShapes";
 import {
   FLOOR_ORDER, PLAN_BLOCKS, TYPE_META, floorOfRoom, levelOf, pointLabel, pointsFor, useMapPoints,
@@ -113,6 +114,21 @@ export function CampusMap({ target, marked, from, onPick, onPointPick, popup, on
   const [helper, setHelper] = useState<"toilet" | "stairs">();
   const [tapped, setTapped] = useState<MapPoint>();
   const [showBlocks, setShowBlocks] = useState(() => safeStorage.get(BLOCKS_KEY) !== "off");
+  // Full screen (comfortable on phones) and the legend (folded on phones).
+  const [full, setFull] = useState(false);
+  const [legendOpen, setLegendOpen] = useState(false);
+  useEffect(() => {
+    if (!full) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !document.querySelector('[aria-modal="true"]')) setFull(false);
+    };
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = "";
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [full]);
   // A category's places (their pins), while no single place is picked.
   const markedPts = useMemo(() => {
     if (target || !marked || !points) return [];
@@ -186,10 +202,24 @@ export function CampusMap({ target, marked, from, onPick, onPointPick, popup, on
   const otherFloor = targetFloor && targetFloor !== floor ? targetFloor : undefined;
   const right = route ? route[route.length - 1][0] >= route[0][0] : true;
 
-  return (
-    <section>
+  const body = (
+    <section
+      className={full ? "fixed inset-0 z-50 flex flex-col bg-background-2 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]" : undefined}
+      role={full ? "dialog" : undefined}
+      aria-label={full ? t("mapsMapTitle") : undefined}
+    >
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-1.5">
+          {full ? (
+            <button
+              type="button"
+              onClick={() => setFull(false)}
+              aria-label={t("close")}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-border bg-surface text-primary hover:bg-background-2"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          ) : null}
           {(target ? HELPERS : []).map((h) => (
             <button
               key={h.id}
@@ -256,7 +286,7 @@ export function CampusMap({ target, marked, from, onPick, onPointPick, popup, on
         </div>
       </div>
 
-      <div className="relative">
+      <div className={cn("relative", full && "min-h-0 flex-1")}>
         {(
           <FloorPlan
             floor={floor}
@@ -283,7 +313,21 @@ export function CampusMap({ target, marked, from, onPick, onPointPick, popup, on
                   }
                 : undefined
             }
-            className="h-[320px] md:h-[440px]"
+            declutter
+            loading={!points && !pointsFailed}
+            controls={
+              <button
+                type="button"
+                onClick={() => setFull((v) => !v)}
+                aria-label={t(full ? "mapsExitFullscreen" : "mapsFullscreen")}
+                title={t(full ? "mapsExitFullscreen" : "mapsFullscreen")}
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-surface text-primary shadow-sm hover:bg-background-2"
+              >
+                {full ? <Shrink className="h-4 w-4" /> : <Expand className="h-4 w-4" />}
+              </button>
+            }
+            // Taller on phones, so the plan isn't a thin strip; the whole screen in full screen.
+            className={full ? "h-full" : "h-[60vh] min-h-[340px] max-h-[560px] md:h-[440px] md:min-h-0 md:max-h-none"}
           />
         )}
 
@@ -389,7 +433,17 @@ export function CampusMap({ target, marked, from, onPick, onPointPick, popup, on
         <p className="mt-2 text-xs text-label">{t("mapsNotOnPlan").replace("{code}", code!).replace("{block}", block ?? "")}</p>
       ) : null}
 
-      <p className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-label">
+      {/* The legend folds into a button on phones. */}
+      <button
+        type="button"
+        onClick={() => setLegendOpen((v) => !v)}
+        aria-expanded={legendOpen}
+        className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-label md:hidden"
+      >
+        {t("mapsLegend")}
+        <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", legendOpen && "rotate-180")} />
+      </button>
+      <p className={cn("mt-2 flex-wrap gap-x-3 gap-y-1 text-[11px] text-label", legendOpen ? "flex" : "hidden md:flex")}>
         {layered ? (
           <>
             {route ? <Dot className="bg-accent" label={t("mapsLegendRoute")} /> : null}
@@ -397,7 +451,8 @@ export function CampusMap({ target, marked, from, onPick, onPointPick, popup, on
             {campus ? <Dot className="bg-amber-500" label={t("mapsHalls")} /> : null}
           </>
         ) : null}
-        {LEGEND.map((type) => (
+        {/* Entrances are already in the legend when the campus layer draws them. */}
+        {LEGEND.filter((type) => !(layered && type === "entrance")).map((type) => (
           <span key={type} className="inline-flex items-center gap-1">
             <span className="h-2.5 w-2.5 rounded-full" style={{ background: TYPE_META[type].color }} />
             {t(TYPE_META[type].key)}
@@ -405,8 +460,17 @@ export function CampusMap({ target, marked, from, onPick, onPointPick, popup, on
         ))}
         <span>· {t("mapsFloorPlanHint")}</span>
       </p>
-      {campus ? <p className="mt-1 text-[11px] text-label">{t("mapsSchemeNote")}</p> : null}
+      {campus && !full ? <p className="mt-1 hidden text-[11px] text-label md:block">{t("mapsSchemeNote")}</p> : null}
     </section>
+  );
+  // Full screen goes on <body>: the page area is its own layer and would trap it.
+  return full ? (
+    <>
+      <div className="h-[60vh] min-h-[340px] max-h-[560px] md:h-[440px]" aria-hidden />
+      {createPortal(body, document.body)}
+    </>
+  ) : (
+    body
   );
 }
 

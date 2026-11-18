@@ -371,7 +371,12 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   as its block; pins win). A place on an upper floor opens on floor 1 (the way
   in) with a "Floor N: where it is" button; "Way in: floor 1" goes back. The
   "Blocks" toggle (`ai_helpdesk_map_blocks`) hides the layer. "Nearest toilet /
-  stairs" and tapping pins work on every floor. Still to do (step 3): the
+  stairs" and tapping pins work on every floor. Phones: the map is taller (60vh)
+  and opens on the plan's full height around the middle of the building (the
+  fit button shows all); pinch, double-tap and trackpad pinch zoom; while
+  zoomed out (`DECLUTTER_K`) the students' map draws only the place, marked
+  pins and entrances; a full-screen button (portalled to `<body>`); the
+  legend folds; Barys waits while the plan or the pins load. Still to do (step 3): the
   upstairs part of the route (stairs → room) on the other floors.
 - **Map extras (`020_map_extras.sql`).** Students: tapping a pin opens what it
   stands for with its full card (photos, 3D tour, link; `openPoint` in
@@ -417,7 +422,7 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   report deletes a photo still pending.
   Any student may also send a photo from a place card ("Add a photo of this
   place"; `POST /api/location-photos`, pending, one per student and place,
-  max 5 waiting, not muted); admins see them in the editor under "Photos from
+  max 20 waiting, not muted); admins see them in the editor under "Photos from
   students" (`GET /api/admin/map/photos/suggestions`) and approve/delete
   them the same way. Bulk upload (editor → "Bulk upload", `PhotoBulk.tsx`):
   photos named by room or place code (`F205.jpg`, `F205-2.jpg`,

@@ -374,12 +374,13 @@ func TestPhotoLimitsUnderParallelRequests(t *testing.T) {
 		return got
 	}
 
-	// 8 suggestions of different places at once: exactly 5 wait, the rest are refused.
-	got := parallel(8, func(i int) int {
+	// 3 more suggestions of different places at once than may wait: exactly the limit waits, the rest are refused.
+	n := maxPendingSuggestions + 3
+	got := parallel(n, func(i int) int {
 		code, _ := e.uploadForm(student, "/api/location-photos", testPNG, map[string]string{"place_code": fmt.Sprintf("%s_%d", place, i)})
 		return code
 	})
-	if got[http.StatusCreated] != maxPendingSuggestions || got[http.StatusTooManyRequests] != 8-maxPendingSuggestions {
+	if got[http.StatusCreated] != maxPendingSuggestions || got[http.StatusTooManyRequests] != n-maxPendingSuggestions {
 		t.Fatalf("parallel suggestions: %v", got)
 	}
 

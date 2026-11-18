@@ -24,7 +24,7 @@ const (
 	maxPhotoCodesPerRequest = 10
 	locationPhotoDir        = "places"
 	// Waiting suggestions one student may have at a time.
-	maxPendingSuggestions = 5
+	maxPendingSuggestions = 20
 )
 
 func normalizePlaceCode(s string) (string, bool) {
