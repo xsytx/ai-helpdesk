@@ -440,7 +440,12 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   on floors 1–4 (map points, type `elevator`; floors 2–4 at the same pixels,
   floor 1's plan is a different drawing): for an upstairs room in a wing the
   floor-1 route ends at the wing's elevator (`nearWing` in `CampusMap`) and
-  the elevator is marked on floor 1 and on the room's floor.
+  the elevator is marked on floor 1 and on the room's floor, with the wing's
+  end stairs. Stairs naming (map points, type `stairs`): no name = goes to
+  every floor (the stairs at the far end of each wing); others name their
+  floors, lowest first: "Stairs 1-2", "Stairs 2-3A-3B" (near the wing
+  entrance), "Stairs 3B-4", "Stairs 1-2-3", and a point on each floor they
+  reach. The route steps list which stairs get to the room's floor.
 - **The AI knows where places are.** `ai_ml/data/raw/faq.csv` has `LOC_*`
   rows (a "Where is …?" Q&A per place in en/ru/kk, short everyday questions,
   the room code rule) generated from `places.ts` by

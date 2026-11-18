@@ -54,13 +54,20 @@ function steps(t: (k: TranslationKey) => string, block: string | undefined, floo
   }
   if (floor && floor > 1) {
     // The wings are split-level: 3A = the right part, 3B = the left part, 4 = the right part only.
+    // Which stairs get there: the wing's end stairs go everywhere; "Stairs 2-3A-3B"
+    // start on floor 2 near the wing's entrance, "Stairs 3B-4" on floor 3B.
     const wing = block && WINGS.has(block);
-    const note =
-      !wing ? undefined
-      : level === "3A" ? fill(t("mapsStep3A"), { block: block! })
-      : level === "3B" ? fill(t("mapsStep3B"), { block: block! })
-      : level === "4" ? t("mapsStepSplit4")
-      : undefined;
+    const notes = !wing
+      ? []
+      : [
+          level === "3A" ? fill(t("mapsStep3A"), { block: block! })
+          : level === "3B" ? fill(t("mapsStep3B"), { block: block! })
+          : level === "4" ? t("mapsStepSplit4")
+          : "",
+          t("mapsStairsEnd"),
+          level === "3A" || level === "3B" ? t("mapsStairs23") : level === "4" ? t("mapsStairs34") : "",
+        ].filter(Boolean);
+    const note = notes.length ? notes.join(" ") : undefined;
     out.push({
       icon: <ArrowUp className="h-4 w-4" />,
       title: fill(t(wing ? "mapsStepLift" : "mapsStepStairs"), { floor: level ?? floor }),

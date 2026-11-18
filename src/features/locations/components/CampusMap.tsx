@@ -44,10 +44,17 @@ function nearest(points: MapPoint[], floor: MapFloor, from: { x: number; y: numb
   return best;
 }
 
-/** The elevator of a wing: the closest one to `at`, if it is in that wing (~a wing's width). */
-function nearWing(points: MapPoint[], floor: MapFloor, at: { x: number; y: number }) {
-  const lift = nearest(points, floor, at, ["elevator"]);
-  return lift && dist(lift, at) < 450 ? lift : undefined;
+const isLift = (p: MapPoint) => p.type === "elevator";
+/** Stairs without a name go to every floor (the ones at the far end of each wing). */
+const isFullStairs = (p: MapPoint) => p.type === "stairs" && !p.name;
+/** The closest matching point to `at` on the floor, if it is in the same wing (within ~a wing). */
+function nearWing(points: MapPoint[], floor: MapFloor, at: { x: number; y: number }, match: (p: MapPoint) => boolean = isLift) {
+  let best: MapPoint | undefined;
+  for (const p of points) {
+    if (p.floor !== floor || !match(p)) continue;
+    if (!best || dist(p, at) < dist(best, at)) best = p;
+  }
+  return best && dist(best, at) < 450 ? best : undefined;
 }
 
 export interface MapPopup { title: string; text: string }
@@ -127,6 +134,8 @@ export function CampusMap({ target, from, onPick, onPointPick, popup, onMore, on
   // The elevator you take (floor 1) and come out of (the place's floor).
   const liftUp = upstairs && targetFloor && anchor && floor === targetFloor ? nearWing(all, targetFloor, anchor) : undefined;
   const lift = floor === "1" ? liftDown : liftUp;
+  // …and the wing's stairs that go to every floor (at its far end).
+  const stairs = lift ? nearWing(all, floor, lift, isFullStairs) : undefined;
   const campus = floor === "1" && showBlocks;
   const showRoute = floor === "1" && route;
   // Floor 1 always carries the route and entrances; the blocks only when switched on.
@@ -224,7 +233,7 @@ export function CampusMap({ target, from, onPick, onPointPick, popup, onMore, on
             floor={floor}
             points={all}
             highlight={here.map((p) => p.id)}
-            secondary={[help?.id, lift?.id].filter((id): id is string => Boolean(id))}
+            secondary={[help?.id, lift?.id, stairs?.id].filter((id): id is string => Boolean(id))}
             block={here.length === 0 ? block : undefined}
             focus={focus}
             onPointClick={(p) => {
@@ -314,7 +323,7 @@ export function CampusMap({ target, from, onPick, onPointPick, popup, onMore, on
       {lift && !help ? (
         <p className="mt-2 flex items-center gap-1.5 text-xs text-label">
           <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: TYPE_META.elevator.color }} />
-          {t(floor === "1" ? "mapsLiftHere" : "mapsLiftOut").replace("{floor}", level ?? targetFloor ?? "")}
+          {t(floor === "1" ? (stairs ? "mapsLiftStairsHere" : "mapsLiftHere") : stairs ? "mapsLiftStairsOut" : "mapsLiftOut").replace("{floor}", level ?? targetFloor ?? "")}
         </p>
       ) : null}
       {help ? (
