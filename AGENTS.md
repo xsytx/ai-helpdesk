@@ -457,7 +457,8 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   reach. The route steps list which stairs get to the room's floor.
 - **The AI knows where places are.** `ai_ml/data/raw/faq.csv` has `LOC_*`
   rows (a "Where is …?" Q&A per place in en/ru/kk, short everyday questions,
-  the room code rule) generated from `places.ts` by
+  the room code rule with floors 3A/3B, how to get upstairs: elevators and
+  stairs) generated from `places.ts` by
   `node scripts/location-faq.mjs`. After changing a place's location: run it,
   rebuild the index with the real folder mounted
   (`docker compose run --rm -v "<repo>/ai_ml/data:/app/data" ai_ml python -m kb.cli index`;

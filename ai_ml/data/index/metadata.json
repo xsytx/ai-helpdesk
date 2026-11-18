@@ -2,6 +2,6 @@
   "model": "intfloat/multilingual-e5-base",
   "strategy": "question_only_e5_base_v1",
   "dimension": 768,
-  "records": 1073,
-  "source_sha256": "cddcaed20e330bc6164c6915e27125d4d19a2fdfd5b82b36b1004530fcd8d465"
+  "records": 1079,
+  "source_sha256": "485afcc71be2bdfb1bb174906683349246e408078cb197f8e41f0033f34edf38"
 }

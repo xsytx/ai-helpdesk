@@ -71,11 +71,28 @@ for (const [code, questions] of Object.entries(SHORT)) {
 }
 
 const RULE = {
-  en: ["How do room numbers like F205 work?", "The letter is the block, the first digit is the floor and the last two are the room: F205 = block F, floor 2, room 05. In the wings, rooms 01–06 are in the left part (floors 1–3) and rooms 07 and up in the right part, which has floors 1–4 at half-levels: its floor 3 is between floors 2 and 3 of the left part, its floor 4 a little above floor 3 of the left part."],
-  ru: ["Как читать номер аудитории, например F205?", "Буква — блок, первая цифра — этаж, последние две — аудитория: F205 = блок F, 2 этаж, аудитория 05. В крыльях аудитории 01–06 — в левой части (этажи 1–3), а 07 и дальше — в правой части, где этажи 1–4 идут полуэтажами: её 3 этаж — между 2 и 3 этажами левой части, 4 этаж — чуть выше 3 этажа левой части."],
-  kk: ["F205 сияқты аудитория нөмірін қалай түсінуге болады?", "Әріп — блок, бірінші цифр — қабат, соңғы екеуі — аудитория: F205 = F блогы, 2-қабат, 05 аудитория. Қанаттарда 01–06 аудиториялар сол жақта (1–3 қабат), ал 07 және одан жоғары — оң жақта, онда 1–4 қабат жартылай деңгейде: оның 3-қабаты сол жақтың 2 және 3-қабаттарының ортасында, 4-қабаты сол жақтың 3-қабатынан сәл жоғары."],
+  en: ["How do room numbers like F205 work?", "The letter is the block, the first digit is the floor and the last two are the room: F205 = block F, floor 2, room 05. The wings D–I are split-level, so floor 3 has two parts: 3A is the right part of the wing (F306 and up) and 3B the left part (F301–F305). Floor 4 (F4xx) is only in the right part of the wing."],
+  ru: ["Как читать номер аудитории, например F205?", "Буква — блок, первая цифра — этаж, последние две — аудитория: F205 = блок F, 2 этаж, аудитория 05. Крылья D–I двухуровневые, поэтому 3 этаж состоит из двух частей: 3A — правая часть крыла (F306 и дальше), 3B — левая часть (F301–F305). 4 этаж (F4xx) есть только в правой части крыла."],
+  kk: ["F205 сияқты аудитория нөмірін қалай түсінуге болады?", "Әріп — блок, бірінші цифр — қабат, соңғы екеуі — аудитория: F205 = F блогы, 2-қабат, 05 аудитория. D–I қанаттары екі деңгейлі, сондықтан 3-қабат екі бөліктен тұрады: 3A — қанаттың оң жағы (F306 және одан кейін), 3B — сол жағы (F301–F305). 4-қабат (F4xx) тек қанаттың оң жағында."],
 };
 for (const lang of LANGS) add(`LOC_ROOMCODES_${lang}`, lang, RULE[lang][0], RULE[lang][1]);
+
+// Getting upstairs in the wings (the elevators and stairs are map points;
+// the route on the Maps page marks them).
+const LIFT_ANSWER = {
+  en: "Every wing D–I has an elevator in its corridor that stops at floors 1, 2, 3A, 3B and 4. By stairs: the stairs at the far end of each wing go to every floor; from floor 2, the stairs near the wing entrance (Stairs 2-3A-3B) go to 3A and 3B; from 3B, Stairs 3B-4 go to floor 4. The route on the Maps page marks the elevator and the stairs.",
+  ru: "В каждом крыле D–I в коридоре есть лифт, он останавливается на этажах 1, 2, 3A, 3B и 4. По лестнице: лестница в дальнем конце крыла ведёт на все этажи; со 2 этажа на 3A и 3B ведёт лестница у входа в крыло (Stairs 2-3A-3B); с 3B на 4 этаж — лестница Stairs 3B-4. Маршрут на странице «Карты» отмечает лифт и лестницу.",
+  kk: "D–I қанаттарының әрқайсысының дәлізінде лифт бар, ол 1, 2, 3A, 3B және 4-қабаттарда тоқтайды. Баспалдақпен: қанаттың ең соңындағы баспалдақ барлық қабатқа апарады; 2-қабаттан 3A мен 3B-ға қанат кіреберісіне жақын баспалдақ (Stairs 2-3A-3B) апарады; 3B-дан 4-қабатқа Stairs 3B-4 баспалдағы апарады. «Карталар» бетіндегі жол лифт пен баспалдақты белгілейді.",
+};
+const LIFT_QUESTIONS = {
+  en: ["How do I get to floor 3A, 3B or 4?", "Where is the elevator?"],
+  ru: ["Как попасть на этаж 3A, 3B или 4?", "Где лифт?"],
+  kk: ["3A, 3B немесе 4-қабатқа қалай жетуге болады?", "Лифт қайда?"],
+};
+for (const lang of LANGS) {
+  add(`LOC_UPSTAIRS_${lang}`, lang, LIFT_QUESTIONS[lang][0], LIFT_ANSWER[lang]);
+  add(`LOC_LIFT_SHORT_${lang}`, lang, LIFT_QUESTIONS[lang][1], LIFT_ANSWER[lang]);
+}
 
 // Keep every other row as it is; replace only the generated ones.
 const file = path.join(root, "ai_ml/data/raw/faq.csv");
