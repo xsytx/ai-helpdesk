@@ -589,7 +589,12 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   in `AppShell` (keyed by path): a new page opens at the top, back/forward
   returns to the old position, `?q=`/`?tags=` changes don't scroll.
 - **Onboarding tour** (`features/onboarding/tour.ts`) points at elements with
-  `data-tour="..."`; keep those attributes when restyling the shell.
+  `data-tour="..."`; keep those attributes when restyling the shell. The
+  tour uses the first *visible* match, so phones and computers can mark
+  different elements (the "settings" step: the sidebar link on computers,
+  the header avatar on phones). Phone bottom bar (`AppShell`): Home, Forum,
+  New chat, Maps, Courses; settings are reached through the avatar → your
+  profile → Settings.
 - **Browser storage** goes through `shared/lib/storage.ts` (`safeStorage`,
   `safeSession`), which never throws.
 - **Commit messages** have no AI co-author/attribution lines.

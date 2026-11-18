@@ -98,7 +98,8 @@ export function AppShell() {
             <ThemeToggle />
             <NotificationBell />
             {user ? (
-              <Link viewTransition to={`/users/${user.id}`} aria-label={t("myProfile")} title={t("myProfile")} className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40">
+              // data-tour: on phones (no sidebar) the tour's "settings" step points here.
+              <Link viewTransition to={`/users/${user.id}`} aria-label={t("myProfile")} title={t("myProfile")} data-tour="settings" className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40">
                 <UserAvatar name={displayName} />
               </Link>
             ) : (
@@ -132,9 +133,11 @@ export function AppShell() {
             </span>
             <span className="text-[10px] font-semibold text-primary">{t("newChat")}</span>
           </button>
-          {/* Maps instead of FAQ here: the FAQ is also on the home page. */}
+          {/* Maps instead of FAQ here: the FAQ is also on the home page. Courses
+              instead of Settings: the avatar above opens your profile, which
+              has the Settings button. */}
           <MobileTab to="/navigation" label={t("navigation")} icon={MapPin} />
-          <MobileTab to="/settings" label={t("profile")} icon={Settings} tour="settings" />
+          <MobileTab to="/courses" label={t("courses")} icon={GraduationCap} />
         </nav>
       </div>
     </div>
