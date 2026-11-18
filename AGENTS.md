@@ -376,7 +376,11 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
 - **Map extras (`020_map_extras.sql`).** Students: tapping a pin opens what it
   stands for with its full card (photos, 3D tour, link; `openPoint` in
   `MapsPage`: linked place → room code → `PT_<id>`), staying on the tapped
-  floor; toilets, stairs and codeless entrances are just named under the map; "Nearest toilet / stairs" (closest point of that type on the floor),
+  floor; toilets, stairs and codeless entrances are just named under the map;
+  the card's 3D tour buttons open the official tour (`tours.ts`) in a
+  full-screen frame over the page (`TourViewer`; view tabs, "open in a new
+  tab", Esc/× close; vrmir3d allows framing — if it ever starts sending
+  `X-Frame-Options`, go back to plain links); "Nearest toilet / stairs" (closest point of that type on the floor),
   "Copy link" to a room or place, and in "Report a mistake" an optional tap
   on the plan = the right spot (`location_reports.suggested_floor/x/y`,
   `suggested` in the API). Editor: a new point can be dragged before it is

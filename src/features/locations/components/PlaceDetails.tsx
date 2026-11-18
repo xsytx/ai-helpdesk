@@ -5,13 +5,14 @@ import { cn } from "@/shared/lib/cn";
 import { getErrorStatus } from "@/shared/api/client";
 import { Button } from "@/shared/ui/Button";
 import { copyText } from "@/shared/lib/clipboard";
-import { Armchair, ArrowUp, BookOpen, Building2, Check, CheckCircle2, Clock, ConciergeBell, Crosshair, DoorOpen, ExternalLink, Flag, Footprints, Info, Lightbulb, Link2, UtensilsCrossed } from "lucide-react";
-import { useEffect, useState, type ReactNode } from "react";
+import { Armchair, ArrowUp, BookOpen, Building2, Check, CheckCircle2, Clock, ConciergeBell, Crosshair, DoorOpen, Flag, Footprints, Info, Lightbulb, Link2, Rotate3d, UtensilsCrossed } from "lucide-react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useReportLocation, type MapSpot } from "../api";
 import { toursFor } from "../tours";
 import { FLOOR_ORDER, floorOfRoom, isRightPart, pointsFor, useMapPoints, type MapFloor } from "../mapPoints";
 import { FloorPlan } from "./FloorPlan";
 import { PlacePhotos } from "./PlacePhotos";
+import { TourViewer } from "./TourViewer";
 import { AddPhotoButton, checkPhotos, PhotoThumb } from "@/features/forum/components/Photos";
 import { uploadReportPhoto } from "../photos";
 import { ENTRANCE_KEY, ENTRANCE_ORDER, blockPlace, type Entrance, type Place, type PlaceKind, type RoomCode, type SchemeBlock } from "../places";
@@ -74,6 +75,11 @@ export function PlaceDetails({ target, from, onFrom }: { target: Place | RoomCod
   const title = room ? fill(t("mapsRoomTitle"), { code: room.code }) : place!.name[locale];
   // 3D tour views: a room by its code, a map point by its name, a place by its code.
   const tours = room ? toursFor(room.code) : place!.point ? toursFor(place!.name.en) : toursFor(place!.code);
+  // The 3D tour view open over the page, if any (closed when the place changes).
+  const [tourAt, setTourAt] = useState<number>();
+  const closeTour = useCallback(() => setTourAt(undefined), []);
+  const targetCode = room ? room.code : place!.code;
+  useEffect(() => setTourAt(undefined), [targetCode]);
   const spot = place?.spot;
   const route =
     spot || (block && (room || place?.kind === "block" || place?.floor))
@@ -159,35 +165,34 @@ export function PlaceDetails({ target, from, onFrom }: { target: Place | RoomCod
 
       {tours.length > 0 && (
         <div>
-          <a
-            href={tours[0].url}
-            target="_blank"
-            rel="noreferrer"
+          <button
+            type="button"
+            onClick={() => setTourAt(0)}
             className="inline-flex h-10 items-center gap-2 rounded-xl bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-hover"
           >
-            <ExternalLink className="h-4 w-4" />
+            <Rotate3d className="h-4 w-4" />
             {t("mapsOpenTour")}
-          </a>
+          </button>
           {tours.length > 1 ? (
             <div className="mt-2.5">
               <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-label">{t("mapsTourMore")}</p>
               <ul className="flex flex-wrap gap-1.5">
-                {tours.slice(1).map((view) => (
+                {tours.slice(1).map((view, k) => (
                   <li key={view.url}>
-                    <a
-                      href={view.url}
-                      target="_blank"
-                      rel="noreferrer"
+                    <button
+                      type="button"
+                      onClick={() => setTourAt(k + 1)}
                       className="inline-flex items-center gap-1 rounded-full border border-border bg-surface px-3 py-1 text-xs font-medium text-primary hover:bg-background-2"
                     >
-                      <ExternalLink className="h-3 w-3 text-label" />
+                      <Rotate3d className="h-3 w-3 text-label" />
                       {view.label[locale]}
-                    </a>
+                    </button>
                   </li>
                 ))}
               </ul>
             </div>
           ) : null}
+          {tourAt !== undefined ? <TourViewer title={title} views={tours} start={tourAt} onClose={closeTour} /> : null}
         </div>
       )}
 
