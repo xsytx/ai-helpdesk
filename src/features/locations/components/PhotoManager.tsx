@@ -7,7 +7,7 @@ import { getErrorStatus } from "@/shared/api/client";
 import { cn } from "@/shared/lib/cn";
 import { Button } from "@/shared/ui/Button";
 import { Check, ChevronLeft, ChevronRight, ImagePlus, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { LocationReport } from "../api";
 import {
   MAX_PHOTO_CAPTION, MAX_PLACE_PHOTOS, useApproveLocationPhoto, useDeleteLocationPhoto, useLocationPhotos, useReorderLocationPhotos,
@@ -46,6 +46,22 @@ export function PhotoManager({ codes, title }: { codes: string[]; title: string 
       setUploading(false);
     }
   };
+  // Ctrl+V anywhere on the page pastes a screenshot (PrtSc, Win+Shift+S,
+  // a clipboard manager) into this place's photos. Text pastes are left alone.
+  const addRef = useRef(add);
+  addRef.current = add;
+  const full = own.length >= MAX_PLACE_PHOTOS;
+  useEffect(() => {
+    if (full) return;
+    const onPaste = (e: ClipboardEvent) => {
+      const files = [...(e.clipboardData?.files ?? [])].filter((f) => f.type.startsWith("image/"));
+      if (files.length === 0 || document.querySelector('[aria-modal="true"]')) return;
+      e.preventDefault();
+      void addRef.current(files);
+    };
+    window.addEventListener("paste", onPaste);
+    return () => window.removeEventListener("paste", onPaste);
+  }, [full]);
   const move = (i: number, by: -1 | 1) => {
     const ids = own.map((p) => p.id);
     [ids[i], ids[i + by]] = [ids[i + by]!, ids[i]!];
@@ -84,7 +100,7 @@ export function PhotoManager({ codes, title }: { codes: string[]; title: string 
         <div className="flex items-center gap-3">
           <AddPhotoButton onFiles={(files) => void add(files)} disabled={busy} />
           <p className="text-xs text-label">
-            {uploading ? t("photoUploading") : t("mapPhotosHint").replace("{n}", String(MAX_PLACE_PHOTOS))}
+            {uploading ? t("photoUploading") : `${t("mapPhotosHint").replace("{n}", String(MAX_PLACE_PHOTOS))} ${t("mapPhotosPaste")}`}
           </p>
         </div>
       ) : null}
