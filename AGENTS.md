@@ -72,7 +72,11 @@ docker compose up -d --build        # everything; site on http://localhost:3000
 npx tsc -b                          # frontend type check (there is no lint/test runner yet)
 npx vite build                      # production build
 npm run dev                         # Vite on :5173, proxies /api to :8080 (backend in Docker)
+bash scripts/backup.sh              # database + uploaded files -> ../backups (outside the repo, newest 10 kept)
 ```
+
+Restoring a backup is described at the top of `scripts/backup.sh`. Backups
+hold students' data: never commit them or put them in the repository.
 
 The AI needs **Ollama running on the host** (`ollama serve` / tray app) with
 the model from `LLM_MODEL` pulled (default `qwen3.5:4b`). The `ai_ml`
@@ -637,7 +641,7 @@ profile pages.
 Courses: story 16 (catalogue) and reviews (17-18) done; an AI summary of
 reviews was postponed by the user. Maps: floors on the site are 1, 2, 3, 4; routes upstairs wait until the
 map data is complete. Ideas: search suggestions, Ctrl+K
-search everywhere, PWA, admin stats page, database backups, CI checks on
+search everywhere, PWA, admin stats page, scheduled backups, CI checks on
 GitHub. Optional: stop admins approving their own flagged
 posts. The 4B model is weak in Kazakh (a Kazakh follow-up understood the
 topic but missed the stored answer).
