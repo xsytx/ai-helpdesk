@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"campus-forum/internal/middleware"
+	"campus-forum/internal/store"
 )
 
 // Photos of campus places. Real database, skipped without TEST_DATABASE_URL.
@@ -301,8 +302,15 @@ func TestStudentPhotoSuggestions(t *testing.T) {
 	if code != http.StatusCreated || photo["status"] != "pending" || photo["place_code"] != place {
 		t.Fatalf("suggest: %d %v", code, photo)
 	}
-	if code, _ := suggest(student, place); code != http.StatusConflict {
-		t.Fatalf("second waiting photo of the same place: %d, want 409", code)
+	// A few angles of one place may wait, not more.
+	many := e.user("user")
+	for i := 0; i < store.MaxSuggestionsPerPlace; i++ {
+		if code, out := suggest(many, place); code != http.StatusCreated {
+			t.Fatalf("photo %d of one place: %d %v", i+1, code, out)
+		}
+	}
+	if code, _ := suggest(many, place); code != http.StatusConflict {
+		t.Fatalf("one more waiting photo of the same place: %d, want 409", code)
 	}
 	if code, _ := suggest(other, place); code != http.StatusCreated {
 		t.Fatalf("another student, same place: %d", code)

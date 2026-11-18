@@ -13,6 +13,7 @@ import { cn } from "@/shared/lib/cn";
 import { Button } from "@/shared/ui/Button";
 import { Card } from "@/shared/ui/Card";
 import { Mascot } from "@/shared/ui/Mascot";
+import { PageSkeleton } from "@/shared/ui/Skeleton";
 import { BookOpen, ChevronDown, GraduationCap, Search, Shuffle } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
@@ -173,7 +174,7 @@ export function CoursesPage() {
               <ElectiveLists lists={curriculum.electives} />
             </>
           ) : curriculumPending ? (
-            <div className="h-40 animate-pulse rounded-2xl bg-background-2" />
+            <PageSkeleton rows={2} title={false} />
           ) : curriculumFailed ? (
             <p className="text-sm text-error">{t("coursesLoadFailed")}</p>
           ) : (

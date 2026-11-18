@@ -420,8 +420,9 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   muted), shown to admins on the report (`ReportPhoto`): "Add to gallery"
   (`POST /api/admin/map/photos/{id}/approve`) or remove; rejecting the
   report deletes a photo still pending.
-  Any student may also send a photo from a place card ("Add a photo of this
-  place"; `POST /api/location-photos`, pending, one per student and place,
+  Any student may also send photos from a place card ("Add photos of this
+  place", several at once, sent one by one; `POST /api/location-photos`,
+  pending, up to `store.MaxSuggestionsPerPlace` (5) per student and place,
   max 20 waiting, not muted); admins see them in the editor under "Photos from
   students" (`GET /api/admin/map/photos/suggestions`) and approve/delete
   them the same way. Bulk upload (editor → "Bulk upload", `PhotoBulk.tsx`):
@@ -569,7 +570,9 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   `chatTestStore` in `backend/internal/handlers/chat_test.go`.
 - **UI building blocks**: `shared/ui` (`Button`, `Card`, `Input`,
   `PasswordField`, `OtpInput`, `RollingNumber`), tokens like `text-primary`,
-  `bg-background-2`, `text-label`, `rounded-2xl`.
+  `bg-background-2`, `text-label`, `rounded-2xl`. Loading: `shared/ui/Skeleton`
+  (`PageSkeleton` = Barys + "Loading…" + placeholder cards, `SkeletonList`,
+  `SkeletonBlock`), not a bare "Loading…" text.
 - **Light/dark theme.** Colours come only from the tokens in
   `styles/globals.css`; `:root[data-theme="dark"]` redefines them (and the
   amber/red/green/sky/violet shades in use). Use `bg-surface` (not

@@ -60,6 +60,10 @@ var ErrPhotoLimit = errors.New("photo limit reached")
 // ErrReportClosed: a photo can't be added to a report that is no longer open.
 var ErrReportClosed = errors.New("report closed")
 
+// MaxSuggestionsPerPlace: a student's waiting photos of one place (a few
+// angles of it); the waiting photos in all are capped by the caller's limit.
+const MaxSuggestionsPerPlace = 5
+
 // lockKey serialises photo writes per place or per student (a transaction
 // advisory lock), so two uploads at once can't both pass a limit.
 func lockKey(ctx context.Context, tx pgx.Tx, key string) error {
@@ -74,7 +78,7 @@ func lockKey(ctx context.Context, tx pgx.Tx, key string) error {
 //     report (ErrConflict); the report row stays locked, so a rejection
 //     waits for this insert and then deletes the photo;
 //   - student suggestion: at most limit waiting per student (ErrPhotoLimit),
-//     one per student and place (ErrConflict).
+//     MaxSuggestionsPerPlace per student and place (ErrConflict).
 func (s *PostgresStore) CreateLocationPhoto(ctx context.Context, p models.LocationPhoto, limit int) (models.LocationPhoto, error) {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
@@ -105,9 +109,15 @@ func (s *PostgresStore) CreateLocationPhoto(ctx context.Context, p models.Locati
 		if err := lockKey(ctx, tx, fmt.Sprintf("location_photo_suggestions:%d", *p.UploadedBy)); err != nil {
 			return p, err
 		}
+		var here int
 		if err := tx.QueryRow(ctx,
-			`SELECT count(*) FROM location_photos WHERE uploaded_by = $1 AND status = 'pending' AND report_id IS NULL`, *p.UploadedBy).Scan(&n); err != nil {
+			`SELECT count(*), count(*) FILTER (WHERE place_code = $2)
+			 FROM location_photos WHERE uploaded_by = $1 AND status = 'pending' AND report_id IS NULL`,
+			*p.UploadedBy, p.PlaceCode).Scan(&n, &here); err != nil {
 			return p, err
+		}
+		if here >= MaxSuggestionsPerPlace {
+			return p, ErrConflict
 		}
 	}
 	if p.ReportID == nil && limit > 0 && n >= limit {

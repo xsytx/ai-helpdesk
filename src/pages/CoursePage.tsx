@@ -6,6 +6,7 @@ import { useLocale } from "@/i18n/LocaleContext";
 import { Button } from "@/shared/ui/Button";
 import { Card } from "@/shared/ui/Card";
 import { Mascot } from "@/shared/ui/Mascot";
+import { PageSkeleton } from "@/shared/ui/Skeleton";
 import { ArrowLeft, MessagesSquare } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import { fill, kindKey, levelKey } from "@/features/courses/labels";
@@ -28,7 +29,7 @@ export function CoursePage() {
     return (
       <div className="mx-auto max-w-3xl space-y-4">
         {back}
-        <div className="h-48 animate-pulse rounded-2xl bg-background-2" />
+        <PageSkeleton rows={2} />
       </div>
     );
   }

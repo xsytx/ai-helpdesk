@@ -9,8 +9,9 @@ import { useMapPoints } from "../mapPoints";
 import { photoCodesOfTarget, useLocationPhotos, useSuggestLocationPhoto } from "../photos";
 import type { Place, RoomCode } from "../places";
 
-/** Waiting suggestions per student (maxPendingSuggestions on the server). */
-const MAX_WAITING = 5;
+/** Waiting suggestions per student, and per student and place (maxPendingSuggestions, store.MaxSuggestionsPerPlace). */
+const MAX_WAITING = 20;
+const MAX_PER_PLACE = 5;
 
 /**
  * The place card's photo gallery (Maps page): a click opens the full-size
@@ -38,42 +39,58 @@ export function PlacePhotos({ target }: { target: Place | RoomCode }) {
   );
 }
 
+/**
+ * "Add photos of this place": several at once (a few angles), sent one after
+ * another with progress; the button stays, so more can follow.
+ */
 function SuggestPhoto({ placeCode, empty }: { placeCode: string; empty: boolean }) {
   const { t } = useLocale();
   const suggest = useSuggestLocationPhoto();
   const input = useRef<HTMLInputElement>(null);
   const [problem, setProblem] = useState<TranslationKey>();
+  const [sending, setSending] = useState<{ i: number; n: number }>();
+  const [sent, setSent] = useState(0);
 
-  const send = (files: File[]) => {
-    const { ok, problem: why } = checkPhotos(files, 1);
-    setProblem(why === "photoTooMany" ? undefined : why);
-    if (!ok[0]) return;
-    suggest.mutate(
-      { placeCode, file: ok[0] },
-      {
-        onError: (err) => {
-          const status = getErrorStatus(err);
-          setProblem(
-            status === 409 ? "mapsSuggestPhotoAlready"
-            : getErrorData(err)?.code === "too_many_waiting" ? "mapsSuggestPhotoTooMany"
-            : "mapsSuggestPhotoFailed",
-          );
-        },
-      },
-    );
+  const send = async (files: File[]) => {
+    const { ok, problem: why } = checkPhotos(files, MAX_PER_PLACE);
+    setProblem(why === "photoTooMany" ? "mapsSuggestPhotoMax" : why);
+    let done = 0;
+    for (const [i, file] of ok.entries()) {
+      setSending({ i: i + 1, n: ok.length });
+      try {
+        await suggest.mutateAsync({ placeCode, file });
+        done++;
+      } catch (err) {
+        setProblem(
+          getErrorStatus(err) === 409 ? "mapsSuggestPhotoAlready"
+          : getErrorData(err)?.code === "too_many_waiting" ? "mapsSuggestPhotoTooMany"
+          : "mapsSuggestPhotoFailed",
+        );
+        break;
+      }
+    }
+    setSending(undefined);
+    setSent((n) => n + done);
   };
 
-  if (suggest.isSuccess) return <p className="mt-2 text-sm text-green-700">{t("mapsSuggestPhotoThanks")}</p>;
-
-  const message = problem ? (
-    <p className="text-xs text-error" role="alert">{t(problem).replace("{n}", String(MAX_WAITING))}</p>
-  ) : null;
-  if (empty) {
+  const busy = sending !== undefined;
+  const status = busy ? t("mapsSuggestPhotoSending").replace("{i}", String(sending.i)).replace("{n}", String(sending.n)) : null;
+  const message = (
+    <>
+      {sent > 0 && !busy ? <p className="text-xs text-green-700" role="status">{t("mapsSuggestPhotoThanks").replace("{n}", String(sent))}</p> : null}
+      {problem ? (
+        <p className="text-xs text-error" role="alert">
+          {t(problem).replace("{n}", String(problem === "mapsSuggestPhotoTooMany" ? MAX_WAITING : MAX_PER_PLACE))}
+        </p>
+      ) : null}
+    </>
+  );
+  if (empty && sent === 0) {
     return (
       <div className="flex items-center gap-3 rounded-xl border border-dashed border-border p-2.5">
-        <AddPhotoButton onFiles={send} disabled={suggest.isPending} />
+        <AddPhotoButton onFiles={(f) => void send(f)} disabled={busy} />
         <div className="min-w-0 space-y-1">
-          <p className="text-xs text-label">{suggest.isPending ? t("photoUploading") : t("mapsSuggestPhotoEmpty")}</p>
+          <p className="text-xs text-label">{status ?? t("mapsSuggestPhotoEmpty")}</p>
           {message}
         </div>
       </div>
@@ -83,20 +100,21 @@ function SuggestPhoto({ placeCode, empty }: { placeCode: string; empty: boolean 
     <div className="mt-2 space-y-1">
       <button
         type="button"
-        disabled={suggest.isPending}
+        disabled={busy}
         onClick={() => input.current?.click()}
         className="inline-flex items-center gap-1.5 rounded-lg px-1.5 py-1 text-xs font-semibold text-brand hover:bg-background-2 disabled:opacity-50 dark:text-primary"
       >
         <ImagePlus className="h-3.5 w-3.5" />
-        {suggest.isPending ? t("photoUploading") : t("mapsSuggestPhoto")}
+        {status ?? t(sent > 0 ? "mapsSuggestPhotoMore" : "mapsSuggestPhoto")}
       </button>
       <input
         ref={input}
         type="file"
         accept={PHOTO_TYPES.join(",")}
+        multiple
         hidden
         onChange={(e) => {
-          send([...(e.target.files ?? [])]);
+          void send([...(e.target.files ?? [])]);
           e.target.value = "";
         }}
       />

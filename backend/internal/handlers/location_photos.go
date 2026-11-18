@@ -305,7 +305,8 @@ func (h *Handlers) UploadReportPhoto(w http.ResponseWriter, r *http.Request) {
 
 // SuggestLocationPhoto: POST /api/location-photos (multipart: file,
 // place_code) — a student offers a photo of a place; it waits for an admin.
-// One waiting photo per student and place, at most maxPendingSuggestions in all.
+// Up to store.MaxSuggestionsPerPlace waiting per student and place, at most
+// maxPendingSuggestions in all.
 func (h *Handlers) SuggestLocationPhoto(w http.ResponseWriter, r *http.Request) {
 	uid, ok := h.userID(r)
 	if !ok {
@@ -340,7 +341,7 @@ func (h *Handlers) SuggestLocationPhoto(w http.ResponseWriter, r *http.Request) 
 		h.removeUpload(relPath)
 		switch {
 		case errors.Is(err, store.ErrConflict):
-			writeError(w, http.StatusConflict, "you already suggested a photo of this place")
+			writeError(w, http.StatusConflict, fmt.Sprintf("you already have %d photos of this place waiting", store.MaxSuggestionsPerPlace))
 			return
 		case errors.Is(err, store.ErrPhotoLimit):
 			writeTooManyWaiting(w)

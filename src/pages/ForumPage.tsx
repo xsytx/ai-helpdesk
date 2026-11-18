@@ -10,6 +10,7 @@ import { useLocale } from "@/i18n/LocaleContext";
 import type { ThreadSort } from "@/entities/forum";
 import { Button } from "@/shared/ui/Button";
 import { Card } from "@/shared/ui/Card";
+import { PageSkeleton } from "@/shared/ui/Skeleton";
 import { Plus, Search, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
@@ -137,7 +138,7 @@ export function ForumPage() {
         {q ? <FaqSearchMatches words={words} /> : null}
 
         {isLoading ? (
-          <p className="py-6 text-center text-sm text-label">{t("loading")}</p>
+          <PageSkeleton title={false} className="py-2" />
         ) : isError ? (
           <p className="py-6 text-center text-sm text-error">{t("forumLoadFailed")}</p>
         ) : threads.length === 0 ? (

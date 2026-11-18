@@ -28,6 +28,7 @@ END $$;
 CREATE INDEX IF NOT EXISTS location_photos_place_idx ON location_photos (place_code, status, sort_order, id);
 -- One photo per report.
 CREATE UNIQUE INDEX IF NOT EXISTS location_photos_report_once ON location_photos (report_id);
--- A student's own photo suggestion (not from a report): one waiting per student and place.
-CREATE UNIQUE INDEX IF NOT EXISTS location_photos_suggest_once
-    ON location_photos (uploaded_by, place_code) WHERE status = 'pending' AND report_id IS NULL;
+-- A student's own photo suggestions (not from a report): up to
+-- store.MaxSuggestionsPerPlace waiting per student and place, counted in
+-- CreateLocationPhoto (it was one, enforced by this index).
+DROP INDEX IF EXISTS location_photos_suggest_once;

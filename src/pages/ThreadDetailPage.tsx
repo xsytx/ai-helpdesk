@@ -24,6 +24,7 @@ import { useLocale } from "@/i18n/LocaleContext";
 import { formatRelativeTime } from "@/shared/lib/format";
 import { UserAvatar } from "@/features/profile/components/UserAvatar";
 import { Card } from "@/shared/ui/Card";
+import { PageSkeleton, SkeletonList } from "@/shared/ui/Skeleton";
 import { ArrowLeft } from "lucide-react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 
@@ -37,7 +38,7 @@ export function ThreadDetailPage() {
   const answersLoading = answersQuery.isLoading || answersQuery.isPlaceholderData;
 
   if (isLoading) {
-    return <p className="text-sm text-label">{t("loading")}</p>;
+    return <PageSkeleton rows={2} className="mx-auto max-w-3xl" />;
   }
 
   if (isError || !thread) {
@@ -75,7 +76,7 @@ export function ThreadDetailPage() {
           <p className="text-xs text-label">{t("sortedByLikes")}</p>
         </div>
         {answersLoading ? (
-          <p className="mt-4 text-sm text-label">{t("loading")}</p>
+          <SkeletonList rows={2} className="mt-4" />
         ) : (
           <div className="mt-4">
             <AnswerList

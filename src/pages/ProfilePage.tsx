@@ -14,6 +14,7 @@ import { cn } from "@/shared/lib/cn";
 import { formatRelativeTime } from "@/shared/lib/format";
 import { Button } from "@/shared/ui/Button";
 import { Card } from "@/shared/ui/Card";
+import { PageSkeleton, SkeletonList } from "@/shared/ui/Skeleton";
 import { CheckCircle2, ChevronUp, MessageCircle, Settings, ShieldCheck, ThumbsUp } from "lucide-react";
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
@@ -28,7 +29,7 @@ export function ProfilePage() {
   const profile = useUserProfile(userId);
   const [tab, setTab] = useState<"answers" | "questions" | "saved">("answers");
 
-  if (profile.isPending) return <p className="text-sm text-label">{t("loading")}</p>;
+  if (profile.isPending) return <PageSkeleton rows={2} className="mx-auto max-w-3xl" />;
   if (profile.isError) {
     return (
       <Card className="mx-auto max-w-lg">
@@ -127,7 +128,7 @@ export function ProfilePage() {
 function SavedTab() {
   const { t } = useLocale();
   const { data: threads = [], isPending } = useSavedThreads(true);
-  if (isPending) return <p className="text-sm text-label">{t("loading")}</p>;
+  if (isPending) return <SkeletonList rows={3} />;
   if (threads.length === 0) return <p className="py-4 text-center text-sm text-label">{t("profileNoSaved")}</p>;
   return <ThreadList threads={threads} />;
 }
@@ -135,7 +136,7 @@ function SavedTab() {
 function QuestionsTab({ userId }: { userId: string }) {
   const { t } = useLocale();
   const { data: threads = [], isPending } = useUserQuestions(userId);
-  if (isPending) return <p className="text-sm text-label">{t("loading")}</p>;
+  if (isPending) return <SkeletonList rows={3} />;
   if (threads.length === 0) return <p className="py-4 text-center text-sm text-label">{t("profileNoQuestions")}</p>;
   return <ThreadList threads={threads} />;
 }
@@ -143,7 +144,7 @@ function QuestionsTab({ userId }: { userId: string }) {
 function AnswersTab({ userId }: { userId: string }) {
   const { t, locale } = useLocale();
   const { data: answers = [], isPending } = useUserAnswers(userId);
-  if (isPending) return <p className="text-sm text-label">{t("loading")}</p>;
+  if (isPending) return <SkeletonList rows={3} />;
   if (answers.length === 0) return <p className="py-4 text-center text-sm text-label">{t("profileNoAnswers")}</p>;
   return (
     <ul className="divide-y divide-border/40">

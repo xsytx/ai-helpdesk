@@ -1,11 +1,6 @@
-import { useLocale } from "@/i18n/LocaleContext";
+import { PageSkeleton } from "@/shared/ui/Skeleton";
 
-/** Shown while a page's code is being downloaded. */
+/** Shown while a page's code is being downloaded: Barys and the page's shape. */
 export function PageLoading() {
-  const { t } = useLocale();
-  return (
-    <p className="py-6 text-center text-sm text-label" role="status">
-      {t("loading")}
-    </p>
-  );
+  return <PageSkeleton className="mx-auto max-w-3xl py-2" />;
 }
