@@ -10,7 +10,7 @@ import { cn } from "@/shared/lib/cn";
 import { safeStorage } from "@/shared/lib/storage";
 import { Mascot } from "@/shared/ui/Mascot";
 import { ArrowDown, ArrowLeft, ArrowRight, Eraser, Footprints, Layers, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { PLAN_SCALE, placeAtPlan, routePoints, type Pt } from "../campusShapes";
 import {
   FLOOR_ORDER, PLAN_BLOCKS, TYPE_META, floorOfRoom, pointLabel, pointsFor, useMapPoints,
@@ -45,12 +45,18 @@ function nearest(points: MapPoint[], floor: MapFloor, from: { x: number; y: numb
 
 export interface MapPopup { title: string; text: string }
 
-export function CampusMap({ target, from, onPick, popup, onMore, onClosePopup, onClear, guide }: {
+export function CampusMap({ target, from, onPick, onPointPick, popup, onMore, onClosePopup, onClear, guide }: {
   /** The room or place you look for (none = the whole campus). */
   target?: Place | RoomCode;
   from: Entrance;
   /** A block or place clicked on the map (its code in places.ts). */
   onPick?: (code: string) => void;
+  /**
+   * A pin tapped on the plan: opens the place or room it stands for and
+   * returns that target's code, or undefined (a toilet, stairs…: just named
+   * under the map).
+   */
+  onPointPick?: (p: MapPoint) => string | undefined;
   /** The card shown on the map for the place picked there. */
   popup?: MapPopup;
   onMore?: () => void;
@@ -84,9 +90,12 @@ export function CampusMap({ target, from, onPick, popup, onMore, onClosePopup, o
   const [helper, setHelper] = useState<"toilet" | "stairs">();
   const [tapped, setTapped] = useState<MapPoint>();
   const [showBlocks, setShowBlocks] = useState(() => safeStorage.get(BLOCKS_KEY) !== "off");
+  // A place opened by tapping its pin stays on the floor it was tapped on.
+  const tappedOn = useRef<{ code: string; floor: MapFloor }>(undefined);
   // Another place or entrance (or the points just loaded): start on its floor again, nothing extra marked.
   useEffect(() => {
-    setFloor(startFloor);
+    const tap = tappedOn.current;
+    setFloor(tap && tap.code === code ? tap.floor : startFloor);
     setHelper(undefined);
     setTapped(undefined);
   }, [code, startFloor, from]);
@@ -202,7 +211,14 @@ export function CampusMap({ target, from, onPick, popup, onMore, onClosePopup, o
             secondary={help ? [help.id] : []}
             block={here.length === 0 ? block : undefined}
             focus={focus}
-            onPointClick={setTapped}
+            onPointClick={(p) => {
+              const opened = onPointPick?.(p);
+              if (opened) {
+                tappedOn.current = { code: opened, floor: p.floor };
+                setFloor(p.floor);
+              }
+              setTapped(opened ? undefined : p);
+            }}
             layer={layered ? (k) => <CampusLayer k={k} blocks={showBlocks} block={schemeBlock} spot={spot} route={route} from={from} onPick={onPick} /> : undefined}
             onPlanClick={
               campus && onPick

@@ -2,8 +2,8 @@ import { Mascot } from "@/shared/ui/Mascot";
 import { CampusMap } from "@/features/locations/components/CampusMap";
 import { KIND_ICON, PlaceDetails } from "@/features/locations/components/PlaceDetails";
 import { PLACES, parseRoomCode, placeForRoom, searchPlaces, type Entrance, type Place, type PlaceKind } from "@/features/locations/places";
-import { useMapPoints } from "@/features/locations/mapPoints";
-import { pointPlaces } from "@/features/locations/pointPlaces";
+import { useMapPoints, type MapPoint } from "@/features/locations/mapPoints";
+import { POINT_PLACE_PREFIX, pointPlaces } from "@/features/locations/pointPlaces";
 import { searchTerms } from "@/features/locations/placeSearch";
 import { highlight } from "@/shared/lib/highlight";
 import { useLocale } from "@/i18n/LocaleContext";
@@ -74,6 +74,33 @@ export function MapsPage() {
     }
     setParams(p, { replace: true, preventScrollReset: true });
   };
+  // A pin tapped on the map opens the place or room it stands for, with its
+  // full card (photos, 3D tour, link): a linked place (Red Hall), a room code
+  // (F205; D117 opens its lecture hall), else the point itself as a place.
+  // Toilets, stairs and codeless entrances aren't places: undefined.
+  const openPoint = (p: MapPoint): string | undefined => {
+    const linked = p.place && PLACES.some((x) => x.code === p.place) ? p.place : undefined;
+    const room = parseRoomCode(p.code);
+    const placeCode = linked ?? (room ? placeForRoom(room.code)?.code : undefined) ?? extra.find((x) => x.code === `${POINT_PLACE_PREFIX}${p.id}`)?.code;
+    if (placeCode) {
+      update({ q: null, cat: null, place: placeCode }, true);
+      return placeCode;
+    }
+    if (room) {
+      update({ q: room.code, cat: null, place: null }, true);
+      return room.code;
+    }
+    return undefined;
+  };
+  const popup = !mapPick || !target
+    ? undefined
+    : "room" in target
+      ? {
+          title: fill(t("mapsRoomTitle"), { code: target.code }),
+          text: [fill(t("mapsBlock"), { block: target.block }), fill(t("mapsFloor"), { floor: target.floor })].join(" · "),
+        }
+      : { title: target.name[locale], text: target.where[locale] };
+
   const submit = (e: FormEvent) => {
     e.preventDefault();
     update({ q: draft.trim() || null, place: null });
@@ -140,7 +167,8 @@ export function MapsPage() {
             from={from}
             // Clicking the picked place again clears it.
             onPick={(code) => update({ q: null, cat: null, place: code === target?.code ? null : code }, code !== target?.code)}
-            popup={mapPick && picked ? { title: picked.name[locale], text: picked.where[locale] } : undefined}
+            onPointPick={openPoint}
+            popup={popup}
             onMore={() => document.getElementById("place-details")?.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth" })}
             onClosePopup={() => setMapPick(false)}
             onClear={() => update({ q: null, place: null })}

@@ -373,8 +373,10 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   "Blocks" toggle (`ai_helpdesk_map_blocks`) hides the layer. "Nearest toilet /
   stairs" and tapping pins work on every floor. Still to do (step 3): the
   upstairs part of the route (stairs → room) on the other floors.
-- **Map extras (`020_map_extras.sql`).** Students: tap any pin to see what it
-  is, "Nearest toilet / stairs" (closest point of that type on the floor),
+- **Map extras (`020_map_extras.sql`).** Students: tapping a pin opens what it
+  stands for with its full card (photos, 3D tour, link; `openPoint` in
+  `MapsPage`: linked place → room code → `PT_<id>`), staying on the tapped
+  floor; toilets, stairs and codeless entrances are just named under the map; "Nearest toilet / stairs" (closest point of that type on the floor),
   "Copy link" to a room or place, and in "Report a mistake" an optional tap
   on the plan = the right spot (`location_reports.suggested_floor/x/y`,
   `suggested` in the API). Editor: a new point can be dragged before it is
