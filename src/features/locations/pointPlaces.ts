@@ -20,6 +20,17 @@ const KIND: Record<PointType, PlaceKind | null> = {
 const WINGS: [SchemeBlock, number, number][] = [
   ["D", 1100, 1436], ["E", 1745, 2098], ["F", 2332, 2689], ["G", 2982, 3316], ["H", 3644, 3990], ["I", 4283, 4655],
 ];
+/**
+ * A point's category chip: an "other" point with 3D tour links is a 3D view
+ * ("Atrium: minimarket"), not a service; a shop is food only when it sells
+ * food (the minimarket), else a service (SDU Store sells merch).
+ */
+function kindOf(p: MapPoint): PlaceKind | null {
+  if (p.type === "other" && p.tours.length > 0) return "tour";
+  if (p.type === "shop") return /market|маркет|food|азық|продукт/i.test(p.name) ? "food" : "service";
+  return KIND[p.type];
+}
+
 const blockOf = (p: MapPoint): SchemeBlock | undefined =>
   p.y < 980 ? WINGS.find(([, x1, x2]) => p.x >= x1 && p.x <= x2)?.[0] : undefined;
 
@@ -30,7 +41,7 @@ export const pointIdOf = (code: string) => (code.startsWith(POINT_PLACE_PREFIX) 
 export function pointPlaces(points: MapPoint[]): Place[] {
   const out: Place[] = [];
   for (const p of points) {
-    const kind = KIND[p.type];
+    const kind = kindOf(p);
     if (!kind || p.place || (p.code && placeForRoom(p.code.toUpperCase()))) continue;
     const block = blockOf(p);
     const typeName = (loc: Locale) => tr(loc, TYPE_META[p.type].key);

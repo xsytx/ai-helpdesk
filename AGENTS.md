@@ -430,7 +430,10 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   aliases above descriptions. Map points that aren't rooms or linked to a
   built-in place (advising desk, cloakroom, labs, Senate Hall…) are places
   too (`PT_<id>`, their pin on the floor plan; reports about them sit on that
-  point in the editor). Suggestions under the box while typing (↑/↓, Enter,
+  point in the editor). Their category chip comes from the point type
+  (`kindOf` in `pointPlaces.ts`): "other" with 3D tour links = the "3D tour"
+  chip, a shop is Food only when it sells food (minimarket), else Services.
+  Suggestions under the box while typing (↑/↓, Enter,
   Esc); a category chip clears the search text.
 - **Split-level wings.** Students say floors 1, 2, 3A, 3B, 4: 3A is the
   right part of a wing (rooms x06 and up on floor 3, F306–F312), 3B the left

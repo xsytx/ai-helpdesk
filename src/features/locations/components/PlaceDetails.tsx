@@ -18,7 +18,7 @@ import { uploadReportPhoto } from "../photos";
 import { ENTRANCE_KEY, ENTRANCE_ORDER, blockPlace, type Entrance, type Place, type PlaceKind, type RoomCode, type SchemeBlock } from "../places";
 
 export const KIND_ICON: Record<PlaceKind, typeof Building2> = {
-  block: Building2, food: UtensilsCrossed, study: BookOpen, service: ConciergeBell, rest: Armchair, entrance: DoorOpen,
+  block: Building2, food: UtensilsCrossed, study: BookOpen, service: ConciergeBell, rest: Armchair, entrance: DoorOpen, tour: Rotate3d,
 };
 
 const SCHEME_BLOCKS = new Set<string>(["A", "B", "C", "D", "E", "F", "G", "H", "I"]);

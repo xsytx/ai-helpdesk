@@ -4,7 +4,8 @@ import type { Locale, TranslationKey } from "@/i18n/translations";
 import { searchPlaces as rankPlaces } from "./placeSearch";
 
 export type Text = Record<Locale, string>;
-export type PlaceKind = "block" | "food" | "study" | "service" | "rest" | "entrance";
+/** "tour": a map point that is a view of the 3D tour (type "other" with tour links). */
+export type PlaceKind = "block" | "food" | "study" | "service" | "rest" | "entrance" | "tour";
 export type Entrance = "C" | "G" | "I";
 /** The entrances in the order the switch shows them, and their names. */
 export const ENTRANCE_ORDER: Entrance[] = ["C", "G", "I"];

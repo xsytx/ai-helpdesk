@@ -11,7 +11,7 @@ import type { TranslationKey } from "@/i18n/translations";
 import { cn } from "@/shared/lib/cn";
 import { Button } from "@/shared/ui/Button";
 import { Card } from "@/shared/ui/Card";
-import { Armchair, BookOpen, Building2, ConciergeBell, MapPin, Search, Sparkles, UtensilsCrossed } from "lucide-react";
+import { Armchair, BookOpen, Building2, ConciergeBell, MapPin, Rotate3d, Search, Sparkles, UtensilsCrossed } from "lucide-react";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
@@ -24,6 +24,7 @@ const KINDS: { kind: PlaceKind | "all"; key: TranslationKey; icon: typeof MapPin
   { kind: "study", key: "mapsCatStudy", icon: BookOpen },
   { kind: "service", key: "mapsCatServices", icon: ConciergeBell },
   { kind: "rest", key: "mapsCatRest", icon: Armchair },
+  { kind: "tour", key: "mapsCatTour", icon: Rotate3d },
 ];
 
 
