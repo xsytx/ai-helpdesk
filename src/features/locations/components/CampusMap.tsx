@@ -19,6 +19,7 @@ import {
   type MapFloor, type MapPoint, type PointType,
 } from "../mapPoints";
 import type { Entrance, Place, RoomCode, SchemeBlock } from "../places";
+import { corridorPath } from "../upstairs";
 import { CampusLayer } from "./CampusLayer";
 import { FloorPlan } from "./FloorPlan";
 
@@ -174,6 +175,8 @@ export function CampusMap({ target, marked, from, onPick, onPointPick, popup, on
   const lift = floor === "1" ? liftDown : liftUp;
   // …and the wing's stairs that go to every floor (at its far end).
   const stairs = lift ? nearWing(all, floor, lift, isFullStairs) : undefined;
+  // On the room's floor: the walk from the elevator along the wing's corridor to it.
+  const upPath = liftUp && here[0] && schemeBlock ? corridorPath(all, floor, schemeBlock, liftUp, here[0]) : null;
   const campus = floor === "1" && showBlocks;
   const showRoute = floor === "1" && route;
   // Floor 1 always carries the route and entrances; the blocks only when switched on.
@@ -189,6 +192,12 @@ export function CampusMap({ target, marked, from, onPick, onPointPick, popup, on
     const ys = pts.map((p) => p.y);
     const [x1, x2, y1, y2] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
     focus = { x: (x1 + x2) / 2, y: (y1 + y2) / 2, w: Math.max(x2 - x1, (y2 - y1) * 2.4) * 1.25 + 300, key: `route-${code}-${from}` };
+  } else if (upPath) {
+    // The walk from the elevator to the room, with a little room around it.
+    const xs = upPath.map((p) => p.x);
+    const ys = upPath.map((p) => p.y);
+    const [x1, x2, y1, y2] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
+    focus = { x: (x1 + x2) / 2, y: (y1 + y2) / 2, w: Math.max(x2 - x1, (y2 - y1) * 1.6) + 700, key: `up-${code}-${floor}` };
   } else if (here[0]) {
     focus = { x: here[0].x, y: here[0].y, key: `${code}-${here[0].id}-${here[0].x}-${here[0].y}` };
   } else if (markedHere.length > 0) {
@@ -314,6 +323,7 @@ export function CampusMap({ target, marked, from, onPick, onPointPick, popup, on
                 : undefined
             }
             declutter
+            path={upPath}
             loading={!points && !pointsFailed}
             controls={
               <button

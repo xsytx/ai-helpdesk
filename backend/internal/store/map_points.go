@@ -26,8 +26,8 @@ var mapExtrasSQL string
 //go:embed migrations/026_map_tours.sql
 var mapToursSQL string
 
-// The points collected with the prototype editor (sdu-map-export/rooms.json),
-// loaded once into an empty map_points table.
+// The map points (with their 3D tour links) as the team left them, loaded
+// once into an empty map_points table; refreshed from the dev database.
 //
 //go:embed migrations/map_points_seed.json
 var mapPointsSeed []byte
@@ -96,8 +96,8 @@ func (s *PostgresStore) seedMapPoints(ctx context.Context) error {
 	defer tx.Rollback(ctx) //nolint:errcheck // a no-op after Commit
 	for _, p := range seed {
 		if _, err := tx.Exec(ctx,
-			`INSERT INTO map_points (code, name, type, floor, x, y, place) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-			p.Code, p.Name, p.Type, p.Floor, p.X, p.Y, p.Place); err != nil {
+			`INSERT INTO map_points (code, name, type, floor, x, y, place, tours) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+			p.Code, p.Name, p.Type, p.Floor, p.X, p.Y, p.Place, tours(p.Tours)); err != nil {
 			return err
 		}
 	}

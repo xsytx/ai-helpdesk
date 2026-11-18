@@ -65,6 +65,8 @@ export interface FloorPlanProps {
   loading?: boolean;
   /** More buttons under the zoom buttons (full screen). */
   controls?: ReactNode;
+  /** A walk on this floor (plan pixels): drawn like the floor-1 route, under the pins. */
+  path?: { x: number; y: number }[] | null;
   className?: string;
 }
 
@@ -73,7 +75,7 @@ const DECLUTTER_K = 4.5;
 
 export function FloorPlan({
   floor, points, highlight = [], secondary = [], dimOthers = false, selectedId, reported = {}, block, focus, onPointClick, onPlanClick, picking,
-  onPointMove, draft, onDraftMove, ghost, wheelZoom, layer, declutter = false, loading = false, controls, className,
+  onPointMove, draft, onDraftMove, ghost, wheelZoom, layer, declutter = false, loading = false, controls, path, className,
 }: FloorPlanProps) {
   const { t } = useLocale();
   const plan = FLOORS[floor];
@@ -317,6 +319,16 @@ export function FloorPlan({
         />
 
         {layer?.(k)}
+
+        {path && path.length > 1 ? (
+          <g pointerEvents="none">
+            <polyline points={path.map((p) => `${p.x},${p.y}`).join(" ")} fill="none" stroke="#fff" strokeWidth={6 * k} strokeLinejoin="round" strokeLinecap="round" />
+            <polyline
+              points={path.map((p) => `${p.x},${p.y}`).join(" ")} fill="none" stroke="var(--color-accent)" strokeWidth={3.5 * k}
+              strokeDasharray={`${7 * k} ${5 * k}`} strokeLinejoin="round" strokeLinecap="round"
+            />
+          </g>
+        ) : null}
 
         {!layer && PLAN_BLOCKS.map((b, i) => (
           <g key={i} style={{ pointerEvents: "none" }}>

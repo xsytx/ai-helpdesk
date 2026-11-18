@@ -350,9 +350,10 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   (`024_floor4.sql`, runs only while "3B" rows exist), then "3B" became "3"
   (`025_floor3.sql`). `x`, `y` are pixels of the image (never resize or crop the
   images, or every point shifts). The table is filled once from
-  `migrations/map_points_seed.json` while it is empty (429 points: the
-  prototype editor's export `maps/sdu-room-locations.json` merged with the
-  site's own edits up to 2026-11-18; existing databases are not re-seeded). `GET /api/map/points` for everyone signed in;
+  `migrations/map_points_seed.json` while it is empty (519 points with their
+  3D tour links: the dev database as of 2026-11-19, elevators and named
+  stairs included; existing databases are not re-seeded; refresh it from the
+  dev database after big map edits, one point per line, by floor, x, y). `GET /api/map/points` for everyone signed in;
   `POST/PUT/DELETE /api/admin/map/points[/{id}]` for staff (one point per room
   code, any letter case). The Maps page's map pins the place on its floor
   (`CampusMap`; matched by room code or the point's `place` = a `places.ts`
@@ -380,8 +381,8 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   fit button shows all); pinch, double-tap and trackpad pinch zoom; while
   zoomed out (`DECLUTTER_K`) the students' map draws only the place, marked
   pins and entrances; a full-screen button (portalled to `<body>`); the
-  legend folds; Barys waits while the plan or the pins load. Still to do (step 3): the
-  upstairs part of the route (stairs → room) on the other floors.
+  legend folds; Barys waits while the plan or the pins load. The upstairs part of the
+  route is the elevator → room walk (see split-level wings).
 - **Map extras (`020_map_extras.sql`).** Students: tapping a pin opens what it
   stands for with its full card (photos, 3D tour, link; `openPoint` in
   `MapsPage`: linked place → room code → `PT_<id>`), staying on the tapped
@@ -460,7 +461,10 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   floor 1's plan is a different drawing): for an upstairs room in a wing the
   floor-1 route ends at the wing's elevator (`nearWing` in `CampusMap`) and
   the elevator is marked on floor 1 and on the room's floor, with the wing's
-  end stairs. Stairs naming (map points, type `stairs`): no name = goes to
+  end stairs; on the room's floor a dashed walk goes from the elevator along
+  the wing's corridor to the room (`corridorPath` in `upstairs.ts`: the line
+  through the elevator with the wings' tilt `WING_SLOPE`, measured on the
+  floor 3 plan). Stairs naming (map points, type `stairs`): no name = goes to
   every floor (the stairs at the far end of each wing); others name their
   floors, lowest first: "Stairs 1-2", "Stairs 2-3A-3B" (near the wing
   entrance), "Stairs 3B-4", "Stairs 1-2-3", and a point on each floor they
@@ -639,8 +643,8 @@ helpers; photos on questions and answers; avatars on the server; public
 profile pages.
 
 Courses: story 16 (catalogue) and reviews (17-18) done; an AI summary of
-reviews was postponed by the user. Maps: floors on the site are 1, 2, 3, 4; routes upstairs wait until the
-map data is complete. Ideas: search suggestions, Ctrl+K
+reviews was postponed by the user. Maps: floors on the site are 1, 2, 3, 4 (students say 3A/3B);
+routes go to the wing elevator and on to the room upstairs. Ideas: search suggestions, Ctrl+K
 search everywhere, PWA, admin stats page, scheduled backups, CI checks on
 GitHub. Optional: stop admins approving their own flagged
 posts. The 4B model is weak in Kazakh (a Kazakh follow-up understood the
