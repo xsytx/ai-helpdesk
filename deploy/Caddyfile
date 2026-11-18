@@ -1,0 +1,10 @@
+# The public front door on a server: HTTPS for SITE_ADDRESS (a certificate
+# from Let's Encrypt, fetched and renewed automatically; ports 80 and 443 must
+# be open), and everything forwarded to the website container, whose nginx
+# serves the app and passes /api and /uploads on to the backend.
+{$SITE_ADDRESS} {
+	reverse_proxy web:80 {
+		# Live notifications and streamed AI answers go out as they come.
+		flush_interval -1
+	}
+}

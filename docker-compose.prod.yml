@@ -1,0 +1,28 @@
+# Additions for a public server (see deploy/README.md), used together with
+# the main file:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+#
+# Caddy answers on ports 80/443 with HTTPS for SITE_ADDRESS and forwards to
+# the website; set WEB_PORT=127.0.0.1:3000 in .env so the website itself is
+# reachable only through Caddy.
+services:
+  caddy:
+    image: caddy:2.8-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      SITE_ADDRESS: "${SITE_ADDRESS:?set SITE_ADDRESS in .env, e.g. sdu-helpdesk.westeurope.cloudapp.azure.com}"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      # The HTTPS certificate is kept here, so restarts don't fetch a new one.
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - web
+    restart: unless-stopped
+
+volumes:
+  caddy-data:
+  caddy-config:

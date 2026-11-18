@@ -55,6 +55,7 @@ src/                 React 19 + TS website (Vite, Tailwind v4, React Router 7, T
 backend/             Go 1.26 JSON API + PostgreSQL schema   (see backend/AGENTS.md)
 ai_ml/               Python FastAPI service: FAQ search + LLM answers + moderation (Ollama)
 docker-compose.yml   web (nginx) + app (Go) + db (Postgres 16) + ai_ml
+docker-compose.prod.yml + deploy/   a public server: Caddy (HTTPS) in front; steps in deploy/README.md
 nginx.conf           serves the site, proxies /api (read timeout 200s for slow AI answers), gzip, caching
 .env / .env.example  settings for docker compose (root .env; ai_ml/.env is only for run.bat)
 ```
