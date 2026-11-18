@@ -112,5 +112,12 @@ Everyone signs in again once (the server has its own login key).
   `0 3 * * * cd /home/azureuser/sdu-helpdesk && bash scripts/backup.sh /home/azureuser/backups`
   and now and then copy one to the laptop with `scp`.
 - **Logs**: `docker compose logs -f app` (or `web`, `caddy`).
-- **The AI** needs a bigger VM with Ollama (8 GB+, slow on a CPU) or a hosted
-  model API (a change in `ai_ml/`).
+- **The AI** without a GPU: Google's Gemini API (free tier). Get a key at
+  aistudio.google.com, add to the server's `.env`:
+  `LLM_PROVIDER=gemini`, `LLM_MODEL=gemini-2.5-flash` (or the current Flash /
+  Flash-Lite model), `LLM_API_KEY=<key>`,
+  `LLM_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai`,
+  then the `up -d` command from step 4. Answers then come whole (not word by
+  word), and students' questions and new posts are sent to Google, whose free
+  tier may use them to improve its products. Ollama on the VM needs 8 GB+ and
+  is slow on a CPU.

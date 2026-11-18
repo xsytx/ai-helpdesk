@@ -78,11 +78,15 @@ services:
   ai_ml:
     build: ./ai_ml
     environment:
-      LLM_PROVIDER: ollama
+      # ollama (default, on this computer) or gemini / openai (a hosted API:
+      # for a server without a GPU; set LLM_API_KEY and LLM_BASE_URL, see
+      # .env.example).
+      LLM_PROVIDER: "${LLM_PROVIDER:-ollama}"
       LLM_MODEL: "${LLM_MODEL:-qwen3.5:4b}"
+      LLM_API_KEY: "${LLM_API_KEY:-}"
       # Inside a container 127.0.0.1 is the container itself, so Ollama on
       # the host is reached through host.docker.internal.
-      LLM_BASE_URL: "${OLLAMA_URL:-http://host.docker.internal:11434}"
+      LLM_BASE_URL: "${LLM_BASE_URL:-${OLLAMA_URL:-http://host.docker.internal:11434}}"
       LLM_TIMEOUT_SECONDS: "${LLM_TIMEOUT_SECONDS:-120}"
       LLM_NUM_PREDICT: "${LLM_NUM_PREDICT:-450}"
     # Makes host.docker.internal work on Linux too (Docker Desktop has it already).
