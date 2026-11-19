@@ -15,7 +15,7 @@ import { PlacePhotos } from "./PlacePhotos";
 import { TourViewer } from "./TourViewer";
 import { AddPhotoButton, checkPhotos, PhotoThumb } from "@/features/forum/components/Photos";
 import { uploadReportPhoto } from "../photos";
-import { ENTRANCE_KEY, ENTRANCE_ORDER, blockPlace, type Entrance, type Place, type PlaceKind, type RoomCode, type SchemeBlock } from "../places";
+import { ENTRANCE_KEY, ENTRANCE_ORDER, blockOnFloor, blockPlace, floorsOfBlock, type Entrance, type Place, type PlaceKind, type RoomCode, type SchemeBlock } from "../places";
 
 export const KIND_ICON: Record<PlaceKind, typeof Building2> = {
   block: Building2, food: UtensilsCrossed, study: BookOpen, service: ConciergeBell, rest: Armchair, entrance: DoorOpen, tour: Rotate3d, room: Presentation,
@@ -78,7 +78,13 @@ function steps(t: (k: TranslationKey) => string, block: string | undefined, floo
   return out;
 }
 
-export function PlaceDetails({ target, from, onFrom }: { target: Place | RoomCode; from: Entrance; onFrom: (e: Entrance) => void }) {
+export function PlaceDetails({ target, from, onFrom, onPlace }: {
+  target: Place | RoomCode;
+  from: Entrance;
+  onFrom: (e: Entrance) => void;
+  /** Open another place (a block's floor switch: "BLOCK_F" → "BLOCK_F_2"). */
+  onPlace?: (code: string) => void;
+}) {
   const { t, locale } = useLocale();
   const room = "room" in target ? target : null;
   const place = room ? null : (target as Place);
@@ -86,6 +92,9 @@ export function PlaceDetails({ target, from, onFrom }: { target: Place | RoomCod
   const faculty = room ? blockPlace(room.block) : null;
 
   const title = room ? fill(t("mapsRoomTitle"), { code: room.code }) : place!.name[locale];
+  // A block (any of its floors): the floor switch.
+  const blockFloors = onPlace && place?.kind === "block" && block && /^BLOCK_[A-I](_\d)?$/.test(place.code) ? floorsOfBlock(block) : undefined;
+  const blockFloor = place?.floor ? String(place.floor) : "1";
   // "3A" / "3B" for a room on floor 3 (the wing's right / left part).
   const level = room ? levelOf(room.floor, room.room) : place?.floor ? String(place.floor) : undefined;
   // 3D tour views: a room by its code, a map point by its name, a place by its code.
@@ -127,10 +136,30 @@ export function PlaceDetails({ target, from, onFrom }: { target: Place | RoomCod
           <h2 className="text-xl font-bold text-primary">{title}</h2>
           <div className="mt-2 flex flex-wrap gap-1.5 text-xs font-medium">
             {block && <Chip>{fill(t("mapsBlock"), { block })}</Chip>}
-            {level !== undefined && <Chip>{fill(t("mapsFloor"), { floor: level })}</Chip>}
+            {level !== undefined && !blockFloors && <Chip>{fill(t("mapsFloor"), { floor: level })}</Chip>}
             {room && <Chip>{fill(t("mapsRoom"), { room: room.room })}</Chip>}
             {faculty && <Chip tone="sky">{faculty.where[locale]}</Chip>}
           </div>
+          {/* A block's floors: each is its own place with its own photos (BLOCK_F, BLOCK_F_2…). */}
+          {blockFloors ? (
+            <div className="mt-2.5 flex flex-wrap items-center gap-2 text-xs font-semibold">
+              <span className="text-label">{t("mapEditorFloor")}</span>
+              <div className="inline-flex rounded-xl border border-border bg-surface p-0.5" role="group" aria-label={t("mapEditorFloor")}>
+                {blockFloors.map((f) => (
+                  <button
+                    key={f}
+                    type="button"
+                    aria-pressed={f === blockFloor}
+                    aria-label={fill(t("mapsFloor"), { floor: f })}
+                    onClick={() => f !== blockFloor && onPlace?.(blockOnFloor(block!, f))}
+                    className={cn("min-w-8 rounded-lg px-2.5 py-1.5 transition-colors", f === blockFloor ? "bg-brand text-white" : "text-label hover:text-primary")}
+                  >
+                    {f}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
           <CopyLink path={room ? `/navigation?q=${encodeURIComponent(room.code)}` : `/navigation?place=${encodeURIComponent(place!.code)}`} />
         </div>
       </div>

@@ -181,11 +181,12 @@ export function MapsPage() {
         </Card>
 
         <Card id="place-details" className="scroll-mt-20 space-y-5">
+          {/* A block's floor (BLOCK_F_2) keeps its block marked in the list. */}
           {(q.trim() || kind !== "all") && !room && (
-            <PlaceList places={results} selected={target?.code} onPick={(p) => update({ place: p.code })} />
+            <PlaceList places={results} selected={target?.code.replace(/^(BLOCK_[A-I])_\d$/, "$1")} onPick={(p) => update({ place: p.code })} />
           )}
           {target ? (
-            <PlaceDetails target={target} from={from} onFrom={setFrom} />
+            <PlaceDetails target={target} from={from} onFrom={setFrom} onPlace={(code) => update({ q: null, place: code })} />
           ) : q.trim() ? (
             <NotFound q={q} />
           ) : (

@@ -317,8 +317,10 @@ const BLOCK_PLACE: Partial<Record<string, string>> = { A: "BLOCK_A", B: "BLOCK_B
  * own photos; floor 1 is the block itself (BLOCK_F). Not in PLACES, so they
  * aren't listed, searched or given to the AI.
  */
+/** A block's floors: the wings D–I have 1–4 (4 = their right part), blocks A, B and C 1–3. */
+export const floorsOfBlock = (block: string): string[] => (/^[D-I]$/.test(block) ? ["1", "2", "3", "4"] : ["1", "2", "3"]);
 export const BLOCK_FLOORS: Place[] = PLACES.filter((p) => p.kind === "block" && p.block).flatMap((p) =>
-  [2, 3, 4].map((f): Place => ({
+  floorsOfBlock(p.block!).slice(1).map(Number).map((f): Place => ({
     code: `${p.code}_${f}`, kind: "block", block: p.block, floor: f, contact: p.contact,
     name: { en: `${p.name.en}, floor ${f}`, kz: `${p.name.kz}, ${f}-қабат`, ru: `${p.name.ru}, ${f} этаж` },
     where: p.where,

@@ -383,7 +383,10 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   = blocks only); a block picked upstairs stays on that floor and opens that
   floor's own place, `BLOCK_F_2` … (`BLOCK_FLOORS` / `blockOnFloor` /
   `placeByCode` in `places.ts`: not in `PLACES`, so not listed, searched or
-  given to the AI), with its own photo gallery; floor 1 is `BLOCK_F`. The
+  given to the AI), with its own photo gallery; floor 1 is `BLOCK_F`. Floors:
+  D–I 1–4, A–C 1–3 (`floorsOfBlock`). A block's card has a floor switch
+  (`onPlace` on `PlaceDetails`) that opens that floor's place, and a block's
+  upper floor opens the map on that floor (`blockUpstairs` in `CampusMap`). The
   editor's photo place list (`PLACES_WITH_FLOORS`) and bulk upload
   (`BLOCK_F_2.jpg`, `BLOCK_F_2-2.jpg`) take them too. "Nearest toilet /
   stairs" and tapping pins work on every floor. Phones: the map is taller (60vh)

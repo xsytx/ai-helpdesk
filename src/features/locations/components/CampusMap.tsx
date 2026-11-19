@@ -109,7 +109,9 @@ export function CampusMap({ target, marked, from, onPick, onPointPick, popup, on
   const route: Pt[] | null = walk && liftDown ? [...walk.slice(0, -1), planToUnit(liftDown.x, liftDown.y)] : walk;
   const level = room ? levelOf(room.floor, room.room) : place?.floor ? String(place.floor) : undefined;
   // Floor 1 first when there is a way in to show; otherwise straight to the place's floor.
-  const startFloor: MapFloor = route ? "1" : (targetFloor ?? "1");
+  // A block's upper floor (BLOCK_F_2) is about that floor: it opens there ("Way in: floor 1" goes back).
+  const blockUpstairs = place !== null && /^BLOCK_[A-I]_\d$/.test(place.code);
+  const startFloor: MapFloor = route && !blockUpstairs ? "1" : (targetFloor ?? "1");
 
   const [floor, setFloor] = useState<MapFloor>(startFloor);
   const [helper, setHelper] = useState<"toilet" | "stairs">();
