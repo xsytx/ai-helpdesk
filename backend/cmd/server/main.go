@@ -315,6 +315,7 @@ func main() {
 	mux.Handle("GET /api/courses", authMw(http.HandlerFunc(h.SearchCourses)))
 	mux.Handle("GET /api/courses/{code}", authMw(http.HandlerFunc(h.GetCourse)))
 	mux.Handle("GET /api/courses/{code}/reviews", authMw(http.HandlerFunc(h.ListCourseReviews)))
+	mux.Handle("GET /api/me/reviews", authMw(http.HandlerFunc(h.ListMyReviews)))
 	mux.Handle("PUT /api/courses/{code}/review", authMw(writeLimiter(http.HandlerFunc(h.SaveCourseReview))))
 	mux.Handle("DELETE /api/courses/{code}/review", authMw(writeLimiter(http.HandlerFunc(h.DeleteCourseReview))))
 	mux.Handle("PUT /api/reviews/{id}/helpful", authMw(writeLimiter(http.HandlerFunc(h.SetReviewHelpful))))

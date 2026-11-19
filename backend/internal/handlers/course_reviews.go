@@ -73,6 +73,23 @@ func (h *Handlers) ListCourseReviews(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"summary": summary, "reviews": reviewsFor(list, staff)})
 }
 
+// ListMyReviews: GET /api/me/reviews — the signed-in student's own reviews of
+// every course, any moderation status (their profile's "My reviews" tab).
+// Never someone else's: reviews are anonymous to other students.
+func (h *Handlers) ListMyReviews(w http.ResponseWriter, r *http.Request) {
+	uid, ok := h.userID(r)
+	if !ok {
+		writeError(w, http.StatusUnauthorized, "not authenticated")
+		return
+	}
+	list, err := h.Store.ListMyCourseReviews(r.Context(), uid)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "could not load the reviews")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"reviews": list})
+}
+
 func validReview(in *models.CourseReviewInput) string {
 	in.Text = strings.TrimSpace(in.Text)
 	in.TakenTerm = strings.ToLower(strings.TrimSpace(in.TakenTerm))

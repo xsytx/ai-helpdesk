@@ -309,6 +309,7 @@ export interface ReviewInput {
 
 const reviewKeys = {
   all: ["reviews"] as const,
+  mine: ["reviews", "mine"] as const,
   course: (code: string, sort: string) => ["reviews", code, sort] as const,
   admin: ["reviews", "admin"] as const,
 };
@@ -323,6 +324,14 @@ export function useCourseReviews(code: string, sort: "new" | "helpful") {
     refetchInterval: (q) => (q.state.data?.reviews.some((r) => r.mine && r.status === "checking") ? 2000 : 30_000),
     queryFn: async () =>
       (await apiClient.get<{ summary: ReviewSummary; reviews: CourseReview[] }>(`/courses/${encodeURIComponent(courseSlug(code))}/reviews`, { params: { sort } })).data,
+  });
+}
+
+/** Your own reviews of every course, any status (your profile's "My reviews"; only you see it). */
+export function useMyReviews() {
+  return useQuery({
+    queryKey: reviewKeys.mine,
+    queryFn: async () => (await apiClient.get<{ reviews: CourseReview[] }>("/me/reviews")).data.reviews,
   });
 }
 

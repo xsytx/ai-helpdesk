@@ -145,6 +145,8 @@ type Store interface {
 	DeleteMyCourseReview(ctx context.Context, code string, userID int64) error
 	// ListCourseReviews: visible ones, the viewer's own, everything for staff.
 	ListCourseReviews(ctx context.Context, code string, viewer int64, staff bool, sort string) ([]models.CourseReview, error)
+	// ListMyCourseReviews: all of a student's own reviews, any status (only they see them).
+	ListMyCourseReviews(ctx context.Context, userID int64) ([]models.CourseReview, error)
 	CourseReviewSummary(ctx context.Context, code string) (models.ReviewSummary, error)
 	SetReviewStatus(ctx context.Context, id int64, status, reason, onlyIf, onlyText string) error
 	ReviewsBeingChecked(ctx context.Context) ([]models.CourseReview, error)

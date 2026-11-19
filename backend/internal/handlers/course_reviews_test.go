@@ -22,6 +22,7 @@ func newReviewsEnv(t *testing.T) *modEnv {
 	mux := http.NewServeMux()
 	mux.Handle("POST /api/admin/curricula", authMw(http.HandlerFunc(e.h.ImportCurriculum)))
 	mux.Handle("GET /api/courses/{code}/reviews", authMw(http.HandlerFunc(e.h.ListCourseReviews)))
+	mux.Handle("GET /api/me/reviews", authMw(http.HandlerFunc(e.h.ListMyReviews)))
 	mux.Handle("PUT /api/courses/{code}/review", authMw(http.HandlerFunc(e.h.SaveCourseReview)))
 	mux.Handle("DELETE /api/courses/{code}/review", authMw(http.HandlerFunc(e.h.DeleteCourseReview)))
 	mux.Handle("PUT /api/reviews/{id}/helpful", authMw(http.HandlerFunc(e.h.SetReviewHelpful)))
@@ -136,6 +137,14 @@ func TestCourseReviews(t *testing.T) {
 	}
 	if num(summary["count"]) != 1 || summary["difficulty"] != 4.0 || summary["interest"] != 4.0 || summary["practical"] != 2.0 || summary["beginner"] != 3.0 || num(summary["recommend_pct"]) != 100 {
 		t.Fatalf("summary: %v", summary)
+	}
+	// "My reviews": the author's own list has it (with the course's name); another student's has none of theirs.
+	if code, mine := e.call(a, http.MethodGet, "/api/me/reviews", nil); code != http.StatusOK || len(list(mine["reviews"])) != 1 ||
+		num(list(mine["reviews"])[0]["id"]) != id || list(mine["reviews"])[0]["course_name"] == "" || list(mine["reviews"])[0]["mine"] != true {
+		t.Fatalf("my reviews: %d %v", code, mine)
+	}
+	if code, theirs := e.call(b, http.MethodGet, "/api/me/reviews", nil); code != http.StatusOK || findReview(list(theirs["reviews"]), id) != nil {
+		t.Fatalf("another student's list shows a's review: %d %v", code, theirs)
 	}
 	staffView, _ := e.reviewsSeenBy(admin, "MAT-101")
 	if s := findReview(staffView, id); s == nil || s["author_name"] == "" || num(s["author_id"]) == 0 {

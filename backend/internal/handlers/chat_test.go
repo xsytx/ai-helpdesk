@@ -169,6 +169,9 @@ func (s *chatTestStore) DeleteMyCourseReview(context.Context, string, int64) err
 func (s *chatTestStore) ListCourseReviews(context.Context, string, int64, bool, string) ([]models.CourseReview, error) {
 	return nil, nil
 }
+func (s *chatTestStore) ListMyCourseReviews(context.Context, int64) ([]models.CourseReview, error) {
+	return nil, nil
+}
 func (s *chatTestStore) CourseReviewSummary(context.Context, string) (models.ReviewSummary, error) {
 	return models.ReviewSummary{}, nil
 }

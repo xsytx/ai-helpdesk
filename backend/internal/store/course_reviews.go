@@ -121,6 +121,13 @@ func (s *PostgresStore) ListCourseReviews(ctx context.Context, code string, view
 		`WHERE r.course_code = $2 AND (`+reviewVisible+` OR r.user_id = $1 OR $3) ORDER BY `+order+` LIMIT 200`, code, staff)
 }
 
+// ListMyCourseReviews returns all of a student's own reviews, any status,
+// newest first (their profile's "My reviews"; only they see it: reviews are
+// anonymous to other students).
+func (s *PostgresStore) ListMyCourseReviews(ctx context.Context, userID int64) ([]models.CourseReview, error) {
+	return s.queryReviews(ctx, userID, `WHERE r.user_id = $1 ORDER BY r.created_at DESC, r.id DESC LIMIT 200`)
+}
+
 // CourseReviewSummary averages a course's visible reviews.
 func (s *PostgresStore) CourseReviewSummary(ctx context.Context, code string) (models.ReviewSummary, error) {
 	var sum models.ReviewSummary
