@@ -244,13 +244,13 @@ function ReportForm({ id, onDone }: { id: number; onDone: () => void }) {
   );
 }
 
-/** One row of 1–5 buttons with the ends labelled ("easy … hard"). */
+/** One row of 1–5 buttons, the ends labelled under them ("easy … hard"), so a row is only as wide as its buttons. */
 function ScorePicker({ label, low, high, value, onChange }: { label: string; low: string; high: string; value: number; onChange: (v: number) => void }) {
   return (
     <fieldset>
       <legend className="text-xs font-semibold text-label">{label}</legend>
-      <div className="mt-1 flex items-center gap-1.5">
-        <span className="w-12 text-right text-[11px] text-label">{low}</span>
+      <div className="mt-1 inline-flex flex-col">
+      <div className="flex items-center gap-1.5">
         {[1, 2, 3, 4, 5].map((n) => (
           <button
             key={n}
@@ -266,7 +266,11 @@ function ScorePicker({ label, low, high, value, onChange }: { label: string; low
             {n}
           </button>
         ))}
-        <span className="w-12 text-[11px] text-label">{high}</span>
+      </div>
+      <div className="mt-0.5 flex justify-between gap-2 text-[11px] leading-tight text-label">
+        <span>{low}</span>
+        <span className="text-right">{high}</span>
+      </div>
       </div>
     </fieldset>
   );
@@ -310,14 +314,15 @@ function ReviewForm({ code, initial, onDone }: { code: string; initial?: CourseR
         if (complete) save.mutate({ ...form, text: form.text.trim() }, { onSuccess: onDone });
       }}
     >
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-start">
-        <div className="grid flex-1 gap-3 sm:grid-cols-2">
+      {/* The hexagon beside the scores only when there is room for both; else under them. */}
+      <div className="flex flex-col items-center gap-3 xl:flex-row xl:items-start">
+        <div className="grid w-full gap-x-6 gap-y-3 sm:w-auto sm:grid-cols-2">
           {SCORES.map((s) => (
             <ScorePicker key={s.key} label={t(s.label)} low={t(s.low)} high={t(s.high)} value={form[s.key]} onChange={(v) => setForm({ ...form, [s.key]: v })} />
           ))}
         </div>
         {/* The shape the student is drawing, as they choose. */}
-        <ReviewHexagon scores={form} className="mx-auto w-full max-w-[340px] shrink-0" />
+        <ReviewHexagon scores={form} className="w-full max-w-[320px] shrink-0 xl:ml-auto" />
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
         <fieldset>
