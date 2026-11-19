@@ -261,6 +261,10 @@ export interface CourseReview {
   difficulty: number;
   workload: number;
   usefulness: number;
+  /** The hexagon's other scores (0 = a review from before they existed). */
+  interest: number;
+  practical: number;
+  beginner: number;
   recommend: boolean;
   text: string;
   taken_year: number;
@@ -284,6 +288,9 @@ export interface ReviewSummary {
   difficulty: number;
   workload: number;
   usefulness: number;
+  interest: number;
+  practical: number;
+  beginner: number;
   recommend_pct: number;
 }
 
@@ -291,6 +298,9 @@ export interface ReviewInput {
   difficulty: number;
   workload: number;
   usefulness: number;
+  interest: number;
+  practical: number;
+  beginner: number;
   recommend: boolean;
   text: string;
   taken_year: number;

@@ -13,12 +13,16 @@ import (
 //go:embed migrations/023_course_reviews.sql
 var courseReviewsSQL string
 
+//go:embed migrations/027_review_axes.sql
+var reviewAxesSQL string
+
 // reviewVisible: what everyone may see (a review being checked is shown, like forum posts).
 const reviewVisible = `r.status IN ('ok', 'checking')`
 
 // reviewColumns: the review, its helpful count, whether the viewer ($1) marked
 // it or wrote it, the author's name and open reports (into fields never sent: see ForStaff).
-const reviewColumns = `r.id, r.course_code, COALESCE(c.name, ''), r.difficulty, r.workload, r.usefulness, r.recommend, r.text,
+const reviewColumns = `r.id, r.course_code, COALESCE(c.name, ''), r.difficulty, r.workload, r.usefulness,
+	COALESCE(r.interest, 0), COALESCE(r.practical, 0), COALESCE(r.beginner, 0), r.recommend, r.text,
 	r.taken_year, r.taken_term, r.status, r.moderation_reason, r.created_at, r.edited_at, r.user_id, COALESCE(u.display_name, ''),
 	(SELECT count(*) FROM review_helpful h WHERE h.review_id = r.id)::int,
 	EXISTS (SELECT 1 FROM review_helpful h WHERE h.review_id = r.id AND h.user_id = $1),
@@ -29,7 +33,8 @@ const reviewFrom = ` FROM course_reviews r LEFT JOIN courses c ON c.code = r.cou
 
 func scanReview(row pgx.Row, viewer int64) (models.CourseReview, error) {
 	var v models.CourseReview
-	err := row.Scan(&v.ID, &v.CourseCode, &v.CourseName, &v.Difficulty, &v.Workload, &v.Usefulness, &v.Recommend, &v.Text,
+	err := row.Scan(&v.ID, &v.CourseCode, &v.CourseName, &v.Difficulty, &v.Workload, &v.Usefulness,
+		&v.Interest, &v.Practical, &v.Beginner, &v.Recommend, &v.Text,
 		&v.TakenYear, &v.TakenTerm, &v.Status, &v.Reason, &v.CreatedAt, &v.EditedAt, &v.UserID, &v.Author,
 		&v.Helpful, &v.HelpedByMe, &v.Reports, &v.Reasons)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -64,16 +69,19 @@ func (s *PostgresStore) queryReviews(ctx context.Context, viewer int64, where st
 func (s *PostgresStore) SaveCourseReview(ctx context.Context, code string, userID int64, in models.CourseReviewInput, status string) (models.CourseReview, error) {
 	var id int64
 	err := s.pool.QueryRow(ctx, `
-		INSERT INTO course_reviews (course_code, user_id, difficulty, workload, usefulness, recommend, text, taken_year, taken_term, status)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		INSERT INTO course_reviews (course_code, user_id, difficulty, workload, usefulness, recommend, text, taken_year, taken_term, status,
+			interest, practical, beginner)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
 		ON CONFLICT (course_code, user_id) DO UPDATE SET
 			difficulty = EXCLUDED.difficulty, workload = EXCLUDED.workload, usefulness = EXCLUDED.usefulness,
+			interest = EXCLUDED.interest, practical = EXCLUDED.practical, beginner = EXCLUDED.beginner,
 			recommend = EXCLUDED.recommend, text = EXCLUDED.text, taken_year = EXCLUDED.taken_year,
 			taken_term = EXCLUDED.taken_term, edited_at = now(),
 			status = CASE WHEN course_reviews.status = 'rejected' THEN 'held' ELSE EXCLUDED.status END,
 			moderation_reason = CASE WHEN course_reviews.status = 'rejected' THEN 'edited_after_reject' ELSE '' END
 		RETURNING id`,
-		code, userID, in.Difficulty, in.Workload, in.Usefulness, in.Recommend, in.Text, in.TakenYear, in.TakenTerm, status).Scan(&id)
+		code, userID, in.Difficulty, in.Workload, in.Usefulness, in.Recommend, in.Text, in.TakenYear, in.TakenTerm, status,
+		in.Interest, in.Practical, in.Beginner).Scan(&id)
 	if isPgErrorCode(err, pgForeignKeyViolation) {
 		return models.CourseReview{}, ErrNotFound
 	}
@@ -120,9 +128,11 @@ func (s *PostgresStore) CourseReviewSummary(ctx context.Context, code string) (m
 		SELECT count(*)::int,
 		       COALESCE(round(avg(difficulty), 1), 0)::float8, COALESCE(round(avg(workload), 1), 0)::float8,
 		       COALESCE(round(avg(usefulness), 1), 0)::float8,
+		       COALESCE(round(avg(interest), 1), 0)::float8, COALESCE(round(avg(practical), 1), 0)::float8,
+		       COALESCE(round(avg(beginner), 1), 0)::float8,
 		       COALESCE(round(100.0 * count(*) FILTER (WHERE recommend) / NULLIF(count(*), 0)), 0)::int
 		FROM course_reviews r WHERE r.course_code = $1 AND `+reviewVisible, code).
-		Scan(&sum.Count, &sum.Difficulty, &sum.Workload, &sum.Usefulness, &sum.RecommendPct)
+		Scan(&sum.Count, &sum.Difficulty, &sum.Workload, &sum.Usefulness, &sum.Interest, &sum.Practical, &sum.Beginner, &sum.RecommendPct)
 	return sum, err
 }
 

@@ -35,7 +35,7 @@ func newReviewsEnv(t *testing.T) *modEnv {
 }
 
 func goodReview(text string) map[string]any {
-	return map[string]any{"difficulty": 4, "workload": 3, "usefulness": 5, "recommend": true, "text": text, "taken_year": time.Now().Year() - 1, "taken_term": "fall"}
+	return map[string]any{"difficulty": 4, "workload": 3, "usefulness": 5, "interest": 4, "practical": 2, "beginner": 3, "recommend": true, "text": text, "taken_year": time.Now().Year() - 1, "taken_term": "fall"}
 }
 
 // reviewsSeenBy returns the reviews of a course as u sees them, and the summary.
@@ -92,11 +92,14 @@ func TestCourseReviews(t *testing.T) {
 
 	// Checks of the input; an unknown course.
 	for _, bad := range []map[string]any{
-		{"difficulty": 0, "workload": 3, "usefulness": 3, "recommend": true, "text": "A clear and fair course overall.", "taken_year": time.Now().Year(), "taken_term": "fall"},
-		{"difficulty": 3, "workload": 6, "usefulness": 3, "recommend": true, "text": "A clear and fair course overall.", "taken_year": time.Now().Year(), "taken_term": "fall"},
-		{"difficulty": 3, "workload": 3, "usefulness": 3, "recommend": true, "text": "too short", "taken_year": time.Now().Year(), "taken_term": "fall"},
-		{"difficulty": 3, "workload": 3, "usefulness": 3, "recommend": true, "text": "A clear and fair course overall.", "taken_year": time.Now().Year() + 1, "taken_term": "fall"},
-		{"difficulty": 3, "workload": 3, "usefulness": 3, "recommend": true, "text": "A clear and fair course overall.", "taken_year": time.Now().Year(), "taken_term": "winter"},
+		{"difficulty": 0, "workload": 3, "usefulness": 3, "interest": 3, "practical": 3, "beginner": 3, "recommend": true, "text": "A clear and fair course overall.", "taken_year": time.Now().Year(), "taken_term": "fall"},
+		{"difficulty": 3, "workload": 6, "usefulness": 3, "interest": 3, "practical": 3, "beginner": 3, "recommend": true, "text": "A clear and fair course overall.", "taken_year": time.Now().Year(), "taken_term": "fall"},
+		{"difficulty": 3, "workload": 3, "usefulness": 3, "interest": 3, "practical": 3, "beginner": 3, "recommend": true, "text": "too short", "taken_year": time.Now().Year(), "taken_term": "fall"},
+		{"difficulty": 3, "workload": 3, "usefulness": 3, "interest": 3, "practical": 3, "beginner": 3, "recommend": true, "text": "A clear and fair course overall.", "taken_year": time.Now().Year() + 1, "taken_term": "fall"},
+		{"difficulty": 3, "workload": 3, "usefulness": 3, "interest": 3, "practical": 3, "beginner": 3, "recommend": true, "text": "A clear and fair course overall.", "taken_year": time.Now().Year(), "taken_term": "winter"},
+		// The hexagon's scores are required too.
+		{"difficulty": 3, "workload": 3, "usefulness": 3, "recommend": true, "text": "A clear and fair course overall.", "taken_year": time.Now().Year(), "taken_term": "fall"},
+		{"difficulty": 3, "workload": 3, "usefulness": 3, "interest": 6, "practical": 3, "beginner": 3, "recommend": true, "text": "A clear and fair course overall.", "taken_year": time.Now().Year(), "taken_term": "fall"},
 	} {
 		if code, _ := e.call(a, http.MethodPut, "/api/courses/MAT-101/review", bad); code != http.StatusBadRequest {
 			t.Fatalf("bad review %v: %d, want 400", bad, code)
@@ -131,7 +134,7 @@ func TestCourseReviews(t *testing.T) {
 			t.Fatalf("students see %q of a review: %v", key, r)
 		}
 	}
-	if num(summary["count"]) != 1 || summary["difficulty"] != 4.0 || num(summary["recommend_pct"]) != 100 {
+	if num(summary["count"]) != 1 || summary["difficulty"] != 4.0 || summary["interest"] != 4.0 || summary["practical"] != 2.0 || summary["beginner"] != 3.0 || num(summary["recommend_pct"]) != 100 {
 		t.Fatalf("summary: %v", summary)
 	}
 	staffView, _ := e.reviewsSeenBy(admin, "MAT-101")

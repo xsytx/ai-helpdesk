@@ -76,7 +76,7 @@ func (h *Handlers) ListCourseReviews(w http.ResponseWriter, r *http.Request) {
 func validReview(in *models.CourseReviewInput) string {
 	in.Text = strings.TrimSpace(in.Text)
 	in.TakenTerm = strings.ToLower(strings.TrimSpace(in.TakenTerm))
-	for _, v := range []int{in.Difficulty, in.Workload, in.Usefulness} {
+	for _, v := range []int{in.Difficulty, in.Workload, in.Usefulness, in.Interest, in.Practical, in.Beginner} {
 		if v < 1 || v > 5 {
 			return "scores must be 1 to 5"
 		}

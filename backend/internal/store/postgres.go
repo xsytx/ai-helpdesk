@@ -116,6 +116,9 @@ func (s *PostgresStore) Migrate(ctx context.Context) error {
 	if _, err := s.pool.Exec(ctx, courseReviewsSQL); err != nil {
 		return err
 	}
+	if _, err := s.pool.Exec(ctx, reviewAxesSQL); err != nil {
+		return err
+	}
 	if _, err := s.pool.Exec(ctx, floor4SQL); err != nil {
 		return err
 	}

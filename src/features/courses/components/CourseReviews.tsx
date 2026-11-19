@@ -19,12 +19,17 @@ import {
   type CourseReview, type ReviewInput, type ReviewSummary, type ReviewTerm,
 } from "../api";
 import { fill } from "../labels";
+import { ReviewHexagon, type ReviewScores } from "./ReviewHexagon";
 
 const TERM_KEY: Record<ReviewTerm, TranslationKey> = { fall: "reviewsTermFall", spring: "reviewsTermSpring", summer: "reviewsTermSummer" };
-const SCORES: { key: "difficulty" | "workload" | "usefulness"; label: TranslationKey; low: TranslationKey; high: TranslationKey }[] = [
+/** The six scores of a review (about the course, not its instructor); the hexagon shows them. */
+const SCORES: { key: keyof ReviewScores; label: TranslationKey; low: TranslationKey; high: TranslationKey }[] = [
+  { key: "usefulness", label: "reviewsUsefulness", low: "reviewsLow", high: "reviewsHigh" },
+  { key: "interest", label: "reviewsInterest", low: "reviewsBoring", high: "reviewsInterestingEnd" },
+  { key: "practical", label: "reviewsPractical", low: "reviewsTheoryEnd", high: "reviewsPracticeEnd" },
+  { key: "beginner", label: "reviewsBeginner", low: "reviewsNeedsBase", high: "reviewsFromZero" },
   { key: "difficulty", label: "reviewsDifficulty", low: "reviewsEasy", high: "reviewsHard" },
   { key: "workload", label: "reviewsWorkload", low: "reviewsLight", high: "reviewsHeavy" },
-  { key: "usefulness", label: "reviewsUsefulness", low: "reviewsLow", high: "reviewsHigh" },
 ];
 
 export function CourseReviews({ code }: { code: string }) {
@@ -99,25 +104,21 @@ export function CourseReviews({ code }: { code: string }) {
 }
 
 function Summary({ summary }: { summary: ReviewSummary }) {
-  const { t } = useLocale();
+  const { t, plural } = useLocale();
   return (
-    <div className="grid gap-3 rounded-2xl bg-background-2/60 p-3 sm:grid-cols-4">
-      {SCORES.map((s) => (
-        <div key={s.key}>
-          <p className="text-xs text-label">{t(s.label)}</p>
-          <p className="text-lg font-bold text-primary">
-            {summary[s.key].toFixed(1)}
-            <span className="text-xs font-normal text-label"> / 5</span>
-          </p>
-          <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-border/60">
-            <div className="h-full rounded-full bg-brand" style={{ width: `${(summary[s.key] / 5) * 100}%` }} />
-          </div>
+    <div className="flex flex-col items-center gap-3 rounded-2xl bg-background-2/60 p-3 sm:flex-row sm:items-center sm:gap-6">
+      <div className="w-full max-w-[420px]">
+        <p className="text-xs font-semibold uppercase tracking-wide text-label">{t("reviewsHexTitle")}</p>
+        <ReviewHexagon scores={summary} />
+      </div>
+      <div className="space-y-2 text-center sm:text-left">
+        <div>
+          <p className="text-xs text-label">{t("reviewsRecommendQ")}</p>
+          <p className="text-2xl font-bold text-primary">{summary.recommend_pct}%</p>
+          <p className="text-xs text-label">{fill(t("reviewsRecommendPct"), { n: summary.recommend_pct })}</p>
         </div>
-      ))}
-      <div>
-        <p className="text-xs text-label">{t("reviewsRecommendQ")}</p>
-        <p className="text-lg font-bold text-primary">{summary.recommend_pct}%</p>
-        <p className="text-xs text-label">{fill(t("reviewsRecommendPct"), { n: summary.recommend_pct })}</p>
+        <p className="text-xs text-label">{plural(summary.count, "reviewsCount")}</p>
+        <p className="max-w-56 text-[11px] text-label">{t("reviewsHexHint")}</p>
       </div>
     </div>
   );
@@ -128,16 +129,13 @@ function ReviewItem({ review, code, onEdit }: { review: CourseReview; code: stri
   const helpful = useReviewHelpful();
   const remove = useDeleteReview(code);
   const [reporting, setReporting] = useState(false);
-  const chip = "rounded-lg bg-background-2 px-2 py-0.5 text-xs text-primary";
   return (
-    <div className={cn("space-y-2", review.mine && "rounded-2xl border border-brand/30 bg-background-2/40 p-3")}>
+    <div className={cn("flex gap-3", review.mine && "rounded-2xl border border-brand/30 bg-background-2/40 p-3")}>
+      {/* This student's scores as a small hexagon (its tooltip lists them). */}
+      <ReviewHexagon scores={review} size="sm" className="shrink-0" />
+      <div className="min-w-0 flex-1 space-y-2">
       <div className="flex flex-wrap items-center gap-1.5">
         {review.mine ? <span className="rounded-lg bg-brand px-2 py-0.5 text-xs font-semibold text-white">{t("reviewsMine")}</span> : null}
-        {SCORES.map((s) => (
-          <span key={s.key} className={chip}>
-            {t(s.label)} {review[s.key]}/5
-          </span>
-        ))}
         <span
           className={cn(
             "inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-xs font-semibold",
@@ -207,6 +205,7 @@ function ReviewItem({ review, code, onEdit }: { review: CourseReview; code: stri
         )}
       </div>
       {reporting ? <ReportForm id={review.id} onDone={() => setReporting(false)} /> : null}
+      </div>
     </div>
   );
 }
@@ -281,13 +280,16 @@ function ReviewForm({ code, initial, onDone }: { code: string; initial?: CourseR
     difficulty: initial?.difficulty ?? 0,
     workload: initial?.workload ?? 0,
     usefulness: initial?.usefulness ?? 0,
+    interest: initial?.interest ?? 0,
+    practical: initial?.practical ?? 0,
+    beginner: initial?.beginner ?? 0,
     recommend: initial?.recommend ?? true,
     text: initial?.text ?? "",
     taken_year: initial?.taken_year ?? now,
     taken_term: initial?.taken_term ?? "fall",
   });
   const textLen = form.text.trim().length;
-  const complete = form.difficulty > 0 && form.workload > 0 && form.usefulness > 0 && textLen >= 20;
+  const complete = SCORES.every((s) => form[s.key] > 0) && textLen >= 20;
 
   let problem: string | undefined;
   if (save.isError) {
@@ -308,10 +310,16 @@ function ReviewForm({ code, initial, onDone }: { code: string; initial?: CourseR
         if (complete) save.mutate({ ...form, text: form.text.trim() }, { onSuccess: onDone });
       }}
     >
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start">
+        <div className="grid flex-1 gap-3 sm:grid-cols-2">
+          {SCORES.map((s) => (
+            <ScorePicker key={s.key} label={t(s.label)} low={t(s.low)} high={t(s.high)} value={form[s.key]} onChange={(v) => setForm({ ...form, [s.key]: v })} />
+          ))}
+        </div>
+        {/* The shape the student is drawing, as they choose. */}
+        <ReviewHexagon scores={form} className="mx-auto w-full max-w-[340px] shrink-0" />
+      </div>
       <div className="grid gap-3 sm:grid-cols-2">
-        {SCORES.map((s) => (
-          <ScorePicker key={s.key} label={t(s.label)} low={t(s.low)} high={t(s.high)} value={form[s.key]} onChange={(v) => setForm({ ...form, [s.key]: v })} />
-        ))}
         <fieldset>
           <legend className="text-xs font-semibold text-label">{t("reviewsRecommendQ")}</legend>
           <div className="mt-1 inline-flex rounded-xl border border-border bg-surface p-0.5 text-sm font-semibold">

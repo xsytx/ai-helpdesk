@@ -552,8 +552,10 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   `store/course_reviews.go`, `handlers/course_reviews.go`,
   `CourseReviews.tsx`, `ReviewsAdminSection.tsx`).** On a course card: one
   review per student and course (`PUT/DELETE /api/courses/{code}/review`;
-  saving again replaces it and sets `edited_at`): difficulty, workload,
-  usefulness 1-5, recommend yes/no, text 20-2000, term taken (fall/spring/
+  saving again replaces it and sets `edited_at`): six scores 1-5 about the
+  course, not its instructor: difficulty, workload, usefulness, interest,
+  practical, beginner (the last three from `027_review_axes.sql`, NULL in
+  older reviews and not averaged then), recommend yes/no, text 20-2000, term taken (fall/spring/
   summer + year). `GET /api/courses/{code}/reviews?sort=new|helpful` →
   averages of visible reviews + the list. **Anonymous for students**: the
   store loads the author into `json:"-"` fields and only `ForStaff()` copies
@@ -572,6 +574,10 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   /api/admin/reviews/{id}/publish|keep|reject {text}`: publish/keep apply only
   to the text the admin read, else 409 `changed`), tab badge = how many wait.
   The viewer's own review is always first in the list (never cut by the limit).
+  The card shows them as a hexagon (`ReviewHexagon`: averages big with each
+  axis's value, a live one in the form, a small one per review); axes are
+  "bigger is better", so difficulty and workload are flipped (6 − score) into
+  Easy and Light load.
 - **Auto-refresh.** React Query polling: feed 15 s, thread 10 s (1.5 s while
   a post is `checking`), admin queue 5 s, admin badge 10 s; paused in
   background tabs; never refetches over a like that is still saving.
@@ -589,7 +595,7 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
 - **Every public SQL read must hide held posts**: use `threadVisible` /
   `commentVisible` in `backend/internal/store/postgres.go`.
 - **Schema changes** are idempotent SQL applied on every start
-  (`001_init.sql` + `003_chat.sql` + `004_faq.sql` + `005_search.sql` + `006_chat_feedback.sql` + `007_forum_extras.sql` + `008_reputation.sql` + `009_profiles.sql` + `010_tags.sql` + `011_forum_answers.sql` + `012_chat_followups.sql` + `013_chat_trust_share.sql` + `014_edits.sql` + `015_saved_restrict.sql` + `016_notification_events.sql` + `017_chat_source_comment.sql` + `018_location_reports.sql` + `019_map_points.sql` + `020_map_extras.sql` + `021_location_photos.sql` + `022_courses.sql` + `023_course_reviews.sql` + `024_floor4.sql` + `025_floor3.sql` + `026_map_tours.sql` in `Migrate`, `002_moderation.sql` in
+  (`001_init.sql` + `003_chat.sql` + `004_faq.sql` + `005_search.sql` + `006_chat_feedback.sql` + `007_forum_extras.sql` + `008_reputation.sql` + `009_profiles.sql` + `010_tags.sql` + `011_forum_answers.sql` + `012_chat_followups.sql` + `013_chat_trust_share.sql` + `014_edits.sql` + `015_saved_restrict.sql` + `016_notification_events.sql` + `017_chat_source_comment.sql` + `018_location_reports.sql` + `019_map_points.sql` + `020_map_extras.sql` + `021_location_photos.sql` + `022_courses.sql` + `023_course_reviews.sql` + `024_floor4.sql` + `025_floor3.sql` + `026_map_tours.sql` + `027_review_axes.sql` in `Migrate`, `002_moderation.sql` in
   `MigrateModeration`): `CREATE ... IF NOT EXISTS` /
   `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`.
 - **Store interface**: adding a method to `store.Store` also needs a stub on

@@ -113,6 +113,10 @@ type CourseReview struct {
 	Difficulty int        `json:"difficulty"`
 	Workload   int        `json:"workload"`
 	Usefulness int        `json:"usefulness"`
+	// The hexagon's three other scores (0 = a review from before they existed).
+	Interest   int        `json:"interest"`
+	Practical  int        `json:"practical"`
+	Beginner   int        `json:"beginner"`
 	Recommend  bool       `json:"recommend"`
 	Text       string     `json:"text"`
 	TakenYear  int        `json:"taken_year"`
@@ -151,6 +155,9 @@ type CourseReviewInput struct {
 	Difficulty int    `json:"difficulty"`
 	Workload   int    `json:"workload"`
 	Usefulness int    `json:"usefulness"`
+	Interest   int    `json:"interest"`
+	Practical  int    `json:"practical"`
+	Beginner   int    `json:"beginner"`
 	Recommend  bool   `json:"recommend"`
 	Text       string `json:"text"`
 	TakenYear  int    `json:"taken_year"`
@@ -163,5 +170,8 @@ type ReviewSummary struct {
 	Difficulty   float64 `json:"difficulty"`
 	Workload     float64 `json:"workload"`
 	Usefulness   float64 `json:"usefulness"`
+	Interest     float64 `json:"interest"`
+	Practical    float64 `json:"practical"`
+	Beginner     float64 `json:"beginner"`
 	RecommendPct int     `json:"recommend_pct"`
 }
