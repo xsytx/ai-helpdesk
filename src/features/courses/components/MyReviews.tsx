@@ -14,7 +14,8 @@ import { ReviewHexagon } from "./ReviewHexagon";
 
 const TERM_KEY: Record<ReviewTerm, TranslationKey> = { fall: "reviewsTermFall", spring: "reviewsTermSpring", summer: "reviewsTermSummer" };
 
-export function MyReviews() {
+/** `onCourses`: shown on the Courses page itself (no "open the courses" link; how to write one instead). */
+export function MyReviews({ onCourses = false }: { onCourses?: boolean }) {
   const { t, locale } = useLocale();
   const { data: reviews = [], isPending } = useMyReviews();
   if (isPending) return <SkeletonList rows={2} />;
@@ -22,9 +23,13 @@ export function MyReviews() {
     return (
       <div className="py-4 text-center text-sm text-label">
         <p>{t("profileNoReviews")}</p>
-        <Link to="/courses" viewTransition className="mt-1 inline-block font-semibold text-brand hover:underline dark:text-primary">
-          {t("profileReviewsGo")}
-        </Link>
+        {onCourses ? (
+          <p className="mt-1 text-xs">{t("coursesMyReviewsHow")}</p>
+        ) : (
+          <Link to="/courses" viewTransition className="mt-1 inline-block font-semibold text-brand hover:underline dark:text-primary">
+            {t("profileReviewsGo")}
+          </Link>
+        )}
       </div>
     );
   }

@@ -1,7 +1,7 @@
 // Small UI animations and sounds. Everything here is decoration: it does
 // nothing when the browser can't do it or the user asked for less motion.
 
-const prefersReducedMotion = () =>
+export const prefersReducedMotion = () =>
   window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 /** Plays a short animation on an element, unless the user prefers less motion. */

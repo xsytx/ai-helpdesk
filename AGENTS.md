@@ -574,7 +574,8 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   /api/admin/reviews/{id}/publish|keep|reject {text}`: publish/keep apply only
   to the text the admin read, else 409 `changed`), tab badge = how many wait.
   The viewer's own review is always first in the list (never cut by the limit).
-  Your own profile has a "My reviews" tab (`MyReviews`, `GET /api/me/reviews`:
+  The Courses page ends with "My reviews" (a button in its top card jumps
+  there) and your own profile has the same tab (`MyReviews`, `GET /api/me/reviews`:
   all your reviews, any status, with the course name, a small hexagon and a
   link to the course); never on a public profile, since reviews are anonymous.
   The card shows them as a hexagon (`ReviewHexagon`: averages big with each

@@ -2,7 +2,7 @@
 // student's own program and current semester; other programs can be browsed;
 // any course can be found by code or name. Each course links to its card.
 import {
-  courseSlug, currentSemester, useCourseSearch, useCurriculum, useMyProgram, usePrograms, useSetMyProgram,
+  courseSlug, currentSemester, useCourseSearch, useCurriculum, useMyProgram, useMyReviews, usePrograms, useSetMyProgram,
   type CourseRef, type CurriculumItem, type Program,
 } from "@/features/courses/api";
 import { facultyName, fill, kindKey, levelKey } from "@/features/courses/labels";
@@ -14,7 +14,9 @@ import { Button } from "@/shared/ui/Button";
 import { Card } from "@/shared/ui/Card";
 import { Mascot } from "@/shared/ui/Mascot";
 import { PageSkeleton } from "@/shared/ui/Skeleton";
-import { BookOpen, ChevronDown, GraduationCap, Search, Shuffle } from "lucide-react";
+import { BookOpen, ChevronDown, GraduationCap, MessageSquareText, Search, Shuffle } from "lucide-react";
+import { MyReviews } from "@/features/courses/components/MyReviews";
+import { prefersReducedMotion } from "@/shared/lib/motion";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 
@@ -22,6 +24,7 @@ export function CoursesPage() {
   const { t } = useLocale();
   const { user } = useAuth();
   const [params, setParams] = useSearchParams();
+  const { data: myReviews } = useMyReviews();
   const { data: programs, isError: programsFailed } = usePrograms();
   const { data: mine, isPending: minePending } = useMyProgram();
   const [choosing, setChoosing] = useState(false);
@@ -65,7 +68,22 @@ export function CoursesPage() {
           <GraduationCap className="h-6 w-6" />
           {t("courses")}
         </h1>
-        <p className="mt-1 text-sm text-label">{t("coursesSubtitle")}</p>
+        <div className="mt-1 flex flex-wrap items-center justify-between gap-2">
+          <p className="text-sm text-label">{t("coursesSubtitle")}</p>
+          {/* Jumps to your reviews at the bottom of the page. */}
+          <a
+            href="#my-reviews"
+            onClick={(e) => {
+              e.preventDefault();
+              document.getElementById("my-reviews")?.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth" });
+            }}
+            className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1 text-xs font-semibold text-primary hover:bg-background-2"
+          >
+            <MessageSquareText className="h-3.5 w-3.5" />
+            {t("profileReviewsTab")}
+            {myReviews && myReviews.length > 0 ? <span className="rounded-full bg-brand px-1.5 text-[10px] text-white">{myReviews.length}</span> : null}
+          </a>
+        </div>
         <CourseSearch q={q} setQ={setQ} />
       </Card>
 
@@ -192,6 +210,15 @@ export function CoursesPage() {
           )}
         </Card>
       ) : null}
+
+      {/* Every course you reviewed (only you see this: reviews are anonymous to others). */}
+      <Card id="my-reviews" className="scroll-mt-20 space-y-3">
+        <h2 className="flex items-center gap-2 text-lg font-bold text-primary">
+          <MessageSquareText className="h-5 w-5" />
+          {t("profileReviewsTab")}
+        </h2>
+        <MyReviews onCourses />
+      </Card>
     </div>
   );
 }
