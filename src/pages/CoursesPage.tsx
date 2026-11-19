@@ -217,7 +217,7 @@ export function CoursesPage() {
           <MessageSquareText className="h-5 w-5" />
           {t("profileReviewsTab")}
         </h2>
-        <MyReviews onCourses />
+        <MyReviews />
       </Card>
     </div>
   );

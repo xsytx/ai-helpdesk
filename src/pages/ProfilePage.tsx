@@ -1,7 +1,6 @@
 import { useSavedThreads } from "@/features/forum/api";
 import { isStaffRole } from "@/features/moderation/api";
 import { RestrictionPanel } from "@/features/moderation/components/Restrictions";
-import { MyReviews } from "@/features/courses/components/MyReviews";
 import { plainText } from "@/shared/ui/RichText";
 import { useAuth } from "@/app/AuthContext";
 import { useUserQuestions } from "@/features/forum/api";
@@ -28,7 +27,7 @@ export function ProfilePage() {
   const { t, locale } = useLocale();
   const { user } = useAuth();
   const profile = useUserProfile(userId);
-  const [tab, setTab] = useState<"answers" | "questions" | "saved" | "reviews">("answers");
+  const [tab, setTab] = useState<"answers" | "questions" | "saved">("answers");
 
   if (profile.isPending) return <PageSkeleton rows={2} className="mx-auto max-w-3xl" />;
   if (profile.isError) {
@@ -95,8 +94,8 @@ export function ProfilePage() {
             [
               ["answers", t("profileAnswersTab"), p.reputation.answers],
               ["questions", t("profileQuestionsTab"), p.questions],
-              // Only you see your saved questions and your course reviews (anonymous to others).
-              ...(isMe ? ([["saved", t("profileSavedTab"), undefined], ["reviews", t("profileReviewsTab"), undefined]] as const) : []),
+              // Only you see your saved questions.
+              ...(isMe ? ([["saved", t("profileSavedTab"), undefined]] as const) : []),
             ] as const
           ).map(([id, label, count]) => (
             <button
@@ -115,15 +114,7 @@ export function ProfilePage() {
             </button>
           ))}
         </div>
-        {tab === "answers" ? (
-          <AnswersTab userId={p.id} />
-        ) : tab === "saved" && isMe ? (
-          <SavedTab />
-        ) : tab === "reviews" && isMe ? (
-          <MyReviews />
-        ) : (
-          <QuestionsTab userId={p.id} />
-        )}
+        {tab === "answers" ? <AnswersTab userId={p.id} /> : tab === "saved" && isMe ? <SavedTab /> : <QuestionsTab userId={p.id} />}
       </Card>
       {isStaffRole(user?.role) && !isMe && !p.staff ? (
         <Card>

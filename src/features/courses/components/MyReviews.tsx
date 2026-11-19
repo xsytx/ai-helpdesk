@@ -1,7 +1,7 @@
-// "My reviews" on your own profile: every course you reviewed, with its
+// "My reviews" at the bottom of the Courses page: every course you reviewed, with its
 // moderation status, your scores as a small hexagon and a link to the course
 // (edit or delete it there). Only you see this list: reviews are anonymous
-// to other students, so it never appears on a public profile.
+// to other students, so it is never shown on anyone's profile.
 import { useLocale } from "@/i18n/LocaleContext";
 import type { TranslationKey } from "@/i18n/translations";
 import { cn } from "@/shared/lib/cn";
@@ -14,8 +14,7 @@ import { ReviewHexagon } from "./ReviewHexagon";
 
 const TERM_KEY: Record<ReviewTerm, TranslationKey> = { fall: "reviewsTermFall", spring: "reviewsTermSpring", summer: "reviewsTermSummer" };
 
-/** `onCourses`: shown on the Courses page itself (no "open the courses" link; how to write one instead). */
-export function MyReviews({ onCourses = false }: { onCourses?: boolean }) {
+export function MyReviews() {
   const { t, locale } = useLocale();
   const { data: reviews = [], isPending } = useMyReviews();
   if (isPending) return <SkeletonList rows={2} />;
@@ -23,13 +22,7 @@ export function MyReviews({ onCourses = false }: { onCourses?: boolean }) {
     return (
       <div className="py-4 text-center text-sm text-label">
         <p>{t("profileNoReviews")}</p>
-        {onCourses ? (
-          <p className="mt-1 text-xs">{t("coursesMyReviewsHow")}</p>
-        ) : (
-          <Link to="/courses" viewTransition className="mt-1 inline-block font-semibold text-brand hover:underline dark:text-primary">
-            {t("profileReviewsGo")}
-          </Link>
-        )}
+        <p className="mt-1 text-xs">{t("coursesMyReviewsHow")}</p>
       </div>
     );
   }
