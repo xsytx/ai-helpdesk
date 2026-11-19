@@ -311,6 +311,27 @@ export function parseRoomCode(q: string): RoomCode | null {
 
 const BLOCK_PLACE: Partial<Record<string, string>> = { A: "BLOCK_A", B: "BLOCK_B", C: "BLOCK_C", D: "BLOCK_D", E: "BLOCK_E", F: "BLOCK_F", G: "BLOCK_G", H: "BLOCK_H", I: "BLOCK_I" };
 
+/**
+ * A block's upper floors as places of their own ("BLOCK_F_2" = block F,
+ * floor 2), opened by tapping the block on the floor 2–4 plans, each with its
+ * own photos; floor 1 is the block itself (BLOCK_F). Not in PLACES, so they
+ * aren't listed, searched or given to the AI.
+ */
+export const BLOCK_FLOORS: Place[] = PLACES.filter((p) => p.kind === "block" && p.block).flatMap((p) =>
+  [2, 3, 4].map((f): Place => ({
+    code: `${p.code}_${f}`, kind: "block", block: p.block, floor: f, contact: p.contact,
+    name: { en: `${p.name.en}, floor ${f}`, kz: `${p.name.kz}, ${f}-қабат`, ru: `${p.name.ru}, ${f} этаж` },
+    where: p.where,
+    aliases: [],
+  })),
+);
+/** A block's place on a floor: "BLOCK_F" on floor 1, "BLOCK_F_2" above. */
+export const blockOnFloor = (block: string, floor: string) => (floor === "1" ? `BLOCK_${block}` : `BLOCK_${block}_${floor}`);
+/** Every place by its code, the blocks' upper floors included. */
+export const placeByCode = (code: string) => PLACES.find((p) => p.code === code) ?? BLOCK_FLOORS.find((p) => p.code === code);
+/** The places for picking one (admin lists): each block followed by its upper floors. */
+export const PLACES_WITH_FLOORS: Place[] = PLACES.flatMap((p) => [p, ...BLOCK_FLOORS.filter((f) => f.code.startsWith(`${p.code}_`))]);
+
 /** A place that a room code stands for, e.g. D117 = lecture hall "Bochka A". */
 export const placeForRoom = (code: string) => PLACES.find((p) => p.rooms?.includes(code));
 export const blockPlace = (block: string) => PLACES.find((p) => p.code === BLOCK_PLACE[block]);

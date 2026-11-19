@@ -129,6 +129,16 @@ export function routePoints(from: Entrance, block?: SchemeBlock, spot?: SchemeSp
   return [...toAtrium(), ...ATRIUM_TO_B, [200, 230], [215, 115]];
 }
 
+/**
+ * Floors 2–4 are another drawing than floor 1 (pixel-aligned with each
+ * other, not with floor 1): floor-1 plan pixels → upper-floor plan pixels,
+ * fitted on 15 elevators and stairs placed on both (about ±15 px). The block
+ * layer is drawn upstairs through it.
+ */
+export const FLOOR1_TO_UPPER = "matrix(1.0085 0 0 1.011 -34.4 -7.3)";
+/** An upper-floor plan pixel in floor-1 plan pixels (the inverse of FLOOR1_TO_UPPER). */
+export const upperToFloor1 = (x: number, y: number): [number, number] => [(x + 34.4) / 1.0085, (y + 7.3) / 1.011];
+
 /** An SVG transform from scheme units to plan pixels (floor-plan coordinates). */
 export const UNIT_TO_PLAN = `matrix(${PLAN_SCALE} 0 0 ${PLAN_SCALE} -0.6 2)`;
 /** A plan pixel in scheme units (the inverse of UNIT_TO_PLAN). */
@@ -142,11 +152,13 @@ const inCircle = (cx: number, cy: number, r: number, [x, y]: Pt) => Math.hypot(x
  * places.ts: a lecture hall, the medical point, the canteen or a block.
  * Small places win over the block around them.
  */
-export function placeAtPlan(x: number, y: number): string | undefined {
+export function placeAtPlan(x: number, y: number, blocksOnly = false): string | undefined {
   const u = planToUnit(x, y);
-  for (const [key, h] of Object.entries(HALLS)) if (inCircle(h.cx, h.cy, h.r, u)) return `HALL_${key}`;
-  if (inCircle(MED[0], MED[1], 30, u)) return "MEDICAL";
-  if (inBox(CANTEEN, u)) return "RED_CANTEEN";
+  if (!blocksOnly) {
+    for (const [key, h] of Object.entries(HALLS)) if (inCircle(h.cx, h.cy, h.r, u)) return `HALL_${key}`;
+    if (inCircle(MED[0], MED[1], 30, u)) return "MEDICAL";
+    if (inBox(CANTEEN, u)) return "RED_CANTEEN";
+  }
   // A block's letter badge (several sit just outside the block's outline).
   for (const [key, [bx, by]] of Object.entries(BADGE)) if (inCircle(bx, by, 30, u)) return `BLOCK_${key}`;
   for (const [key, boxes] of Object.entries(BLOCKS)) if (boxes.some((b) => inBox(b, u))) return `BLOCK_${key}`;

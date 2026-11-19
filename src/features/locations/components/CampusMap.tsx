@@ -13,12 +13,12 @@ import { Mascot } from "@/shared/ui/Mascot";
 import { ArrowDown, ArrowLeft, ArrowRight, ChevronDown, Eraser, Expand, Footprints, Layers, Shrink, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { PLAN_SCALE, WING_DOOR_X, placeAtPlan, planToUnit, routePoints, type Pt } from "../campusShapes";
+import { PLAN_SCALE, WING_DOOR_X, placeAtPlan, planToUnit, routePoints, upperToFloor1, type Pt } from "../campusShapes";
 import {
   FLOOR_ORDER, PLAN_BLOCKS, TYPE_META, floorOfRoom, levelOf, pointLabel, pointsFor, useMapPoints,
   type MapFloor, type MapPoint, type PointType,
 } from "../mapPoints";
-import type { Entrance, Place, RoomCode, SchemeBlock } from "../places";
+import { blockOnFloor, type Entrance, type Place, type RoomCode, type SchemeBlock } from "../places";
 import { corridorPath } from "../upstairs";
 import { CampusLayer } from "./CampusLayer";
 import { FloorPlan } from "./FloorPlan";
@@ -29,7 +29,7 @@ const HELPERS: { id: "toilet" | "stairs"; types: PointType[]; key: "mapsNearestT
   { id: "toilet", types: ["toilet"], key: "mapsNearestToilet" },
   { id: "stairs", types: ["stairs", "elevator"], key: "mapsNearestStairs" },
 ];
-/** Remembered choice: the campus layer (block colours, halls…) on floor 1. */
+/** Remembered choice: the campus layer (block colours, halls…; upstairs only the blocks). */
 const BLOCKS_KEY = "ai_helpdesk_map_blocks";
 
 const dist = (a: { x: number; y: number }, b: { x: number; y: number }) => Math.hypot(a.x - b.x, a.y - b.y);
@@ -177,10 +177,20 @@ export function CampusMap({ target, marked, from, onPick, onPointPick, popup, on
   const stairs = lift ? nearWing(all, floor, lift, isFullStairs) : undefined;
   // On the room's floor: the walk from the elevator along the wing's corridor to it.
   const upPath = liftUp && here[0] && schemeBlock ? corridorPath(all, floor, schemeBlock, liftUp, here[0], level, room?.room) : null;
-  const campus = floor === "1" && showBlocks;
+  // The blocks (tints, letters, clickable) on every floor when switched on;
+  // floor 1 also always carries the route and entrances.
+  const campus = showBlocks;
   const showRoute = floor === "1" && route;
-  // Floor 1 always carries the route and entrances; the blocks only when switched on.
-  const layered = floor === "1" && (showBlocks || Boolean(route));
+  const layered = floor === "1" ? showBlocks || Boolean(route) : showBlocks;
+  const upper = floor !== "1";
+  // A block picked on an upper floor is that floor's place ("BLOCK_F_2", with
+  // its own photos) and opens there (not back on floor 1, the way in).
+  const pickHere = (picked: string) => {
+    const blockLetter = upper ? /^BLOCK_([A-I])$/.exec(picked)?.[1] : undefined;
+    const code = blockLetter ? blockOnFloor(blockLetter, floor) : picked;
+    if (upper) tappedOn.current = { code, floor };
+    onPick?.(code);
+  };
 
   // What to frame: the place and its helper, else the whole route (with the pin), else the pin.
   let focus: { x: number; y: number; key: string; w?: number } | null = null;
@@ -256,20 +266,18 @@ export function CampusMap({ target, marked, from, onPick, onPointPick, popup, on
           ) : null}
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {floor === "1" ? (
-            <button
-              type="button"
-              aria-pressed={showBlocks}
-              onClick={toggleBlocks}
-              className={cn(
-                "inline-flex items-center gap-1.5 rounded-xl border px-2.5 py-1.5 text-xs font-semibold transition-colors",
-                showBlocks ? "border-brand bg-brand text-white" : "border-border bg-surface text-label hover:text-primary",
-              )}
-            >
-              <Layers className="h-3.5 w-3.5" />
-              {t("mapsShowBlocks")}
-            </button>
-          ) : null}
+          <button
+            type="button"
+            aria-pressed={showBlocks}
+            onClick={toggleBlocks}
+            className={cn(
+              "inline-flex items-center gap-1.5 rounded-xl border px-2.5 py-1.5 text-xs font-semibold transition-colors",
+              showBlocks ? "border-brand bg-brand text-white" : "border-border bg-surface text-label hover:text-primary",
+            )}
+          >
+            <Layers className="h-3.5 w-3.5" />
+            {t("mapsShowBlocks")}
+          </button>
           <div className="inline-flex rounded-xl border border-border bg-surface p-0.5 text-xs font-semibold" role="group" aria-label={t("mapEditorFloor")}>
             {FLOOR_ORDER.map((f) => (
               <button
@@ -313,12 +321,19 @@ export function CampusMap({ target, marked, from, onPick, onPointPick, popup, on
               }
               setTapped(opened ? undefined : p);
             }}
-            layer={layered ? (k) => <CampusLayer k={k} blocks={showBlocks} block={schemeBlock} spot={spot} route={route} from={from} onPick={onPick} /> : undefined}
+            layer={
+              layered
+                ? (k) => upper
+                  ? <CampusLayer k={k} upper block={schemeBlock} onPick={onPick ? pickHere : undefined} />
+                  : <CampusLayer k={k} blocks={showBlocks} block={schemeBlock} spot={spot} route={route} from={from} onPick={onPick} />
+                : undefined
+            }
             onPlanClick={
               campus && onPick
                 ? (x, y) => {
-                    const picked = placeAtPlan(x, y);
-                    if (picked) onPick(picked);
+                    // Upstairs only blocks: the halls, canteen and medical point are floor 1's.
+                    const picked = upper ? placeAtPlan(...upperToFloor1(x, y), true) : placeAtPlan(x, y);
+                    if (picked) pickHere(picked);
                   }
                 : undefined
             }
@@ -455,7 +470,7 @@ export function CampusMap({ target, marked, from, onPick, onPointPick, popup, on
         <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", legendOpen && "rotate-180")} />
       </button>
       <p className={cn("mt-2 flex-wrap gap-x-3 gap-y-1 text-[11px] text-label", legendOpen ? "flex" : "hidden md:flex")}>
-        {layered ? (
+        {layered && !upper ? (
           <>
             {route ? <Dot className="bg-accent" label={t("mapsLegendRoute")} /> : null}
             <Dot className="bg-red-600" label={t("mapsLegendEntrance")} />
@@ -463,7 +478,7 @@ export function CampusMap({ target, marked, from, onPick, onPointPick, popup, on
           </>
         ) : null}
         {/* Entrances are already in the legend when the campus layer draws them. */}
-        {LEGEND.filter((type) => !(layered && type === "entrance")).map((type) => (
+        {LEGEND.filter((type) => !(layered && !upper && type === "entrance")).map((type) => (
           <span key={type} className="inline-flex items-center gap-1">
             <span className="h-2.5 w-2.5 rounded-full" style={{ background: TYPE_META[type].color }} />
             {t(TYPE_META[type].key)}
@@ -471,7 +486,7 @@ export function CampusMap({ target, marked, from, onPick, onPointPick, popup, on
         ))}
         <span>· {t("mapsFloorPlanHint")}</span>
       </p>
-      {campus && !full ? <p className="mt-1 hidden text-[11px] text-label md:block">{t("mapsSchemeNote")}</p> : null}
+      {campus && !upper && !full ? <p className="mt-1 hidden text-[11px] text-label md:block">{t("mapsSchemeNote")}</p> : null}
     </section>
   );
   // Full screen goes on <body>: the page area is its own layer and would trap it.

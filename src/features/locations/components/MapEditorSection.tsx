@@ -18,7 +18,7 @@ import {
   FLOOR_ORDER, PLAN_BLOCKS, POINT_TYPES, TYPE_META, pointsFor, useDeleteMapPoint, useMapChanges, useMapPoints, useSaveMapPoint,
   isTourUrl, type MapFloor, type MapPoint, type MapPointChange, type MapPointDraft, type PointTour, type PointType,
 } from "../mapPoints";
-import { PLACES, parseRoomCode } from "../places";
+import { PLACES, PLACES_WITH_FLOORS, parseRoomCode, placeByCode } from "../places";
 import { FloorPlan } from "./FloorPlan";
 import { pointIdOf } from "../pointPlaces";
 import { photoCodesOf, photoCodesOfPoint } from "../photos";
@@ -31,7 +31,7 @@ const placeRooms = (code: string) => PLACES.find((p) => p.code === code)?.rooms 
 function reportTarget(r: LocationReport, points: MapPoint[]) {
   const pointId = pointIdOf(r.placeCode);
   const matched = pointId ? points.filter((p) => p.id === pointId) : pointsFor(points, r.placeCode, placeRooms(r.placeCode));
-  const letter = /^BLOCK_([A-I])$/.exec(r.placeCode)?.[1] ?? /^([A-I])\d{3}$/.exec(r.placeCode)?.[1];
+  const letter = /^BLOCK_([A-I])(?:_\d)?$/.exec(r.placeCode)?.[1] ?? /^([A-I])\d{3}$/.exec(r.placeCode)?.[1];
   return { matched, block: matched.length === 0 ? letter : undefined };
 }
 
@@ -262,7 +262,7 @@ export function MapEditorSection() {
     const pointId = pointIdOf(code);
     const point = pointId ? all.find((p) => p.id === pointId) : undefined;
     if (point) return point.name || point.code || t(TYPE_META[point.type].key);
-    return PLACES.find((p) => p.code === code)?.name[locale] ?? code;
+    return placeByCode(code)?.name[locale] ?? code;
   };
   const field = "w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm text-primary outline-none focus:border-brand";
   const onThisFloor = all.filter((p) => p.floor === floor).length;
@@ -473,7 +473,7 @@ export function MapEditorSection() {
                 {t("mapPhotosTitle")} · {t("mapPhotosPickPlace")}
                 <select className={cn(field, "mt-1")} value={photoPlace} onChange={(e) => setPhotoPlace(e.target.value)}>
                   <option value="">{t("mapPhotosChoose")}</option>
-                  {PLACES.map((p) => (
+                  {PLACES_WITH_FLOORS.map((p) => (
                     <option key={p.code} value={p.code}>{p.name[locale]}</option>
                   ))}
                 </select>
@@ -482,7 +482,7 @@ export function MapEditorSection() {
                 <PhotoManager
                   key={photoPlace}
                   codes={photoCodesOf(photoPlace, all)}
-                  title={t("mapPhotosOf").replace("{name}", PLACES.find((p) => p.code === photoPlace)?.name[locale] ?? photoPlace)}
+                  title={t("mapPhotosOf").replace("{name}", placeByCode(photoPlace)?.name[locale] ?? photoPlace)}
                 />
               ) : null}
             </div>

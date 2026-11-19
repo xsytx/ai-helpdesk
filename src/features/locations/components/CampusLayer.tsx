@@ -5,7 +5,7 @@
 // onPlanClick (see placeAtPlan); keyboard users tab to them here.
 import { useLocale } from "@/i18n/LocaleContext";
 import { useId, type KeyboardEvent, type MouseEvent, type ReactNode } from "react";
-import { BADGE, BLOCKS, CANTEEN, COLOR, ENTRANCES, H, HALLS, MED, PLAN_SCALE, UNIT_TO_PLAN, W, type Pt } from "../campusShapes";
+import { BADGE, BLOCKS, CANTEEN, COLOR, ENTRANCES, FLOOR1_TO_UPPER, H, HALLS, MED, PLAN_SCALE, UNIT_TO_PLAN, W, type Pt } from "../campusShapes";
 import { ENTRANCE_KEY, PLACES, type Entrance, type SchemeBlock, type SchemeSpot } from "../places";
 
 /** The outlines of the found place (also cut out of the fade over the rest). */
@@ -20,11 +20,17 @@ function targetShapes(block?: SchemeBlock, spot?: SchemeSpot): ReactNode[] {
   return BLOCKS[block].map((b, i) => <rect key={i} x={b.x - 6} y={b.y - 6} width={b.w + 12} height={b.h + 12} rx="18" />);
 }
 
-export function CampusLayer({ k, blocks = true, block, spot, route, from, onPick }: {
+export function CampusLayer({ k, blocks = true, upper = false, block, spot, route, from, onPick }: {
   /** FloorPlan's plan pixels per screen pixel (keeps letters readable at any zoom). */
   k: number;
   /** Block colours, letters, halls and clickable places (off: only the route and entrances). */
   blocks?: boolean;
+  /**
+   * An upper floor (2–4): only the blocks (tints, letters, clickable), moved
+   * onto that drawing (FLOOR1_TO_UPPER); the canteen, halls, medical point,
+   * entrances and route are floor 1's.
+   */
+  upper?: boolean;
   /** The place you look for: its block, or a spot (a lecture hall, the canteen, the medical point). */
   block?: SchemeBlock;
   spot?: SchemeSpot;
@@ -71,6 +77,37 @@ export function CampusLayer({ k, blocks = true, block, spot, route, from, onPick
       {shape}
     </g>
   );
+
+  if (upper) {
+    return (
+      <g transform={FLOOR1_TO_UPPER}>
+        <g transform={UNIT_TO_PLAN}>
+          <g pointerEvents="none">
+            {(Object.keys(BLOCKS) as SchemeBlock[]).map((key) =>
+              BLOCKS[key].map((b, i) => (
+                <rect
+                  key={`${key}${i}`} x={b.x} y={b.y} width={b.w} height={b.h} rx="16"
+                  fill={COLOR[key]} fillOpacity={block === key ? 0.22 : 0.12} stroke={block === key ? "var(--color-accent)" : COLOR[key]}
+                  strokeOpacity={block === key ? 1 : 0.55} strokeWidth={block === key ? 2.5 * u : 3}
+                />
+              )),
+            )}
+            {(Object.keys(BADGE) as SchemeBlock[]).map((key) => (
+              <g key={key}>
+                <circle cx={BADGE[key][0]} cy={BADGE[key][1]} r={badge} fill={COLOR[key]} stroke="#fff" strokeWidth={badge / 6} />
+                <text x={BADGE[key][0]} y={BADGE[key][1] + badge * 0.37} fontSize={badge * 1.08} fontWeight="700" textAnchor="middle" fill="#fff">{key}</text>
+              </g>
+            ))}
+          </g>
+          <g>
+            {(Object.keys(BLOCKS) as SchemeBlock[]).map((key) =>
+              hit(`BLOCK_${key}`, BLOCKS[key].map((b, i) => <rect key={i} x={b.x} y={b.y} width={b.w} height={b.h} rx="16" />)),
+            )}
+          </g>
+        </g>
+      </g>
+    );
+  }
 
   return (
     <g transform={UNIT_TO_PLAN}>

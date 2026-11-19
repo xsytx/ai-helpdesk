@@ -1,7 +1,7 @@
 import { Mascot } from "@/shared/ui/Mascot";
 import { CampusMap } from "@/features/locations/components/CampusMap";
 import { KIND_ICON, PlaceDetails } from "@/features/locations/components/PlaceDetails";
-import { PLACES, parseRoomCode, placeForRoom, searchPlaces, type Entrance, type Place, type PlaceKind } from "@/features/locations/places";
+import { BLOCK_FLOORS, PLACES, parseRoomCode, placeForRoom, searchPlaces, type Entrance, type Place, type PlaceKind } from "@/features/locations/places";
 import { levelOf, useMapPoints, type MapPoint } from "@/features/locations/mapPoints";
 import { POINT_PLACE_PREFIX, pointPlaces } from "@/features/locations/pointPlaces";
 import { searchTerms } from "@/features/locations/placeSearch";
@@ -51,7 +51,7 @@ export function MapsPage() {
     const list = q.trim() ? searchPlaces(q, extra) : kind === "all" ? PLACES.filter((p) => p.popular) : [...PLACES, ...extra];
     return kind === "all" ? list : list.filter((p) => p.kind === kind);
   }, [q, kind, extra]);
-  const picked = [...PLACES, ...extra].find((p) => p.code === params.get("place"));
+  const picked = [...PLACES, ...BLOCK_FLOORS, ...extra].find((p) => p.code === params.get("place"));
   const target = room ?? (roomPlace ? { ...roomPlace, floor: code!.floor } : undefined) ?? picked ?? (q.trim() ? results[0] : undefined);
 
   // What Barys says on the map: where to and, for upper floors, which floor.

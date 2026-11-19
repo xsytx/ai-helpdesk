@@ -376,7 +376,16 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   the medical point picks it (`placeAtPlan` via `onPlanClick`; a letter counts
   as its block; pins win). A place on an upper floor opens on floor 1 (the way
   in) with a "Floor N: where it is" button; "Way in: floor 1" goes back. The
-  "Blocks" toggle (`ai_helpdesk_map_blocks`) hides the layer. "Nearest toilet /
+  "Blocks" toggle (`ai_helpdesk_map_blocks`) hides the layer. Floors 2–4 get
+  only the blocks (tints, letters, clickable, so a block's card and photos
+  open from any floor; `CampusLayer upper`), moved onto their drawing with
+  `FLOOR1_TO_UPPER` (clicks back with `upperToFloor1`, `placeAtPlan(…, true)`
+  = blocks only); a block picked upstairs stays on that floor and opens that
+  floor's own place, `BLOCK_F_2` … (`BLOCK_FLOORS` / `blockOnFloor` /
+  `placeByCode` in `places.ts`: not in `PLACES`, so not listed, searched or
+  given to the AI), with its own photo gallery; floor 1 is `BLOCK_F`. The
+  editor's photo place list (`PLACES_WITH_FLOORS`) and bulk upload
+  (`BLOCK_F_2.jpg`, `BLOCK_F_2-2.jpg`) take them too. "Nearest toilet /
   stairs" and tapping pins work on every floor. Phones: the map is taller (60vh)
   and opens on the plan's full height around the middle of the building (the
   fit button shows all); pinch, double-tap and trackpad pinch zoom; while

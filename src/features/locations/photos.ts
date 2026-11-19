@@ -7,7 +7,7 @@ import { shrinkImage } from "@/shared/lib/image";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { MapPoint } from "./mapPoints";
 import { POINT_PLACE_PREFIX } from "./pointPlaces";
-import { PLACES, parseRoomCode, placeForRoom, type Place, type RoomCode } from "./places";
+import { parseRoomCode, placeByCode, placeForRoom, type Place, type RoomCode } from "./places";
 
 /** Gallery photos per place (same as maxLocationPhotos on the server). */
 export const MAX_PLACE_PHOTOS = 12;
@@ -195,6 +195,9 @@ export function bulkPhotoTarget(fileName: string, points: MapPoint[]): { code: s
   const name = fileName.replace(/\.[^.]+$/, "").trim();
   // A number after the code tells photos of one room apart: "-2", "_2", " 2", " (2)".
   const base = (/^(.+?)(?:\s*\(\d+\)|[\s_-]+\d{1,2})$/.exec(name)?.[1] ?? name).trim();
+  // A whole name that is a place comes first: "BLOCK_F_2" is block F's floor 2, not BLOCK_F's 2nd photo.
+  const whole = placeByCode(name.toUpperCase());
+  if (whole) return { code: whole.code, label: whole.code };
   for (const candidate of base === name ? [name] : [base, name]) {
     const upper = candidate.toUpperCase();
     const room = parseRoomCode(candidate);
@@ -202,7 +205,7 @@ export function bulkPhotoTarget(fileName: string, points: MapPoint[]): { code: s
       const point = points.find((p) => p.code.toUpperCase() === room.code);
       return { code: point ? photoCodesOfPoint(point)[0]! : (placeForRoom(room.code)?.code ?? room.code), label: room.code };
     }
-    const place = PLACES.find((p) => p.code === upper);
+    const place = placeByCode(upper);
     if (place) return { code: place.code, label: place.code };
     const point = points.find((p) => p.code && p.code.toUpperCase() === upper);
     if (point) return { code: photoCodesOfPoint(point)[0]!, label: point.code };
