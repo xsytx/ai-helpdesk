@@ -105,7 +105,7 @@
   {"code": "", "name": "Minimarket", "type": "shop", "floor": "1", "x": 2784, "y": 1160, "place": ""},
   {"code": "", "name": "Canteen", "type": "canteen", "floor": "1", "x": 2784, "y": 1451, "place": "RED_CANTEEN"},
   {"code": "F110", "name": "", "type": "room", "floor": "1", "x": 2884, "y": 954, "place": ""},
-  {"code": "", "name": "SDU Copy Centre", "type": "other", "floor": "1", "x": 2886, "y": 1136, "place": ""},
+  {"code": "", "name": "SDU Copy Centre", "type": "other", "floor": "1", "x": 2886, "y": 1136, "place": "COPY_CENTRE"},
   {"code": "", "name": "Stairs 1-2", "type": "stairs", "floor": "1", "x": 2895, "y": 1252, "place": ""},
   {"code": "", "name": "", "type": "entrance", "floor": "1", "x": 2962, "y": 912, "place": ""},
   {"code": "G10", "name": "", "type": "room", "floor": "1", "x": 3003, "y": 946, "place": ""},

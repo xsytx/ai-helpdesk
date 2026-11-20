@@ -539,7 +539,11 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   Under an answer, buttons for room codes in the question (F205, "F 205")
   and, when the question asks where something is ("where", "где", "қайда"…),
   places by name or alias (one place per alias word; Bochka A–D by letter).
-  Matched in the browser; the model is not involved.
+  Matched in the browser; the model is not involved. General words that
+  several places deal with ("documents": SSC and the copy centre) are in
+  `GENERAL_ALIASES` and count only when nothing more specific matched
+  ("where can I print documents?" = `COPY_CENTRE`, linked to its map point
+  through the point's place). Multi-word aliases match word forms too.
 - **Courses (Sprint 6, story 16; `022_courses.sql`, `internal/curricula`,
   `store/courses.go`, `handlers/courses.go`, `features/courses/`).** The data
   comes from the SDU portal's public "Curricula" pages, given to admin panel

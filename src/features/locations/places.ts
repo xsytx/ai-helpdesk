@@ -85,7 +85,22 @@ export const PLACES: Place[] = [
       kz: "B блогы. 0–2 қабаттар: компьютерлер (0), оқу бөлмелері (1), топтық жұмыс (2)",
       ru: "Блок B. Этажи 0–2: компьютеры (0), учебные комнаты (1), групповая работа (2)",
     },
-    aliases: ["research hub", "library", "библиотека", "кітапхана", "study room", "computer", "компьютер", "print", "printer", "принтер"],
+    aliases: ["research hub", "library", "библиотека", "кітапхана", "study room", "computer", "компьютер"],
+  },
+  {
+    // Printing and copies: its map point (floor 1, by Entrance G) links to it through the point's place.
+    code: "COPY_CENTRE", kind: "service", block: "G", floor: 1,
+    name: { en: "SDU Copy Centre", kz: "SDU Copy Centre (көшірме орталығы)", ru: "SDU Copy Centre (копицентр)" },
+    where: {
+      en: "1st floor, by the entrance on the block G side: printing, copies and scanning",
+      kz: "1-қабат, G блогы жағындағы кіреберістің жанында: басып шығару, көшірме, сканерлеу",
+      ru: "1 этаж, у входа со стороны блока G: печать, ксерокопии, сканирование",
+    },
+    aliases: [
+      "copy centre", "copy center", "copy", "print", "printer", "copies", "photocopy", "xerox", "scan",
+      "ксерокс", "ксерокопия", "копицентр", "печать", "распечатать", "принтер", "сканировать",
+      "көшірме", "басып шығару", "сканерлеу",
+    ],
   },
   {
     code: "SSC", kind: "service", popular: true, contact: "SSC@sdu.edu.kz · ext. 333, 335",

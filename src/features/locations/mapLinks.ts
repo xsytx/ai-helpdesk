@@ -14,13 +14,20 @@ const norm = (s: string) => s.toLowerCase().replace(/ё/g, "е");
 
 /**
  * Does `text` mention `term`? At a word start; one-word terms of 5+ letters
- * also match their word forms ("столовая" → "столовую", "библиотеке").
+ * also match their word forms ("столовая" → "столовую", "библиотеке"), and so
+ * does a multi-word term whose last word has 6+ letters ("басып шығару" →
+ * "басып шығаруға").
  */
 function mentions(text: string, term: string): boolean {
   const t = norm(term).trim();
   if (t.length < 3) return false;
   const oneWord = /^\p{L}+$/u.test(t);
-  const stem = oneWord && t.length >= 6 ? t.slice(0, -2) : oneWord && t.length === 5 ? t.slice(0, -1) : t;
+  const lastWord = /^[\p{L} ]+$/u.test(t) ? (t.split(" ").pop() ?? "") : "";
+  const stem =
+    oneWord && t.length >= 6 ? t.slice(0, -2)
+    : oneWord && t.length === 5 ? t.slice(0, -1)
+    : !oneWord && lastWord.length >= 6 ? t.slice(0, -2)
+    : t;
   let from = 0;
   for (;;) {
     const i = text.indexOf(stem, from);
@@ -34,6 +41,13 @@ function mentions(text: string, term: string): boolean {
     from = i + 1;
   }
 }
+
+/**
+ * Aliases that name a thing several places deal with ("documents": the SSC
+ * issues them, the copy centre prints them). They count only when nothing more
+ * specific matched: "where can I print documents?" is the copy centre.
+ */
+const GENERAL_ALIASES = new Set(["documents", "документы", "құжат"]);
 
 /** Words that make a question about where something is (any of the three languages). */
 const WHERE = [
@@ -79,15 +93,22 @@ export function findMapTargets(raw: string, locale: Locale, max = 2): MapTarget[
   for (const p of byPopular) {
     if ([p.name.en, p.name.ru, p.name.kz].some((n) => mentions(text, n))) add(toPlace(p));
   }
-  // Aliases: one place per word ("canteen" is the Red Canteen, not every canteen).
+  // Aliases: one place per word ("canteen" is the Red Canteen, not every canteen);
+  // specific words first, general ones only if nothing else matched.
   const usedWords = new Set<string>();
-  for (const p of byPopular) {
-    // Block and lecture-hall aliases are too general ("block", "bochka" without a letter).
-    if (p.kind === "block" || p.code.startsWith("HALL_")) continue;
-    const word = p.aliases.find((a) => a.length >= 3 && !usedWords.has(a) && mentions(text, a));
-    if (!word) continue;
-    for (const a of p.aliases) if (mentions(text, a)) usedWords.add(a);
-    add(toPlace(p));
+  const before = out.length;
+  for (const general of [false, true]) {
+    if (general && out.length > before) break;
+    for (const p of byPopular) {
+      // Block and lecture-hall aliases are too general ("block", "bochka" without a letter).
+      if (p.kind === "block" || p.code.startsWith("HALL_")) continue;
+      const word = p.aliases.find(
+        (a) => a.length >= 3 && GENERAL_ALIASES.has(a) === general && !usedWords.has(a) && mentions(text, a),
+      );
+      if (!word) continue;
+      for (const a of p.aliases) if (mentions(text, a)) usedWords.add(a);
+      add(toPlace(p));
+    }
   }
   return out;
 }
