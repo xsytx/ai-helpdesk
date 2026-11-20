@@ -165,7 +165,8 @@ func (h *Handlers) SetMyProgram(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid program")
 		return
 	}
-	if now := time.Now().Year(); req.EntryYear < now-10 || req.EntryYear > now+1 {
+	// No future entry years (nobody has started them yet).
+	if now := time.Now().Year(); req.EntryYear < now-10 || req.EntryYear > now {
 		writeError(w, http.StatusBadRequest, "invalid entry year")
 		return
 	}

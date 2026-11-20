@@ -362,9 +362,10 @@ function ProgramChooser({ programs, initial, onDone, onCancel }: {
   const now = new Date();
   // Before September, this year's first-years haven't started yet.
   const latest = now.getMonth() + 1 >= 9 ? now.getFullYear() : now.getFullYear() - 1;
-  const years = Array.from({ length: 7 }, (_, i) => latest + 1 - i);
+  // No future years: the newest is this autumn's first-years.
+  const years = Array.from({ length: 7 }, (_, i) => latest - i);
   const [code, setCode] = useState(initial?.program_code ?? "");
-  const [year, setYear] = useState(initial?.entry_year ?? latest);
+  const [year, setYear] = useState(Math.min(initial?.entry_year ?? latest, latest));
   const field = "mt-1 w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm text-primary outline-none focus:border-brand";
   return (
     <Card className="space-y-3">

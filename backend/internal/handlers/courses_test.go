@@ -8,6 +8,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"campus-forum/internal/middleware"
 )
@@ -219,6 +220,7 @@ func TestMyProgram(t *testing.T) {
 		{"program_code": "99999", "entry_year": 2025},
 		{"program_code": "abc", "entry_year": 2025},
 		{"program_code": "10107", "entry_year": 1990},
+		{"program_code": "10107", "entry_year": time.Now().Year() + 1},
 	} {
 		if code, _ := e.call(student, http.MethodPut, "/api/me/program", bad); code != http.StatusBadRequest {
 			t.Fatalf("%v: %d, want 400", bad, code)
