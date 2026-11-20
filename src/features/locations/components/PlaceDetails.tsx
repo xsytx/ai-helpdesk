@@ -5,7 +5,7 @@ import { cn } from "@/shared/lib/cn";
 import { getErrorStatus } from "@/shared/api/client";
 import { Button } from "@/shared/ui/Button";
 import { copyText } from "@/shared/lib/clipboard";
-import { Armchair, ArrowUp, BookOpen, Building2, Check, CheckCircle2, Clock, ConciergeBell, Crosshair, DoorOpen, Flag, Footprints, Info, Lightbulb, Link2, Presentation, Rotate3d, UtensilsCrossed } from "lucide-react";
+import { Armchair, ArrowDown, ArrowUp, BookOpen, Building2, Check, CheckCircle2, Clock, ConciergeBell, Crosshair, DoorOpen, Flag, Footprints, Info, Lightbulb, Link2, MapPin, Presentation, Rotate3d, UtensilsCrossed } from "lucide-react";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useReportLocation, type MapSpot } from "../api";
 import { toursFor, type TourView } from "../tours";
@@ -15,7 +15,7 @@ import { PlacePhotos } from "./PlacePhotos";
 import { TourViewer } from "./TourViewer";
 import { AddPhotoButton, checkPhotos, PhotoThumb } from "@/features/forum/components/Photos";
 import { uploadReportPhoto } from "../photos";
-import { ENTRANCE_KEY, ENTRANCE_ORDER, blockOnFloor, blockPlace, floorsOfBlock, type Entrance, type Place, type PlaceKind, type RoomCode, type SchemeBlock } from "../places";
+import { blockOnFloor, blockPlace, floorsOfBlock, type Entrance, type Place, type PlaceKind, type RoomCode, type SchemeBlock } from "../places";
 
 export const KIND_ICON: Record<PlaceKind, typeof Building2> = {
   block: Building2, food: UtensilsCrossed, study: BookOpen, service: ConciergeBell, rest: Armchair, entrance: DoorOpen, tour: Rotate3d, room: Presentation,
@@ -33,24 +33,54 @@ export function schemeBlockOf(target: Place | RoomCode): SchemeBlock | undefined
 const fill = (s: string, vars: Record<string, string | number>) =>
   s.replace(/\{(\w+)\}/g, (_, k: string) => String(vars[k] ?? ""));
 
-interface Step { icon: ReactNode; title: string; note?: string; done?: boolean }
+/** One step of the way; `floor` = the plan that shows it (tapping the step opens it). */
+interface Step { icon: ReactNode; title: string; note?: string; done?: boolean; floor: MapFloor; level?: string }
 
-function steps(t: (k: TranslationKey) => string, block: string | undefined, floor: number | undefined, from: Entrance, last: string, spotName?: string, level?: string): Step[] {
+/** Where the route starts when it isn't an entrance: a room or place. */
+interface StartInfo { name: string; block?: string; floor?: number; level?: string; spot: boolean }
+
+/** A floor number as a plan (floors above 4 don't exist; none = floor 1). */
+const planOf = (floor?: number): MapFloor => (floor === 2 ? "2" : floor === 3 ? "3" : floor && floor >= 4 ? "4" : "1");
+
+function steps(t: (k: TranslationKey) => string, block: string | undefined, floor: number | undefined, from: Entrance, last: string, spotName?: string, level?: string, start?: StartInfo): Step[] {
+  const startWing = Boolean(start?.block && WINGS.has(start.block));
+  const startUp = Boolean(start?.floor && start.floor > 1);
+  const startPlan = planOf(start?.floor);
+  const endPlan = planOf(floor);
   const out: Step[] = [
-    { icon: <DoorOpen className="h-4 w-4" />, title: fill(t("mapsStepEnter"), { e: from }) },
+    start
+      ? { icon: <MapPin className="h-4 w-4" />, title: fill(t("mapsStepStart"), { name: start.name }), floor: startPlan, level: start.level }
+      : { icon: <DoorOpen className="h-4 w-4" />, title: fill(t("mapsStepEnter"), { e: from }), floor: "1" },
   ];
-  if (spotName) {
-    out.push({ icon: <Footprints className="h-4 w-4" />, title: fill(t("mapsStepCorridorTo"), { name: spotName }), note: t("mapsStepCorridorNote") });
+  // Both upstairs in one wing: only the elevator (or the corridor, on one floor).
+  if (start && startUp && startWing && start.block === block && floor && floor > 1) {
+    out.push(
+      start.level === level
+        ? { icon: <Footprints className="h-4 w-4" />, title: t("mapsStepWingCorridor"), floor: startPlan }
+        : { icon: <ArrowUp className="h-4 w-4" />, title: fill(t("mapsStepLiftTo"), { floor: level ?? floor }), note: t("mapsStairsEnd"), floor: startPlan },
+    );
+    out.push({ icon: <CheckCircle2 className="h-4 w-4" />, title: last, done: true, floor: endPlan, level });
+    return out;
+  }
+  if (start && startUp) {
+    out.push({ icon: <ArrowDown className="h-4 w-4" />, title: t(startWing ? "mapsStepLiftDown" : "mapsStepStairsDown"), floor: startPlan });
+  }
+  // Starting in the same block (on floor 1, or after coming down): no walk to it.
+  const sameBlock = Boolean(start && !start.spot && !spotName && start.block === block);
+  if (sameBlock) {
+    // Already there.
+  } else if (spotName) {
+    out.push({ icon: <Footprints className="h-4 w-4" />, title: fill(t("mapsStepCorridorTo"), { name: spotName }), note: t("mapsStepCorridorNote"), floor: "1" });
   } else if (!block) {
     // Nothing to walk: the place is outside the main building.
-  } else if (block === "C" && from === "C") {
+  } else if (block === "C" && from === "C" && !start) {
     // Entrance C is in block C: nothing more to walk.
   } else if (WINGS.has(block)) {
-    out.push({ icon: <Footprints className="h-4 w-4" />, title: fill(t("mapsStepCorridor"), { block }), note: t("mapsStepCorridorNote") });
+    out.push({ icon: <Footprints className="h-4 w-4" />, title: fill(t("mapsStepCorridor"), { block }), note: t("mapsStepCorridorNote"), floor: "1" });
   } else if (SCHEME_BLOCKS.has(block)) {
-    out.push({ icon: <Footprints className="h-4 w-4" />, title: fill(t("mapsStepToBlock"), { block }) });
+    out.push({ icon: <Footprints className="h-4 w-4" />, title: fill(t("mapsStepToBlock"), { block }), floor: "1" });
   } else {
-    out.push({ icon: <Info className="h-4 w-4" />, title: fill(t("mapsStepUnknownBlock"), { block }) });
+    out.push({ icon: <Info className="h-4 w-4" />, title: fill(t("mapsStepUnknownBlock"), { block }), floor: "1" });
   }
   if (floor && floor > 1) {
     // The wings are split-level: 3A = the right part, 3B = the left part, 4 = the right part only.
@@ -72,16 +102,25 @@ function steps(t: (k: TranslationKey) => string, block: string | undefined, floo
       icon: <ArrowUp className="h-4 w-4" />,
       title: fill(t(wing ? "mapsStepLift" : "mapsStepStairs"), { floor: level ?? floor }),
       note,
+      // The elevator is taken on floor 1 (marked there).
+      floor: "1",
     });
   }
-  out.push({ icon: <CheckCircle2 className="h-4 w-4" />, title: last, done: true });
+  out.push({ icon: <CheckCircle2 className="h-4 w-4" />, title: last, done: true, floor: endPlan, level });
   return out;
 }
 
-export function PlaceDetails({ target, from, onFrom, onPlace }: {
+export function PlaceDetails({ target, from, start, startRoutable, mapFloor, onShowFloor, onPlace }: {
   target: Place | RoomCode;
   from: Entrance;
-  onFrom: (e: Entrance) => void;
+  /** A room or place the route starts from instead of the entrance (chosen above the map). */
+  start?: Place | RoomCode;
+  /** The start is on the scheme (else the route starts from the entrance). */
+  startRoutable?: boolean;
+  /** The floor the map shows now: its steps are highlighted. */
+  mapFloor?: MapFloor;
+  /** A step tapped: show its floor on the map. */
+  onShowFloor?: (floor: MapFloor) => void;
   /** Open another place (a block's floor switch: "BLOCK_F" → "BLOCK_F_2"). */
   onPlace?: (code: string) => void;
 }) {
@@ -116,6 +155,15 @@ export function PlaceDetails({ target, from, onFrom, onPlace }: {
   const targetCode = room ? room.code : place!.code;
   useEffect(() => setTourAt(undefined), [targetCode]);
   const spot = place?.spot;
+  const startInfo: StartInfo | undefined = start && startRoutable && start.code !== targetCode
+    ? {
+        name: "room" in start ? start.code : start.name[locale],
+        block: start.block,
+        floor: start.floor,
+        level: "room" in start ? levelOf(start.floor, start.room) : start.floor ? String(start.floor) : undefined,
+        spot: !("room" in start) && Boolean(start.spot),
+      }
+    : undefined;
   const route =
     spot || (block && (room || place?.kind === "block" || place?.floor))
       ? steps(
@@ -123,8 +171,10 @@ export function PlaceDetails({ target, from, onFrom, onPlace }: {
           room ? fill(t("mapsStepRoom"), { room: room.room }) : fill(t("mapsStepHere"), { name: place!.name[locale] }),
           spot ? place!.name[locale] : undefined,
           level,
+          startInfo,
         )
       : null;
+  const floorsInRoute = route ? new Set(route.map((s) => s.floor)).size : 0;
 
   return (
     <div className="space-y-5">
@@ -181,36 +231,50 @@ export function PlaceDetails({ target, from, onFrom, onPlace }: {
 
       {route && (
         <section>
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-label">{t("mapsHowToGet")}</h3>
-            <div className="inline-flex rounded-xl border border-border bg-surface p-0.5 text-xs font-semibold" role="group" aria-label={t("mapsFrom")}>
-              {ENTRANCE_ORDER.map((e) => (
-                <button
-                  key={e}
-                  type="button"
-                  onClick={() => onFrom(e)}
-                  aria-pressed={from === e}
-                  className={cn("rounded-lg px-3 py-1.5 transition-colors", from === e ? "bg-brand text-white" : "text-label hover:text-primary")}
-                >
-                  {t(ENTRANCE_KEY[e])}
-                </button>
-              ))}
-            </div>
-          </div>
-          <ol className="relative space-y-4 pl-10">
+          <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-label">{t("mapsHowToGet")}</h3>
+          {/* Steps on more than one floor: tapping one shows its floor on the map; the floor on screen is highlighted. */}
+          <ol className="relative space-y-2 pl-10">
             <span className="absolute bottom-3 left-[15px] top-3 w-px bg-border" aria-hidden />
-            {route.map((s, i) => (
-              <li key={i} className="relative">
-                <span className={cn(
-                  "absolute -left-10 top-0 flex h-8 w-8 items-center justify-center rounded-full",
-                  s.done ? "bg-green-50 text-green-700" : "bg-background-2 text-primary",
-                )}>
-                  {s.icon}
-                </span>
-                <p className="pt-1 text-sm font-semibold text-primary">{s.title}</p>
-                {s.note && <p className="text-xs text-label">{s.note}</p>}
-              </li>
-            ))}
+            {route.map((s, i) => {
+              const here = floorsInRoute > 1 && s.floor === mapFloor;
+              const body = (
+                <>
+                  <p className="text-sm font-semibold text-primary">{s.title}</p>
+                  {s.note && <p className="text-xs text-label">{s.note}</p>}
+                </>
+              );
+              return (
+                <li key={i} className="relative">
+                  <span className={cn(
+                    "absolute -left-10 top-1 flex h-8 w-8 items-center justify-center rounded-full",
+                    s.done ? "bg-green-50 text-green-700" : here ? "bg-brand text-white" : "bg-background-2 text-primary",
+                  )}>
+                    {s.icon}
+                  </span>
+                  {floorsInRoute > 1 && onShowFloor ? (
+                    <button
+                      type="button"
+                      onClick={() => onShowFloor(s.floor)}
+                      aria-current={here ? "step" : undefined}
+                      className={cn(
+                        "flex w-full items-start justify-between gap-2 rounded-xl px-2.5 py-1.5 text-left transition-colors",
+                        here ? "bg-background-2" : "hover:bg-background-2",
+                      )}
+                    >
+                      <span className="min-w-0">{body}</span>
+                      <span className={cn(
+                        "mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold",
+                        here ? "bg-brand text-white" : "border border-border text-label",
+                      )}>
+                        {fill(t("mapsStepFloor"), { floor: s.level ?? s.floor })}
+                      </span>
+                    </button>
+                  ) : (
+                    <div className="px-2.5 py-1.5">{body}</div>
+                  )}
+                </li>
+              );
+            })}
           </ol>
         </section>
       )}

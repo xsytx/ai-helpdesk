@@ -20,7 +20,22 @@ function targetShapes(block?: SchemeBlock, spot?: SchemeSpot): ReactNode[] {
   return BLOCKS[block].map((b, i) => <rect key={i} x={b.x - 6} y={b.y - 6} width={b.w + 12} height={b.h + 12} rx="18" />);
 }
 
-export function CampusLayer({ k, blocks = true, upper = false, block, spot, route, from, onPick }: {
+/** A small name tag above a point of the route (scheme units; u keeps one size on screen). */
+/** The start's tag goes under its point, the end's above: the plan's own pin names sit above pins. */
+function RouteTag({ at: [x, y], text, u, filled }: { at: Pt; text: string; u: number; filled: boolean }) {
+  const size = 11 * u;
+  const w = (text.length * 0.6 + 1.4) * size;
+  const h = size * 1.75;
+  const top = filled ? y - 10 * u - h : y + 10 * u;
+  return (
+    <g>
+      <rect x={x - w / 2} y={top} width={w} height={h} rx={h / 2} fill={filled ? "var(--color-accent)" : "#fff"} stroke="var(--color-accent)" strokeWidth={1.5 * u} />
+      <text x={x} y={top + h / 2 + size * 0.36} fontSize={size} fontWeight="700" textAnchor="middle" fill={filled ? "#fff" : "#1e2151"}>{text}</text>
+    </g>
+  );
+}
+
+export function CampusLayer({ k, blocks = true, upper = false, block, spot, route, from, startLabel, endLabel, onPick }: {
   /** FloorPlan's plan pixels per screen pixel (keeps letters readable at any zoom). */
   k: number;
   /** Block colours, letters, halls and clickable places (off: only the route and entrances). */
@@ -38,6 +53,9 @@ export function CampusLayer({ k, blocks = true, upper = false, block, spot, rout
   route?: Pt[] | null;
   /** The entrance the route starts from (drawn bigger). */
   from?: Entrance;
+  /** Names on the route's ends: where you start and where you go. */
+  startLabel?: string;
+  endLabel?: string;
   /** A place picked with the keyboard (pointer clicks come through FloorPlan's onPlanClick). */
   onPick?: (code: string) => void;
 }) {
@@ -46,6 +64,7 @@ export function CampusLayer({ k, blocks = true, upper = false, block, spot, rout
   // Scheme units per screen pixel: letters, lines and dots keep one size on screen at any zoom.
   const u = k / PLAN_SCALE;
   const badge = 10 * u;
+  const begin = route?.[0];
   const end = route?.at(-1);
   const shapes = targetShapes(block, spot);
   const nameOf = (code: string) => PLACES.find((p) => p.code === code)?.name[locale] ?? code;
@@ -160,7 +179,11 @@ export function CampusLayer({ k, blocks = true, upper = false, block, spot, rout
             points={route.map((p) => p.join(",")).join(" ")} fill="none" stroke="var(--color-accent)" strokeWidth={3.5 * u}
             strokeDasharray={`${7 * u} ${5 * u}`} strokeLinejoin="round" strokeLinecap="round"
           />
+          {/* Start: a hollow ring; the end: a filled dot. Each named in a small tag above it. */}
+          {begin && <circle cx={begin[0]} cy={begin[1]} r={6 * u} fill="#fff" stroke="var(--color-accent)" strokeWidth={3 * u} />}
           {end && <circle cx={end[0]} cy={end[1]} r={6 * u} fill="var(--color-accent)" stroke="#fff" strokeWidth={2 * u} />}
+          {begin && startLabel ? <RouteTag at={begin} text={startLabel} u={u} filled={false} /> : null}
+          {end && endLabel ? <RouteTag at={end} text={endLabel} u={u} filled /> : null}
         </g>
       )}
 

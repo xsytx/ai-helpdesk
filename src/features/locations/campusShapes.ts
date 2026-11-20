@@ -129,6 +129,54 @@ export function routePoints(from: Entrance, block?: SchemeBlock, spot?: SchemeSp
   return [...toAtrium(), ...ATRIUM_TO_B, [200, 230], [215, 115]];
 }
 
+/** The way from the gap east of the atrium up to the hall's west end. */
+const ATRIUM_TO_HALL: Pt[] = [[350, 505], [368, 496], [400, 478], [425, HALL_Y]];
+
+/**
+ * The way from the walkway to a place (its first point is on the walkway),
+ * or null when the place isn't on the scheme. The same walks routePoints
+ * takes, with the entrance part left out.
+ */
+export function legFromHall(block?: SchemeBlock, spot?: SchemeSpot): Pt[] | null {
+  if (spot?.startsWith("hall")) {
+    const h = HALLS[spot.slice(4) as keyof typeof HALLS];
+    return [[h.cx, hallY(h.cx)], [h.cx, h.cy - h.r]];
+  }
+  if (spot === "canteen") return [[1032, HALL_Y], [1032, 500]];
+  if (spot === "med") return [[MED[0], hallY(MED[0])], [MED[0], MED[1] + 6]];
+  if (!block) return null;
+  if (block === "H") {
+    const door = WING_DOOR_X.H!;
+    return [[1600, hallY(1600)], [1620, 425], [door, 410], [door, WING_END_Y]];
+  }
+  const door = WING_DOOR_X[block];
+  if (door !== undefined) return [[door, hallY(door)], [door, 412], [door, WING_END_Y]];
+  const atrium = [...ATRIUM_TO_HALL].reverse();
+  if (block === "C") return [...atrium, [318, 560]];
+  if (block === "B") return [...atrium, ...ATRIUM_TO_B];
+  return [...atrium, ...ATRIUM_TO_B, [200, 230], [215, 115]];
+}
+
+const samePt = (a: Pt, b: Pt) => a[0] === b[0] && a[1] === b[1];
+
+/**
+ * The route from one place to another on floor 1 (scheme units): out of the
+ * first to the walkway, along it, into the second. Where both ways share a
+ * start (blocks A, B and C all start past the atrium), the shared part is
+ * walked once. Null when either isn't on the scheme or they are one place.
+ */
+export function routeBetween(a: { block?: SchemeBlock; spot?: SchemeSpot }, b: { block?: SchemeBlock; spot?: SchemeSpot }): Pt[] | null {
+  const legA = legFromHall(a.block, a.spot);
+  const legB = legFromHall(b.block, b.spot);
+  if (!legA || !legB) return null;
+  let shared = 0;
+  while (shared < legA.length && shared < legB.length && samePt(legA[shared], legB[shared])) shared++;
+  const out: Pt[] = shared > 0
+    ? [...legA.slice(shared - 1).reverse(), ...legB.slice(shared)]
+    : [...[...legA].reverse(), ...alongHall(legA[0][0], legB[0][0]).slice(0, -1), ...legB];
+  return out.length > 1 ? out : null;
+}
+
 /**
  * Floors 2–4 are another drawing than floor 1 (pixel-aligned with each
  * other, not with floor 1): floor-1 plan pixels → upper-floor plan pixels,

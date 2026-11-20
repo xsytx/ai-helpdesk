@@ -339,6 +339,34 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   → `POST /api/location-reports` (one open report per student and place);
   admin panel → "Map reports" (`/admin?section=map-reports`) marks them
   fixed / rejected (`018_location_reports.sql`, `handlers/location_reports.go`).
+- **Route from a room or place (`?from=F205`).** "Start from" sits under
+  the Maps search box (the search is "to"): `StartField` = Entrances C/G/I or
+  any room/place (room code or place search). The start is kept in the URL
+  `from` param, so it stays while you pick other places. On floor 1 the route
+  is `routeBetween` in `campusShapes.ts`: out of the start to the walkway
+  (`legFromHall`, the same walks `routePoints` takes without the entrance
+  part), along it, into the target; A/B/C share the atrium part, which is
+  walked once; same block = no line. Its ends are tagged on the map
+  (`RouteTag` in `CampusLayer`: start under its point, end above it; "↓" /
+  "↑ 3A" when that end is an elevator). Starting upstairs in a wing: the map
+  opens on the start's floor with the walk to the wing's elevator
+  (`corridorPath`), the floor-1 route begins at that elevator; both upstairs
+  in one wing = just the elevator. A start not on the scheme (outside the
+  main building) falls back to the entrance with a note. `FloorPlan` takes
+  `paths` (several walks per floor). The steps under the map carry their
+  floor: when they span several floors each is a button with a floor chip
+  ("Floor 3A") that shows that floor (`showFloor` on `CampusMap`, scrolling
+  the map into view on phones), and the floor on screen (`onFloorChange`)
+  highlights its steps.
+- **Link previews (`handlers/preview.go`).** Telegram, WhatsApp and other
+  link-preview bots don't run JS, so nginx sends their page requests (by
+  User-Agent, `map $link_preview_bot`; real files like `/og-image.png`
+  excluded) to `GET /api/preview/<path>`: a small page with og:/twitter: tags.
+  Question = title, text start, first question photo (only `ok` posts, never
+  held/checking); shared chat = title + first answer; course = code, name,
+  ECTS; profile = name only; anything else = the site's card
+  (`public/og-image.png`, 1200×630). Image links use `BASE_URL`
+  (`PUBLIC_URL`), so set it on the server. `index.html` has default tags too.
 - **Floor plans and the map editor (`019_map_points.sql`, `store/map_points.go`,
   `handlers/map_points.go`, `features/locations/mapPoints.ts`).** Rooms,
   stairs, toilets, entrances and services are points on the floor-plan images

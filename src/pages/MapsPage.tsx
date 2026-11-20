@@ -1,8 +1,10 @@
 import { Mascot } from "@/shared/ui/Mascot";
 import { CampusMap } from "@/features/locations/components/CampusMap";
-import { KIND_ICON, PlaceDetails } from "@/features/locations/components/PlaceDetails";
-import { BLOCK_FLOORS, PLACES, parseRoomCode, placeForRoom, searchPlaces, type Entrance, type Place, type PlaceKind } from "@/features/locations/places";
-import { levelOf, useMapPoints, type MapPoint } from "@/features/locations/mapPoints";
+import { StartField } from "@/features/locations/components/StartField";
+import { KIND_ICON, PlaceDetails, schemeBlockOf } from "@/features/locations/components/PlaceDetails";
+import { legFromHall } from "@/features/locations/campusShapes";
+import { BLOCK_FLOORS, PLACES, parseRoomCode, placeForRoom, searchPlaces, type Entrance, type Place, type PlaceKind, type RoomCode } from "@/features/locations/places";
+import { levelOf, useMapPoints, type MapFloor, type MapPoint } from "@/features/locations/mapPoints";
 import { POINT_PLACE_PREFIX, pointPlaces } from "@/features/locations/pointPlaces";
 import { searchTerms } from "@/features/locations/placeSearch";
 import { highlight } from "@/shared/lib/highlight";
@@ -53,6 +55,38 @@ export function MapsPage() {
   }, [q, kind, extra]);
   const picked = [...PLACES, ...BLOCK_FLOORS, ...extra].find((p) => p.code === params.get("place"));
   const target = room ?? (roomPlace ? { ...roomPlace, floor: code!.floor } : undefined) ?? picked ?? (q.trim() ? results[0] : undefined);
+  // The route can start from a room or place instead of an entrance (?from=F205).
+  const startCode = params.get("from");
+  const start = useMemo((): Place | RoomCode | undefined => {
+    if (!startCode) return undefined;
+    const rc = parseRoomCode(startCode);
+    if (rc) {
+      const pl = placeForRoom(rc.code);
+      return pl ? { ...pl, floor: rc.floor } : rc;
+    }
+    return [...PLACES, ...BLOCK_FLOORS, ...extra].find((p) => p.code === startCode);
+  }, [startCode, extra]);
+  // Only a start drawn on the scheme (a block, lecture hall, canteen…) has a route from it.
+  const startRoutable = Boolean(start && legFromHall(schemeBlockOf(start), "room" in start ? undefined : start.spot));
+  const startName = start ? ("room" in start ? start.code : start.name[locale]) : "";
+  const startNote = !start
+    ? undefined
+    : target && start.code === target.code
+      ? t("mapsStartSame").replace("{name}", startName)
+      : !startRoutable
+        ? t("mapsStartNoRoute").replace("{name}", startName)
+        : undefined;
+
+  // The map's floor, shared with the steps: a tapped step shows its floor
+  // (n counts the taps, so the same floor can be asked for again).
+  const [mapFloor, setMapFloor] = useState<MapFloor>();
+  const [floorAsk, setFloorAsk] = useState<{ floor: MapFloor; n: number }>();
+  const showFloor = (floor: MapFloor) => {
+    setFloorAsk((a) => ({ floor, n: (a?.n ?? 0) + 1 }));
+    // On phones the map is above the steps: bring it into view.
+    const map = document.getElementById("campus-map");
+    if (map && map.getBoundingClientRect().top < 0) map.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "start" });
+  };
 
   // What Barys says on the map: where to and, for upper floors, which floor.
   const fill = (text: string, vars: Record<string, string | number>) =>
@@ -132,6 +166,17 @@ export function MapsPage() {
           }}
           onPickRoom={(code) => update({ q: code, cat: null, place: null })}
         />
+        <StartField
+          from={from}
+          start={start}
+          note={startNote}
+          extra={extra}
+          onEntrance={(e) => {
+            setFrom(e);
+            update({ from: null });
+          }}
+          onStart={(code) => update({ from: code })}
+        />
         <p className="mt-2 text-xs text-label">
           {t("mapsTry")}{" "}
           {EXAMPLES.map((ex, i) => (
@@ -162,13 +207,16 @@ export function MapsPage() {
 
       {/* The map comes before the details: picking a place changes only what is below it, so the map stays put. */}
       <div className="space-y-6">
-        <Card>
+        <Card id="campus-map" className="scroll-mt-20">
           <h2 className="mb-3 font-semibold text-primary">{t("mapsMapTitle")}</h2>
           <CampusMap
             target={target}
             // A category chip marks all its places on the map (until one is picked).
             marked={kind !== "all" ? results : undefined}
             from={from}
+            start={startRoutable ? start : undefined}
+            showFloor={floorAsk}
+            onFloorChange={setMapFloor}
             // Clicking the picked place again clears it.
             onPick={(code) => update({ q: null, cat: null, place: code === target?.code ? null : code }, code !== target?.code)}
             onPointPick={openPoint}
@@ -186,7 +234,15 @@ export function MapsPage() {
             <PlaceList places={results} selected={target?.code.replace(/^(BLOCK_[A-I])_\d$/, "$1")} onPick={(p) => update({ place: p.code })} />
           )}
           {target ? (
-            <PlaceDetails target={target} from={from} onFrom={setFrom} onPlace={(code) => update({ q: null, place: code })} />
+            <PlaceDetails
+              target={target}
+              from={from}
+              start={start}
+              startRoutable={startRoutable}
+              mapFloor={mapFloor}
+              onShowFloor={showFloor}
+              onPlace={(code) => update({ q: null, place: code })}
+            />
           ) : q.trim() ? (
             <NotFound q={q} />
           ) : (

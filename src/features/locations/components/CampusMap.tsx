@@ -13,12 +13,12 @@ import { Mascot } from "@/shared/ui/Mascot";
 import { ArrowDown, ArrowLeft, ArrowRight, ChevronDown, Eraser, Expand, Footprints, Layers, Shrink, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { PLAN_SCALE, WING_DOOR_X, placeAtPlan, planToUnit, routePoints, upperToFloor1, type Pt } from "../campusShapes";
+import { PLAN_SCALE, WING_DOOR_X, placeAtPlan, planToUnit, routeBetween, routePoints, upperToFloor1, type Pt } from "../campusShapes";
 import {
   FLOOR_ORDER, PLAN_BLOCKS, TYPE_META, floorOfRoom, levelOf, pointLabel, pointsFor, useMapPoints,
   type MapFloor, type MapPoint, type PointType,
 } from "../mapPoints";
-import { blockOnFloor, type Entrance, type Place, type RoomCode, type SchemeBlock } from "../places";
+import { ENTRANCE_KEY, blockOnFloor, type Entrance, type Place, type RoomCode, type SchemeBlock, type SchemeSpot } from "../places";
 import { corridorPath } from "../upstairs";
 import { CampusLayer } from "./CampusLayer";
 import { FloorPlan } from "./FloorPlan";
@@ -61,12 +61,37 @@ function nearWing(points: MapPoint[], floor: MapFloor, at: { x: number; y: numbe
 
 export interface MapPopup { title: string; text: string }
 
-export function CampusMap({ target, marked, from, onPick, onPointPick, popup, onMore, onClosePopup, onClear, guide }: {
+/** Where a room or place is: its pins, block, spot on the scheme and floor. */
+function locate(target: Place | RoomCode, points: MapPoint[] | undefined) {
+  const room = "room" in target ? target : null;
+  const place = room ? null : (target as Place);
+  const code = room ? room.code : place!.code;
+  const matches = !points ? [] : place?.point ? points.filter((p) => p.id === place.point) : pointsFor(points, code, place?.rooms);
+  const block = target.block;
+  const schemeBlock = block && /^[A-I]$/.test(block) ? (block as SchemeBlock) : undefined;
+  const spot: SchemeSpot | undefined = place?.spot;
+  const declaredFloor: MapFloor | undefined = place?.floor
+    ? place.floor >= 4 ? "4" : place.floor === 3 ? "3" : place.floor === 2 ? "2" : "1"
+    : undefined;
+  const floor: MapFloor | undefined = (room ? floorOfRoom(room.floor, room.room) : undefined) ?? matches[0]?.floor ?? declaredFloor;
+  const level = room ? levelOf(room.floor, room.room) : place?.floor ? String(place.floor) : undefined;
+  /** Upstairs in a wing: reached by the wing's elevator. */
+  const upWing = Boolean(floor && floor !== "1" && schemeBlock && WING_DOOR_X[schemeBlock] !== undefined);
+  return { room, place, code, matches, block, schemeBlock, spot, floor, level, upWing };
+}
+
+export function CampusMap({ target, marked, from, start, showFloor, onFloorChange, onPick, onPointPick, popup, onMore, onClosePopup, onClear, guide }: {
   /** The room or place you look for (none = the whole campus). */
   target?: Place | RoomCode;
   /** A category chip's places, marked on the map while nothing is picked. */
   marked?: Place[];
   from: Entrance;
+  /** A room or place the route starts from instead of the entrance (F205 → F310). */
+  start?: Place | RoomCode;
+  /** Show this floor (a step tapped under the map); `n` changes with every tap. */
+  showFloor?: { floor: MapFloor; n: number };
+  /** The floor on screen changed. */
+  onFloorChange?: (floor: MapFloor) => void;
   /** A block or place clicked on the map (its code in places.ts). */
   onPick?: (code: string) => void;
   /**
@@ -85,33 +110,48 @@ export function CampusMap({ target, marked, from, onPick, onPointPick, popup, on
   /** What Barys says about the route ("This way: Block F, then up to floor 2!"). */
   guide?: string;
 }) {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const { data: points, isError: pointsFailed } = useMapPoints();
-  const room = target && "room" in target ? target : null;
-  const place = target && !room ? (target as Place) : null;
-  const code = room ? room.code : place?.code;
-  const matches = !points || !target ? [] : place?.point ? points.filter((p) => p.id === place.point) : pointsFor(points, code!, place?.rooms);
-  const block = target?.block;
-  const schemeBlock = block && /^[A-I]$/.test(block) ? (block as SchemeBlock) : undefined;
-  const spot = place?.spot;
   const all = points ?? [];
-  const walk = target && (schemeBlock || spot) ? routePoints(from, schemeBlock, spot) : null;
-  /** The floor the place itself is on (its pin), if known. */
-  const declaredFloor: MapFloor | undefined = place?.floor
-    ? place.floor >= 4 ? "4" : place.floor === 3 ? "3" : place.floor === 2 ? "2" : "1"
-    : undefined;
-  const targetFloor: MapFloor | undefined =
-    (room ? floorOfRoom(room.floor, room.room) : undefined) ?? matches[0]?.floor ?? declaredFloor;
+  const end = target ? locate(target, points) : undefined;
+  const room = end?.room ?? null;
+  const place = end?.place ?? null;
+  const code = end?.code;
+  const matches = end?.matches ?? [];
+  const block = end?.block;
+  const schemeBlock = end?.schemeBlock;
+  const spot = end?.spot;
+  const targetFloor = end?.floor;
+  const level = end?.level;
+  // The start (a room or place instead of an entrance), when it isn't the place itself.
+  const startAt = start ? locate(start, points) : undefined;
+  const begin = startAt && end && startAt.code !== end.code ? startAt : undefined;
+  // Both upstairs in one wing: just the elevator, no floor-1 walk.
+  const oneWing = Boolean(begin?.upWing && end?.upWing && begin.schemeBlock === schemeBlock);
+  const walk = !end
+    ? null
+    : begin
+      ? oneWing ? null : routeBetween({ block: begin.schemeBlock, spot: begin.spot }, { block: schemeBlock, spot })
+      : schemeBlock || spot ? routePoints(from, schemeBlock, spot) : null;
   // Upstairs in a wing: the route ends at the wing's elevator (on its corridor,
   // so the walk is the same), marked on floor 1 and on the place's floor.
-  const upstairs = walk && targetFloor && targetFloor !== "1" && schemeBlock && WING_DOOR_X[schemeBlock] !== undefined;
-  const liftDown = upstairs ? nearWing(all, "1", toPlan(walk[walk.length - 1])) : undefined;
-  const route: Pt[] | null = walk && liftDown ? [...walk.slice(0, -1), planToUnit(liftDown.x, liftDown.y)] : walk;
-  const level = room ? levelOf(room.floor, room.room) : place?.floor ? String(place.floor) : undefined;
+  // Starting upstairs, it begins at the elevator you come down in.
+  const upstairs = Boolean(end?.upWing && (walk || oneWing));
+  const liftDown = upstairs && walk ? nearWing(all, "1", toPlan(walk[walk.length - 1])) : undefined;
+  const liftBack = begin?.upWing && walk ? nearWing(all, "1", toPlan(walk[0])) : undefined;
+  const route: Pt[] | null = walk
+    ? [
+        ...(liftBack ? [planToUnit(liftBack.x, liftBack.y)] : [walk[0]]),
+        ...walk.slice(1, -1),
+        ...(liftDown ? [planToUnit(liftDown.x, liftDown.y)] : [walk[walk.length - 1]]),
+      ]
+    : null;
   // Floor 1 first when there is a way in to show; otherwise straight to the place's floor.
+  // Starting upstairs, the map opens where you are.
   // A block's upper floor (BLOCK_F_2) is about that floor: it opens there ("Way in: floor 1" goes back).
   const blockUpstairs = place !== null && /^BLOCK_[A-I]_\d$/.test(place.code);
-  const startFloor: MapFloor = route && !blockUpstairs ? "1" : (targetFloor ?? "1");
+  const beginFloor = begin?.floor && begin.floor !== "1" ? begin.floor : undefined;
+  const startFloor: MapFloor = beginFloor ?? (route && !blockUpstairs ? "1" : (targetFloor ?? "1"));
 
   const [floor, setFloor] = useState<MapFloor>(startFloor);
   const [helper, setHelper] = useState<"toilet" | "stairs">();
@@ -159,7 +199,19 @@ export function CampusMap({ target, marked, from, onPick, onPointPick, popup, on
     setFloor(tap && tap.code === code ? tap.floor : startFloor);
     setHelper(undefined);
     setTapped(undefined);
-  }, [code, startFloor, from]);
+  }, [code, startFloor, from, begin?.code]);
+  // A step tapped under the map: its floor.
+  useEffect(() => {
+    if (!showFloor) return;
+    setFloor(showFloor.floor);
+    setTapped(undefined);
+  }, [showFloor]);
+  useEffect(() => onFloorChange?.(floor), [floor, onFloorChange]);
+  // The route's ends on floor 1, named: where you start and where you go
+  // (with an arrow when that end is an elevator).
+  const nameOf = (x: ReturnType<typeof locate>) => (x.room ? x.room.code : x.place!.name[locale]);
+  const startLabel = begin ? `${nameOf(begin)}${liftBack ? " ↓" : ""}` : t(ENTRANCE_KEY[from]);
+  const endLabel = end ? `${nameOf(end)}${liftDown ? ` ↑ ${level ?? targetFloor}` : ""}` : undefined;
   const toggleBlocks = () =>
     setShowBlocks((v) => {
       safeStorage.set(BLOCKS_KEY, v ? "off" : "on");
@@ -179,6 +231,15 @@ export function CampusMap({ target, marked, from, onPick, onPointPick, popup, on
   const stairs = lift ? nearWing(all, floor, lift, isFullStairs) : undefined;
   // On the room's floor: the walk from the elevator along the wing's corridor to it.
   const upPath = liftUp && here[0] && schemeBlock ? corridorPath(all, floor, schemeBlock, liftUp, here[0], level, room?.room) : null;
+  // Where you start: its pin, and upstairs the walk from it to the wing's elevator.
+  const beginHere = begin?.matches.filter((p) => p.floor === floor) ?? [];
+  const liftStart = begin?.upWing && floor === begin.floor && beginHere[0] ? nearWing(all, floor, beginHere[0]) : undefined;
+  const startPath = liftStart && begin?.schemeBlock
+    ? corridorPath(all, floor, begin.schemeBlock, liftStart, beginHere[0], begin.level, begin.room?.room)
+    : null;
+  const walks = [startPath, upPath].filter((p): p is NonNullable<typeof p> => Boolean(p));
+  // The elevator you start from: on your floor, and where you come out on floor 1.
+  const startLift = floor === "1" ? liftBack : liftStart;
   // The blocks (tints, letters, clickable) on every floor when switched on;
   // floor 1 also always carries the route and entrances.
   const campus = showBlocks;
@@ -199,19 +260,20 @@ export function CampusMap({ target, marked, from, onPick, onPointPick, popup, on
   if (help && anchor) {
     focus = { x: (anchor.x + help.x) / 2, y: (anchor.y + help.y) / 2, w: dist(anchor, help) * 1.6 + 500, key: `${code}-${helper}-${help.id}` };
   } else if (showRoute) {
-    const pts = [...route.map(toPlan), ...here];
+    const pts = [...route.map(toPlan), ...here, ...beginHere];
     const xs = pts.map((p) => p.x);
     const ys = pts.map((p) => p.y);
     const [x1, x2, y1, y2] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
-    focus = { x: (x1 + x2) / 2, y: (y1 + y2) / 2, w: Math.max(x2 - x1, (y2 - y1) * 2.4) * 1.25 + 300, key: `route-${code}-${from}` };
-  } else if (upPath) {
-    // The walk from the elevator to the room, with a little room around it.
-    const xs = upPath.map((p) => p.x);
-    const ys = upPath.map((p) => p.y);
+    focus = { x: (x1 + x2) / 2, y: (y1 + y2) / 2, w: Math.max(x2 - x1, (y2 - y1) * 2.4) * 1.25 + 300, key: `route-${code}-${begin?.code ?? from}` };
+  } else if (walks.length > 0) {
+    // The walks from the elevator to the room (and to where you start), with a little room around them.
+    const xs = walks.flat().map((p) => p.x);
+    const ys = walks.flat().map((p) => p.y);
     const [x1, x2, y1, y2] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
-    focus = { x: (x1 + x2) / 2, y: (y1 + y2) / 2, w: Math.max(x2 - x1, (y2 - y1) * 1.6) + 700, key: `up-${code}-${floor}` };
-  } else if (here[0]) {
-    focus = { x: here[0].x, y: here[0].y, key: `${code}-${here[0].id}-${here[0].x}-${here[0].y}` };
+    focus = { x: (x1 + x2) / 2, y: (y1 + y2) / 2, w: Math.max(x2 - x1, (y2 - y1) * 1.6) + 700, key: `up-${code}-${begin?.code}-${floor}` };
+  } else if (here[0] || beginHere[0]) {
+    const pin = here[0] ?? beginHere[0];
+    focus = { x: pin.x, y: pin.y, key: `${code}-${pin.id}-${pin.x}-${pin.y}` };
   } else if (markedHere.length > 0) {
     // Frame all of the category's pins on this floor.
     const xs = markedHere.map((p) => p.x);
@@ -311,7 +373,7 @@ export function CampusMap({ target, marked, from, onPick, onPointPick, popup, on
             floor={floor}
             points={all}
             highlight={here.map((p) => p.id)}
-            secondary={[help?.id, lift?.id, stairs?.id, ...markedHere.map((p) => p.id)].filter((id): id is string => Boolean(id))}
+            secondary={[help?.id, lift?.id, stairs?.id, startLift?.id, ...beginHere.map((p) => p.id), ...markedHere.map((p) => p.id)].filter((id): id is string => Boolean(id))}
             dimOthers={markedHere.length > 0}
             block={here.length === 0 ? block : undefined}
             focus={focus}
@@ -327,7 +389,7 @@ export function CampusMap({ target, marked, from, onPick, onPointPick, popup, on
               layered
                 ? (k) => upper
                   ? <CampusLayer k={k} upper block={schemeBlock} onPick={onPick ? pickHere : undefined} />
-                  : <CampusLayer k={k} blocks={showBlocks} block={schemeBlock} spot={spot} route={route} from={from} onPick={onPick} />
+                  : <CampusLayer k={k} blocks={showBlocks} block={schemeBlock} spot={spot} route={route} from={begin ? undefined : from} startLabel={startLabel} endLabel={endLabel} onPick={onPick} />
                 : undefined
             }
             onPlanClick={
@@ -340,7 +402,7 @@ export function CampusMap({ target, marked, from, onPick, onPointPick, popup, on
                 : undefined
             }
             declutter
-            path={upPath}
+            paths={walks}
             loading={!points && !pointsFailed}
             controls={
               <button
@@ -370,7 +432,7 @@ export function CampusMap({ target, marked, from, onPick, onPointPick, popup, on
         ) : null}
 
         {/* The place is on another floor: one tap to its floor, and back to the way in. */}
-        {target && (otherFloor || (route && floor !== "1")) ? (
+        {target && (otherFloor || (route && floor !== "1") || (beginFloor && floor !== beginFloor)) ? (
           <div className="absolute left-2 top-2 z-[5] flex flex-col items-start gap-1.5">
             {otherFloor ? (
               <button
@@ -385,6 +447,19 @@ export function CampusMap({ target, marked, from, onPick, onPointPick, popup, on
                 <ArrowRight className="h-3.5 w-3.5" />
               </button>
             ) : null}
+            {beginFloor && floor !== beginFloor ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setFloor(beginFloor);
+                  setTapped(undefined);
+                }}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 py-1.5 text-xs font-semibold text-primary shadow-md hover:bg-background-2"
+              >
+                <ArrowLeft className="h-3.5 w-3.5" />
+                {t("mapsShowStart").replace("{floor}", begin?.level ?? beginFloor)}
+              </button>
+            ) : null}
             {route && floor !== "1" ? (
               <button
                 type="button"
@@ -395,7 +470,7 @@ export function CampusMap({ target, marked, from, onPick, onPointPick, popup, on
                 className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 py-1.5 text-xs font-semibold text-primary shadow-md hover:bg-background-2"
               >
                 <ArrowLeft className="h-3.5 w-3.5" />
-                {t("mapsBackToRoute")}
+                {t(begin ? "mapsRouteFloor1" : "mapsBackToRoute")}
               </button>
             ) : null}
           </div>
@@ -427,7 +502,13 @@ export function CampusMap({ target, marked, from, onPick, onPointPick, popup, on
         </p>
       ) : null}
       {helper && anchor && !help ? <p className="mt-2 text-xs text-label">{t("mapsNoneOnFloor")}</p> : null}
-      {lift && !help ? (
+      {liftStart && floor !== "1" && !help ? (
+        <p className="mt-2 flex items-center gap-1.5 text-xs text-label">
+          <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: TYPE_META.elevator.color }} />
+          {oneWing ? t("mapsLiftHere").replace("{floor}", level ?? targetFloor ?? "") : t("mapsLiftDownHere")}
+        </p>
+      ) : null}
+      {lift && !help && lift.id !== liftStart?.id ? (
         <p className="mt-2 flex items-center gap-1.5 text-xs text-label">
           <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: TYPE_META.elevator.color }} />
           {t(floor === "1" ? (stairs ? "mapsLiftStairsHere" : "mapsLiftHere") : stairs ? "mapsLiftStairsOut" : "mapsLiftOut").replace("{floor}", level ?? targetFloor ?? "")}

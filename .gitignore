@@ -7,3 +7,7 @@ dist/
 curricula/
 *.htm
 *_files/
+
+# Personal Claude Code MCP servers (e.g. the Playwright browser for testing).
+.mcp.json
+.playwright-mcp/
