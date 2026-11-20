@@ -10,6 +10,10 @@ Two modes are compared:
 Run (with Ollama running):
     docker compose run --rm ai_ml python scripts/eval_moderation.py
 Prints precision / recall / false-positive rate per mode and every mistake.
+
+With a hosted model on a free tier (Gemini: 15 requests a minute per model),
+pace the checks so the limit isn't hit: --pause 4.5 (about 5 minutes for 60
+cases, ~60 requests of the day's quota).
 """
 import argparse
 import json
@@ -40,12 +44,18 @@ def score(results):
     return {'tp': tp, 'fn': fn, 'fp': fp, 'tn': tn, 'precision': precision, 'recall': recall, 'false_positive_rate': fpr}
 
 
-def run(cases, check):
+def run(cases, check, pause=0.0, progress=False):
     out = []
-    for case in cases:
+    for i, case in enumerate(cases, 1):
+        if progress:
+            print(f'\r  checking {i}/{len(cases)}…', end='', flush=True)
+        if pause and i > 1:
+            time.sleep(pause)
         verdict = check(case['text'])
         out.append({**case, 'decision': verdict['decision'], 'categories': verdict['categories'],
                     'flagged': verdict['decision'] != 'allow'})
+    if progress:
+        print('\r' + ' ' * 30 + '\r', end='')
     return out
 
 
@@ -66,6 +76,8 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--cases', default=str(ROOT / 'eval' / 'moderation_cases.jsonl'))
     parser.add_argument('--json', help='also save per-case results to this file')
+    parser.add_argument('--pause', type=float, default=0.0,
+                        help='seconds between LLM checks (free Gemini tier: 4.5 keeps under 15 a minute)')
     args = parser.parse_args()
     cases = load_cases(args.cases)
 
@@ -76,7 +88,7 @@ def main():
 
     full = ModerationService(make_client(Settings.from_env()))
     t0 = time.time()
-    full_results = run(cases, full.moderate)
+    full_results = run(cases, full.moderate, pause=args.pause, progress=True)
     full_score = report(f"dictionary + LLM ({Settings.from_env().llm_model})", full_results, time.time() - t0)
 
     if args.json:
