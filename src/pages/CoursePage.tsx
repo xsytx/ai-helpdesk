@@ -15,6 +15,7 @@ import { DescriptionForm } from "@/features/courses/components/CoursesAdminSecti
 import { Link, useParams } from "react-router-dom";
 import { fill, kindKey, levelKey } from "@/features/courses/labels";
 import { CourseReviews } from "@/features/courses/components/CourseReviews";
+import { SemesterCourses } from "@/features/courses/components/SemesterCourses";
 
 export function CoursePage() {
   const { t, locale } = useLocale();
@@ -146,6 +147,9 @@ export function CoursePage() {
       </Card>
 
       <CourseReviews code={course.code} />
+
+      {/* The rest of the semester, to move between courses. */}
+      <SemesterCourses code={course.code} places={course.places} />
     </div>
   );
 }

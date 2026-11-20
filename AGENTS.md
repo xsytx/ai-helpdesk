@@ -579,6 +579,10 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   typos via trigrams). A course card `/courses/MAT-101` (`CoursePage`, `GET
   /api/courses/{code}`) shows hours, description and every program/semester
   it is taught in (required, elective slot, or only in an elective list).
+  Under the reviews, "Also in semester N" (`SemesterCourses`) lists the
+  rest of that semester to move between courses: your own program (and entry
+  year) when the course is in it, else its first program with a semester;
+  it reuses the cached curriculum query (ratings via `RatingChip`).
   Main tracks first; other tracks and minors are just more imports.
 - **Course reviews (stories 17-18; `023_course_reviews.sql`,
   `store/course_reviews.go`, `handlers/course_reviews.go`,

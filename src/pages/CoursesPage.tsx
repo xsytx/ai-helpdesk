@@ -15,8 +15,9 @@ import { Button } from "@/shared/ui/Button";
 import { Card } from "@/shared/ui/Card";
 import { Mascot } from "@/shared/ui/Mascot";
 import { PageSkeleton } from "@/shared/ui/Skeleton";
-import { BookOpen, ChevronDown, GraduationCap, MessageSquareText, Search, Shuffle, ThumbsUp } from "lucide-react";
+import { BookOpen, ChevronDown, GraduationCap, MessageSquareText, Search, Shuffle } from "lucide-react";
 import { MyReviews } from "@/features/courses/components/MyReviews";
+import { RatingChip } from "@/features/courses/components/RatingChip";
 import { prefersReducedMotion } from "@/shared/lib/motion";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
@@ -229,26 +230,6 @@ function CourseLink({ course, className }: { course: CourseRef; className?: stri
     <Link to={`/courses/${courseSlug(course.code)}`} viewTransition className={cn("hover:underline", className)}>
       {course.name || course.code}
     </Link>
-  );
-}
-
-/** How students rate a course, small: 👍 86% · 7 (the full sentence as its tooltip). */
-function RatingChip({ rating, className }: { rating: ReviewBrief; className?: string }) {
-  const { t } = useLocale();
-  const text = fill(t("coursesRatingTitle"), { pct: rating.recommend_pct, n: rating.count });
-  return (
-    <span
-      title={text}
-      aria-label={text}
-      className={cn(
-        "shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold",
-        rating.recommend_pct >= 70 ? "bg-green-50 text-green-700" : "bg-background-2 text-label",
-        className,
-      )}
-    >
-      <ThumbsUp className="h-3 w-3" aria-hidden />
-      {rating.recommend_pct}% · {rating.count}
-    </span>
   );
 }
 
