@@ -571,7 +571,12 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   `courses` (by code "MAT 101"; names from the portal, English only;
   descriptions in 3 languages written by admins and kept on re-import;
   staff also edit them right on the course card, students see none while
-  empty),
+  empty; many at once from a CSV in admin → Courses → "Import descriptions":
+  `descriptionsCsv.ts` reads code + description_en/kz/ru, comma or Excel's
+  semicolon, BOM ok, empty cell = keep; saved one by one through PUT
+  /api/admin/courses/{code}, retrying on 429. SDU has no public course
+  descriptions (syllabi are in Moodle after enrolment): the team checks drafts
+  against their syllabi before importing),
   `curricula`, `curriculum_items` (a course or a slot with `options`),
   `curriculum_electives`, `user_programs` (a student's program + entry year).
   `/courses` (`CoursesPage`) opens on the student's program and current
