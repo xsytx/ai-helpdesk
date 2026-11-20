@@ -24,6 +24,7 @@ class Settings:
     # --- LLM ---
     llm_provider: str = 'ollama'          # ollama | openai | gemini
     llm_model: str = 'qwen3:4b'
+    llm_fallback_model: str = ''          # запасная модель при 503/429/404 основной (пусто = нет)
     llm_base_url: str = ''                # пусто = адрес по умолчанию для провайдера
     llm_api_key: str = ''                 # нужен только для openai/gemini
     llm_timeout: float = 120.0            # секунд на один запрос к модели
@@ -51,6 +52,7 @@ class Settings:
         return cls(
             llm_provider=os.getenv('LLM_PROVIDER', d.llm_provider).strip().lower() or d.llm_provider,
             llm_model=os.getenv('LLM_MODEL', d.llm_model).strip() or d.llm_model,
+            llm_fallback_model=os.getenv('LLM_FALLBACK_MODEL', '').strip(),
             llm_base_url=os.getenv('LLM_BASE_URL', '').strip(),
             llm_api_key=os.getenv('LLM_API_KEY', '').strip(),
             llm_timeout=_float('LLM_TIMEOUT_SECONDS', d.llm_timeout),

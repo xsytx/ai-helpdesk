@@ -698,6 +698,11 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   `gofmt -l` lists every Go file for the same reason — not a real problem.
 - `ADMIN_EMAILS` is applied at backend startup (and at registration); after
   changing it run `docker compose up -d`, then log out/in.
+- The live server (no GPU) uses Gemini (`LLM_PROVIDER=gemini` in its `.env`):
+  `LLM_MODEL` + `LLM_FALLBACK_MODEL` (`kb/llm.py`: on 503/429/404 one retry, then
+  the fallback; each model has its own free limit). Google retires model names
+  (`gemini-2.5-flash` stopped working in 2026-11): a 404 in `logs ai_ml` = pick
+  a current name in AI Studio. The laptop keeps Ollama.
 - The small local model (`qwen3.5:4b`, fits a 4 GB GPU) is weak in Kazakh and
   sometimes picks an odd moderation category; decisions are measured by the
   eval above (last run: 100% recall, 0% false positives on 60 + 24 cases).

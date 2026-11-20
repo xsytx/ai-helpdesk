@@ -105,6 +105,69 @@ class OpenAITests(unittest.TestCase):
             OpenAICompatClient('openai', 'gpt', '')
 
 
+def gemini_with(handler, fallback=''):
+    http = httpx.Client(base_url='http://gemini.test', transport=httpx.MockTransport(handler))
+    return OpenAICompatClient('gemini', 'main-flash', 'k', http=http, fallback_model=fallback)
+
+
+def answer(content):
+    return httpx.Response(200, json={'choices': [{'message': {'content': content}}]})
+
+
+class FallbackTests(unittest.TestCase):
+    def run_with(self, statuses, fallback='spare-lite'):
+        """statuses: model -> HTTP status it answers (200 = an answer)."""
+        seen = []
+
+        def handler(request):
+            model = json.loads(request.content)['model']
+            seen.append(model)
+            status = statuses[model]
+            return answer('{"from":"%s"}' % model) if status == 200 else httpx.Response(status, text='x')
+        with patch('kb.llm.time.sleep'):
+            try:
+                return gemini_with(handler, fallback).chat_json([]), seen
+            except LLMError as exc:
+                return exc, seen
+
+    def test_overloaded_main_model_falls_back(self):
+        out, seen = self.run_with({'main-flash': 503, 'spare-lite': 200})
+        self.assertEqual(out, '{"from":"spare-lite"}')
+        self.assertEqual(seen, ['main-flash', 'main-flash', 'spare-lite'])  # one retry, then the spare
+
+    def test_daily_limit_and_retired_model_fall_back(self):
+        for status in (429, 404):
+            out, seen = self.run_with({'main-flash': status, 'spare-lite': 200})
+            self.assertEqual(out, '{"from":"spare-lite"}', status)
+
+    def test_healthy_main_model_never_touches_the_spare(self):
+        out, seen = self.run_with({'main-flash': 200, 'spare-lite': 200})
+        self.assertEqual(seen, ['main-flash'])
+
+    def test_other_errors_do_not_fall_back(self):
+        out, seen = self.run_with({'main-flash': 401, 'spare-lite': 200})
+        self.assertEqual(out.code, 'llm_auth')
+        self.assertEqual(seen, ['main-flash'])
+
+    def test_both_down_reports_the_spare_error(self):
+        out, seen = self.run_with({'main-flash': 503, 'spare-lite': 503})
+        self.assertEqual(out.code, 'llm_overloaded')
+        self.assertEqual(seen, ['main-flash', 'main-flash', 'spare-lite', 'spare-lite'])
+
+    def test_no_fallback_configured(self):
+        out, seen = self.run_with({'main-flash': 503}, fallback='')
+        self.assertEqual(out.code, 'llm_overloaded')
+        self.assertEqual(seen, ['main-flash', 'main-flash'])
+
+    def test_missing_model_message_fits_the_provider(self):
+        out, _ = self.run_with({'main-flash': 404}, fallback='')
+        self.assertNotIn('ollama', str(out).lower())
+        c = client_with(lambda r: httpx.Response(404, text='x'))
+        with self.assertRaises(LLMError) as ctx:
+            c.chat_json([])
+        self.assertIn('ollama pull qwen3:4b', str(ctx.exception))
+
+
 class ParseTests(unittest.TestCase):
     def test_tolerant_parsing(self):
         self.assertEqual(parse_json_object('```json\n{"a":1}\n```'), {'a': 1})

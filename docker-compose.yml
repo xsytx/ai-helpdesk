@@ -83,6 +83,8 @@ services:
       # .env.example).
       LLM_PROVIDER: "${LLM_PROVIDER:-ollama}"
       LLM_MODEL: "${LLM_MODEL:-qwen3.5:4b}"
+      # Used when LLM_MODEL is overloaded, over its limit or retired (empty = none).
+      LLM_FALLBACK_MODEL: "${LLM_FALLBACK_MODEL:-}"
       LLM_API_KEY: "${LLM_API_KEY:-}"
       # Inside a container 127.0.0.1 is the container itself, so Ollama on
       # the host is reached through host.docker.internal.
