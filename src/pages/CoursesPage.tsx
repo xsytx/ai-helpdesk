@@ -10,6 +10,7 @@ import { useAuth } from "@/app/AuthContext";
 import { useLocale } from "@/i18n/LocaleContext";
 import { isStaffRole } from "@/features/moderation/api";
 import { cn } from "@/shared/lib/cn";
+import { useIsPhone } from "@/shared/lib/media";
 import { Button } from "@/shared/ui/Button";
 import { Card } from "@/shared/ui/Card";
 import { Mascot } from "@/shared/ui/Mascot";
@@ -310,11 +311,20 @@ function ElectiveLists({ lists }: { lists: Record<string, CourseRef[]> }) {
   );
 }
 
-/** Programs grouped by level, then school, for a <select>. */
+/** A program's line in lists: "Computer Science · EN (10107)". */
+const programLabel = (p: Program) => `${p.title} · ${p.lang}${p.tag ? ` · ${p.tag}` : ""} (${p.code})`;
+
+/**
+ * Programs for a <select>: first those whose courses are added (a curriculum
+ * was imported), then the rest grouped by level and school.
+ */
 function ProgramOptions({ programs }: { programs: Program[] }) {
   const { t } = useLocale();
   const groups = new Map<string, Program[]>();
+  const ready = programs.filter((p) => p.years.length > 0);
+  if (ready.length > 0) groups.set(t("coursesWithCourses"), ready);
   for (const p of programs) {
+    if (p.years.length > 0) continue;
     const key = `${t(levelKey(p.level))} · ${facultyName(p.faculty, t)}`;
     groups.set(key, [...(groups.get(key) ?? []), p]);
   }
@@ -324,7 +334,7 @@ function ProgramOptions({ programs }: { programs: Program[] }) {
         <optgroup key={label} label={label}>
           {list.map((p) => (
             <option key={p.code} value={p.code}>
-              {p.title} · {p.lang}{p.tag ? ` · ${p.tag}` : ""} ({p.code})
+              {programLabel(p)}
             </option>
           ))}
         </optgroup>
@@ -367,6 +377,20 @@ function ProgramChooser({ programs, initial, onDone, onCancel }: {
   const [code, setCode] = useState(initial?.program_code ?? "");
   const [year, setYear] = useState(Math.min(initial?.entry_year ?? latest, latest));
   const field = "mt-1 w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm text-primary outline-none focus:border-brand";
+  // Typing finds a program by name or code (every word a word start): one tap picks it.
+  const [find, setFind] = useState("");
+  const found = useMemo(() => {
+    const words = find.toLowerCase().split(/\s+/).filter(Boolean);
+    if (words.length === 0) return [];
+    return programs
+      .filter((p) => {
+        const hay = `${p.title} ${p.lang} ${p.tag} ${p.code}`.toLowerCase().split(/[\s()·,-]+/);
+        return words.every((w) => hay.some((h) => h.startsWith(w)));
+      })
+      // Programs with courses added first.
+      .sort((a, b) => Number(b.years.length > 0) - Number(a.years.length > 0))
+      .slice(0, 8);
+  }, [find, programs]);
   return (
     <Card className="space-y-3">
       <div className="flex items-start gap-3">
@@ -375,6 +399,47 @@ function ProgramChooser({ programs, initial, onDone, onCancel }: {
           <h2 className="font-semibold text-primary">{t("coursesChooseTitle")}</h2>
           <p className="text-sm text-label">{t("coursesChooseHint")}</p>
         </div>
+      </div>
+      <div>
+        <div className="flex items-center gap-2 rounded-xl border border-border bg-surface px-3 focus-within:border-brand">
+          <Search className="h-4 w-4 shrink-0 text-label" />
+          <input
+            value={find}
+            onChange={(e) => setFind(e.target.value)}
+            maxLength={60}
+            placeholder={t("coursesFindProgram")}
+            aria-label={t("coursesFindProgram")}
+            className="min-w-0 flex-1 bg-transparent py-2 text-sm text-primary outline-none placeholder:text-label/70"
+          />
+        </div>
+        {find.trim() ? (
+          found.length > 0 ? (
+            <ul className="mt-1.5 divide-y divide-border/60 overflow-hidden rounded-xl border border-border/60">
+              {found.map((p) => (
+                <li key={p.code}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCode(p.code);
+                      setFind("");
+                    }}
+                    className="flex w-full items-center justify-between gap-2 bg-surface px-3 py-2 text-left text-sm text-primary hover:bg-background-2"
+                  >
+                    <span className="min-w-0">
+                      <span className="block">{programLabel(p)}</span>
+                      <span className="block text-xs text-label">{t(levelKey(p.level))} · {facultyName(p.faculty, t)}</span>
+                    </span>
+                    {p.years.length > 0 ? (
+                      <span className="shrink-0 rounded-full bg-green-50 px-2 py-0.5 text-[11px] font-semibold text-green-700">{t("coursesWithCourses")}</span>
+                    ) : null}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-1.5 text-xs text-label">{t("coursesNoProgramFound")}</p>
+          )
+        ) : null}
       </div>
       <div className="grid gap-3 sm:grid-cols-[1fr_10rem]">
         <label className="block text-xs font-semibold text-label">
@@ -416,6 +481,8 @@ function ProgramChooser({ programs, initial, onDone, onCancel }: {
 /** Search any course by code or name; results link to the course. */
 function CourseSearch({ q, setQ }: { q: string; setQ: (v: string) => void }) {
   const { t } = useLocale();
+  // The full hint doesn't fit a phone's box: a short one there.
+  const hint = t(useIsPhone() ? "coursesSearchShort" : "coursesSearchPlaceholder");
   const [debounced, setDebounced] = useState(q);
   useEffect(() => {
     const timer = setTimeout(() => setDebounced(q), 250);
@@ -431,7 +498,7 @@ function CourseSearch({ q, setQ }: { q: string; setQ: (v: string) => void }) {
           value={q}
           onChange={(e) => setQ(e.target.value)}
           maxLength={100}
-          placeholder={t("coursesSearchPlaceholder")}
+          placeholder={hint}
           aria-label={t("coursesSearchPlaceholder")}
           className="min-w-0 flex-1 bg-transparent py-1.5 text-base text-primary outline-none placeholder:text-label/70"
         />

@@ -569,7 +569,9 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   `curriculum_electives`, `user_programs` (a student's program + entry year).
   `/courses` (`CoursesPage`) opens on the student's program and current
   semester (`currentSemester`: autumn odd, spring even; first visit = choose
-  program and entry year, `PUT /api/me/program`); the entry year's curriculum
+  program and entry year, `PUT /api/me/program`; a search box finds the program
+  by name or code, and programs with an imported curriculum come first as
+  "Courses added"); the entry year's curriculum
   if imported, else the newest with a note; other programs via
   `?program=`; course search by code or name (`GET /api/courses?q=`,
   typos via trigrams). A course card `/courses/MAT-101` (`CoursePage`, `GET
