@@ -3,7 +3,7 @@
 // any course can be found by code or name. Each course links to its card.
 import {
   courseSlug, currentSemester, useCourseSearch, useCurriculum, useMyProgram, useMyReviews, usePrograms, useSetMyProgram,
-  type CourseRef, type CurriculumItem, type Program,
+  type CourseRef, type CurriculumItem, type Program, type ReviewBrief,
 } from "@/features/courses/api";
 import { facultyName, fill, kindKey, levelKey } from "@/features/courses/labels";
 import { useAuth } from "@/app/AuthContext";
@@ -15,7 +15,7 @@ import { Button } from "@/shared/ui/Button";
 import { Card } from "@/shared/ui/Card";
 import { Mascot } from "@/shared/ui/Mascot";
 import { PageSkeleton } from "@/shared/ui/Skeleton";
-import { BookOpen, ChevronDown, GraduationCap, MessageSquareText, Search, Shuffle } from "lucide-react";
+import { BookOpen, ChevronDown, GraduationCap, MessageSquareText, Search, Shuffle, ThumbsUp } from "lucide-react";
 import { MyReviews } from "@/features/courses/components/MyReviews";
 import { prefersReducedMotion } from "@/shared/lib/motion";
 import { useEffect, useMemo, useState } from "react";
@@ -183,7 +183,7 @@ export function CoursesPage() {
                     </h3>
                     <ul className="divide-y divide-border/60 overflow-hidden rounded-2xl border border-border/60">
                       {s.items.map((it, i) => (
-                        <ItemRow key={i} item={it} />
+                        <ItemRow key={i} item={it} rating={it.course ? curriculum.ratings?.[it.course.code] : undefined} />
                       ))}
                     </ul>
                   </section>
@@ -232,13 +232,37 @@ function CourseLink({ course, className }: { course: CourseRef; className?: stri
   );
 }
 
-function ItemRow({ item }: { item: CurriculumItem }) {
+/** How students rate a course, small: 👍 86% · 7 (the full sentence as its tooltip). */
+function RatingChip({ rating, className }: { rating: ReviewBrief; className?: string }) {
+  const { t } = useLocale();
+  const text = fill(t("coursesRatingTitle"), { pct: rating.recommend_pct, n: rating.count });
+  return (
+    <span
+      title={text}
+      aria-label={text}
+      className={cn(
+        "shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold",
+        rating.recommend_pct >= 70 ? "bg-green-50 text-green-700" : "bg-background-2 text-label",
+        className,
+      )}
+    >
+      <ThumbsUp className="h-3 w-3" aria-hidden />
+      {rating.recommend_pct}% · {rating.count}
+    </span>
+  );
+}
+
+function ItemRow({ item, rating }: { item: CurriculumItem; rating?: ReviewBrief }) {
   const { t } = useLocale();
   if (item.course) {
     return (
       <li className="flex items-center gap-3 bg-surface px-3 py-2.5 text-sm">
         <span className="w-[4.5rem] shrink-0 font-mono text-xs font-semibold text-label">{item.course.code}</span>
-        <CourseLink course={item.course} className="min-w-0 flex-1 font-medium text-primary" />
+        <span className="min-w-0 flex-1">
+          <CourseLink course={item.course} className="font-medium text-primary" />
+          {rating && rating.count > 0 ? <RatingChip rating={rating} className="mt-1 flex w-fit sm:hidden" /> : null}
+        </span>
+        {rating && rating.count > 0 ? <RatingChip rating={rating} className="hidden sm:inline-flex" /> : null}
         <span className="shrink-0 text-xs text-label">{fill(t("coursesEcts"), { n: item.ects })}</span>
       </li>
     );

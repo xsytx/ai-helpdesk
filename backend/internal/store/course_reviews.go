@@ -143,6 +143,32 @@ func (s *PostgresStore) CourseReviewSummary(ctx context.Context, code string) (m
 	return sum, err
 }
 
+// ReviewBriefs: for each of the courses that has visible reviews, how many
+// and the share that recommend it.
+func (s *PostgresStore) ReviewBriefs(ctx context.Context, codes []string) (map[string]models.ReviewBrief, error) {
+	out := map[string]models.ReviewBrief{}
+	if len(codes) == 0 {
+		return out, nil
+	}
+	rows, err := s.pool.Query(ctx, `
+		SELECT r.course_code, count(*)::int, round(100.0 * count(*) FILTER (WHERE recommend) / count(*))::int
+		FROM course_reviews r WHERE r.course_code = ANY($1) AND `+reviewVisible+`
+		GROUP BY r.course_code`, codes)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var code string
+		var b models.ReviewBrief
+		if err := rows.Scan(&code, &b.Count, &b.RecommendPct); err != nil {
+			return nil, err
+		}
+		out[code] = b
+	}
+	return out, rows.Err()
+}
+
 // SetReviewStatus records a moderation result. With onlyIf / onlyText set,
 // it changes only a review still in that status and with that text (a
 // background check never overrides an admin's decision or a newer edit).

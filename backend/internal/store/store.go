@@ -148,6 +148,8 @@ type Store interface {
 	// ListMyCourseReviews: all of a student's own reviews, any status (only they see them).
 	ListMyCourseReviews(ctx context.Context, userID int64) ([]models.CourseReview, error)
 	CourseReviewSummary(ctx context.Context, code string) (models.ReviewSummary, error)
+	// ReviewBriefs: count and recommend % of the visible reviews, per course with any.
+	ReviewBriefs(ctx context.Context, codes []string) (map[string]models.ReviewBrief, error)
 	SetReviewStatus(ctx context.Context, id int64, status, reason, onlyIf, onlyText string) error
 	ReviewsBeingChecked(ctx context.Context) ([]models.CourseReview, error)
 	// SetReviewHelpful / ReportReview: ErrForbidden for your own review, ErrNotFound for a hidden one.

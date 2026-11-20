@@ -188,7 +188,7 @@ export function ModerationPage() {
   return (
     <div className={cn("mx-auto space-y-4", section === "map-editor" ? "max-w-6xl" : "max-w-3xl")}>
       <h1 className="text-xl font-bold text-primary">{t("adminPanel")}</h1>
-      <nav className="flex gap-1 overflow-x-auto border-b border-border/60" aria-label={t("adminPanel")}>
+      <nav className="flex gap-1 overflow-x-auto border-b border-border/60 [scrollbar-width:none] sm:flex-wrap sm:overflow-visible [&::-webkit-scrollbar]:hidden" aria-label={t("adminPanel")}>
         {SECTIONS.map((s) => (
           <button
             key={s.id}

@@ -18,7 +18,6 @@ import {
   useCourseReviews, useDeleteReview, useReportReview, useReviewHelpful, useSaveReview,
   type CourseReview, type ReviewInput, type ReviewSummary, type ReviewTerm,
 } from "../api";
-import { fill } from "../labels";
 import { ReviewHexagon, type ReviewScores } from "./ReviewHexagon";
 
 const TERM_KEY: Record<ReviewTerm, TranslationKey> = { fall: "reviewsTermFall", spring: "reviewsTermSpring", summer: "reviewsTermSummer" };
@@ -115,7 +114,6 @@ function Summary({ summary }: { summary: ReviewSummary }) {
         <div>
           <p className="text-xs text-label">{t("reviewsRecommendQ")}</p>
           <p className="text-2xl font-bold text-primary">{summary.recommend_pct}%</p>
-          <p className="text-xs text-label">{fill(t("reviewsRecommendPct"), { n: summary.recommend_pct })}</p>
         </div>
         <p className="text-xs text-label">{plural(summary.count, "reviewsCount")}</p>
         <p className="max-w-56 text-[11px] text-label">{t("reviewsHexHint")}</p>
@@ -229,7 +227,7 @@ function ReportForm({ id, onDone }: { id: number; onDone: () => void }) {
         maxLength={300}
         placeholder={t("reviewsReportReason")}
         aria-label={t("reviewsReportReason")}
-        className="min-w-0 flex-1 rounded-lg border border-border bg-surface px-2.5 py-1.5 text-xs text-primary outline-none focus:border-brand"
+        className="min-w-0 basis-full rounded-lg border border-border bg-surface px-2.5 py-1.5 text-xs text-primary outline-none focus:border-brand sm:basis-auto sm:flex-1"
       />
       <Button type="submit" size="sm" variant="secondary" className="h-8" disabled={report.isPending}>
         {t("reviewsReportSend")}
@@ -276,24 +274,31 @@ function ScorePicker({ label, low, high, value, onChange }: { label: string; low
   );
 }
 
+/** The last term that has ended: before June the autumn before, else this spring. */
+function lastFinishedTerm(d: Date): { term: ReviewTerm; year: number } {
+  return d.getMonth() < 5 ? { term: "fall", year: d.getFullYear() - 1 } : { term: "spring", year: d.getFullYear() };
+}
+
 function ReviewForm({ code, initial, onDone }: { code: string; initial?: CourseReview; onDone: () => void }) {
   const { t, locale } = useLocale();
   const save = useSaveReview(code);
   const now = new Date().getFullYear();
-  const [form, setForm] = useState<ReviewInput>({
+  const last = lastFinishedTerm(new Date());
+  // "Recommend?" starts unanswered (null): a preset Yes would count for students who never chose it.
+  const [form, setForm] = useState<Omit<ReviewInput, "recommend"> & { recommend: boolean | null }>({
     difficulty: initial?.difficulty ?? 0,
     workload: initial?.workload ?? 0,
     usefulness: initial?.usefulness ?? 0,
     interest: initial?.interest ?? 0,
     practical: initial?.practical ?? 0,
     beginner: initial?.beginner ?? 0,
-    recommend: initial?.recommend ?? true,
+    recommend: initial?.recommend ?? null,
     text: initial?.text ?? "",
-    taken_year: initial?.taken_year ?? now,
-    taken_term: initial?.taken_term ?? "fall",
+    taken_year: initial?.taken_year ?? last.year,
+    taken_term: initial?.taken_term ?? last.term,
   });
   const textLen = form.text.trim().length;
-  const complete = SCORES.every((s) => form[s.key] > 0) && textLen >= 20;
+  const complete = SCORES.every((s) => form[s.key] > 0) && form.recommend !== null && textLen >= 20;
 
   let problem: string | undefined;
   if (save.isError) {
@@ -311,7 +316,7 @@ function ReviewForm({ code, initial, onDone }: { code: string; initial?: CourseR
       className="space-y-3 rounded-2xl border border-border bg-surface p-3"
       onSubmit={(e) => {
         e.preventDefault();
-        if (complete) save.mutate({ ...form, text: form.text.trim() }, { onSuccess: onDone });
+        if (complete && form.recommend !== null) save.mutate({ ...form, recommend: form.recommend, text: form.text.trim() }, { onSuccess: onDone });
       }}
     >
       {/* The hexagon beside the scores only when there is room for both; else under them. */}

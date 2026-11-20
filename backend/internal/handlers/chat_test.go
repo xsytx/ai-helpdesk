@@ -172,6 +172,9 @@ func (s *chatTestStore) ListCourseReviews(context.Context, string, int64, bool, 
 func (s *chatTestStore) ListMyCourseReviews(context.Context, int64) ([]models.CourseReview, error) {
 	return nil, nil
 }
+func (s *chatTestStore) ReviewBriefs(context.Context, []string) (map[string]models.ReviewBrief, error) {
+	return map[string]models.ReviewBrief{}, nil
+}
 func (s *chatTestStore) CourseReviewSummary(context.Context, string) (models.ReviewSummary, error) {
 	return models.ReviewSummary{}, nil
 }

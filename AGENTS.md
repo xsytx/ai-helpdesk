@@ -606,6 +606,10 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   /api/admin/reviews/{id}/publish|keep|reject {text}`: publish/keep apply only
   to the text the admin read, else 409 `changed`), tab badge = how many wait.
   The viewer's own review is always first in the list (never cut by the limit).
+  "Recommend?" starts unanswered (a preset Yes would skew the %); the term
+  defaults to the last finished one. The curriculum list shows each course's
+  rating (`ratings` in `GET /api/curriculum`: count + recommend % of visible
+  reviews, `ReviewBriefs`) as a small "👍 86% · 7" chip.
   The Courses page ends with "My reviews" (a button in its top card jumps
   there; `MyReviews`, `GET /api/me/reviews`: all your reviews, any status,
   with the course name, a small hexagon and a link to the course); only you

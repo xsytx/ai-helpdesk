@@ -59,6 +59,14 @@ export interface Curriculum extends CurriculumInfo {
   tracks: string[];
   semesters: CurriculumSemester[];
   electives: Record<string, CourseRef[]>;
+  /** Course code → its visible reviews in one number (only courses that have reviews). */
+  ratings?: Record<string, ReviewBrief>;
+}
+
+export interface ReviewBrief {
+  count: number;
+  /** The share of reviewers who recommend the course, 0-100. */
+  recommend_pct: number;
 }
 
 export interface Course {

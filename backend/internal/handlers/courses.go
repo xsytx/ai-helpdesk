@@ -77,6 +77,27 @@ func (h *Handlers) GetCurriculum(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "could not load the curriculum")
 		return
 	}
+	// How students rate the plan's courses (the list shows it next to each).
+	var codes []string
+	for _, sem := range cur.Semesters {
+		for _, it := range sem.Items {
+			if it.Course != nil {
+				codes = append(codes, it.Course.Code)
+			}
+			for _, o := range it.Options {
+				codes = append(codes, o.Code)
+			}
+		}
+	}
+	for _, list := range cur.Electives {
+		for _, c := range list {
+			codes = append(codes, c.Code)
+		}
+	}
+	if cur.Ratings, err = h.Store.ReviewBriefs(r.Context(), codes); err != nil {
+		writeError(w, http.StatusInternalServerError, "could not load the curriculum")
+		return
+	}
 	writeJSON(w, http.StatusOK, cur)
 }
 

@@ -21,6 +21,7 @@ func newReviewsEnv(t *testing.T) *modEnv {
 	authMw := middleware.Auth(e.secret)
 	mux := http.NewServeMux()
 	mux.Handle("POST /api/admin/curricula", authMw(http.HandlerFunc(e.h.ImportCurriculum)))
+	mux.Handle("GET /api/curriculum", authMw(http.HandlerFunc(e.h.GetCurriculum)))
 	mux.Handle("GET /api/courses/{code}/reviews", authMw(http.HandlerFunc(e.h.ListCourseReviews)))
 	mux.Handle("GET /api/me/reviews", authMw(http.HandlerFunc(e.h.ListMyReviews)))
 	mux.Handle("PUT /api/courses/{code}/review", authMw(http.HandlerFunc(e.h.SaveCourseReview)))
@@ -282,5 +283,50 @@ func TestCourseReviews(t *testing.T) {
 	}
 	if code, _ := e.call(a, http.MethodDelete, "/api/courses/MAT-101/review", nil); code != http.StatusNotFound {
 		t.Fatalf("delete twice: %d", code)
+	}
+}
+
+// The curriculum list carries each course's rating: visible reviews only
+// (a held one doesn't count), and the share that recommend it.
+func TestCurriculumRatings(t *testing.T) {
+	e := newReviewsEnv(t)
+	a, b, c, admin := e.user("user"), e.user("user"), e.user("user"), e.user("admin")
+	if code, out := e.call(admin, http.MethodPost, "/api/admin/curricula", map[string]any{"text": sampleCurriculum(t)}); code != http.StatusCreated {
+		t.Fatalf("import: %d %v", code, out)
+	}
+	old, err := e.pg.ListCourseReviews(context.Background(), "MAT 101", 0, true, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, r := range old {
+		if err := e.pg.DeleteMyCourseReview(context.Background(), "MAT 101", r.UserID); err != nil {
+			t.Fatal(err)
+		}
+	}
+	save := func(u modUser, review map[string]any, want string) {
+		t.Helper()
+		code, rev := e.call(u, http.MethodPut, "/api/courses/MAT-101/review", review)
+		if code != http.StatusOK {
+			t.Fatalf("save: %d %v", code, rev)
+		}
+		e.waitReview(num(rev["id"]), want)
+	}
+	save(a, goodReview("Hard but fair; the weekly problem sets help a lot."), "ok")
+	no := goodReview("Too fast for me, the lectures skip the basic steps.")
+	no["recommend"] = false
+	save(b, no, "ok")
+	save(c, goodReview("MAYBE this one should be checked by a person first."), "held")
+
+	code, cur := e.call(a, http.MethodGet, "/api/curriculum?program=10101&year=2026", nil)
+	if code != http.StatusOK {
+		t.Fatalf("curriculum: %d %v", code, cur)
+	}
+	ratings, _ := cur["ratings"].(map[string]any)
+	mat, _ := ratings["MAT 101"].(map[string]any)
+	if mat == nil || num(mat["count"]) != 2 || num(mat["recommend_pct"]) != 50 {
+		t.Fatalf("MAT 101 rating: %v (all: %v)", mat, ratings)
+	}
+	if _, has := ratings["MAT 102"]; has {
+		t.Fatalf("a course without reviews has a rating: %v", ratings["MAT 102"])
 	}
 }

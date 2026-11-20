@@ -50,6 +50,15 @@ type CurriculumView struct {
 	Semesters []CurriculumSemester `json:"semesters"`
 	// Elective lists (AE, NAE…) → the courses in them.
 	Electives map[string][]CourseRef `json:"electives"`
+	// Ratings: course code → how its visible reviews recommend it (only
+	// courses of this plan that have reviews).
+	Ratings map[string]ReviewBrief `json:"ratings"`
+}
+
+// ReviewBrief is a course's reviews in one number, for lists.
+type ReviewBrief struct {
+	Count        int `json:"count"`
+	RecommendPct int `json:"recommend_pct"`
 }
 
 // CurriculumSemester is one term.
