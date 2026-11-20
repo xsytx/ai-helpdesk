@@ -254,7 +254,7 @@ function ItemRow({ item }: { item: CurriculumItem }) {
         <span className="shrink-0 text-xs text-label">{fill(t("coursesEcts"), { n: item.ects })}</span>
       </div>
       {item.options && item.options.length > 0 ? (
-        <div className="mt-1.5 flex flex-wrap items-center gap-1.5 pl-[5.25rem]">
+        <div className="mt-1.5 flex flex-wrap items-center gap-1.5 sm:pl-[5.25rem]">
           <span className="text-xs text-label">{t("coursesElectivePick")}:</span>
           {item.options.map((o) =>
             o.name ? (
@@ -263,10 +263,10 @@ function ItemRow({ item }: { item: CurriculumItem }) {
                 to={`/courses/${courseSlug(o.code)}`}
                 viewTransition
                 title={o.name}
-                className="rounded-full border border-border bg-surface px-2.5 py-0.5 text-xs text-primary hover:bg-background-2"
+                className="inline-flex max-w-full items-baseline rounded-full border border-border bg-surface px-2.5 py-0.5 text-xs text-primary hover:bg-background-2"
               >
-                <span className="font-mono font-semibold">{o.code}</span>
-                <span className="ml-1 hidden text-label sm:inline">{o.name}</span>
+                <span className="shrink-0 font-mono font-semibold">{o.code}</span>
+                <span className="ml-1 truncate text-label">{o.name}</span>
               </Link>
             ) : (
               <span key={o.code} className="rounded-full border border-dashed border-border px-2.5 py-0.5 font-mono text-xs font-semibold text-label">

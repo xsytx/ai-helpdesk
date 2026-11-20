@@ -430,7 +430,8 @@ function DescriptionEditor() {
   );
 }
 
-function DescriptionForm({ course, onClose }: { course: Course; onClose: () => void }) {
+/** The three descriptions of a course (admin panel, and on the course card for staff). */
+export function DescriptionForm({ course, onClose, onCard = false }: { course: Course; onClose: () => void; onCard?: boolean }) {
   const { t } = useLocale();
   const save = useUpdateCourse();
   const [en, setEn] = useState(course.description);
@@ -441,14 +442,17 @@ function DescriptionForm({ course, onClose }: { course: Course; onClose: () => v
       className="space-y-2 rounded-2xl border border-border bg-surface p-3"
       onSubmit={(e) => {
         e.preventDefault();
-        save.mutate({ code: course.code, description: en, description_kz: kz, description_ru: ru });
+        // On the card the form closes once saved: the new text shows in its place.
+        save.mutate({ code: course.code, description: en, description_kz: kz, description_ru: ru }, { onSuccess: () => onCard && onClose() });
       }}
     >
-      <p className="font-semibold text-primary">
-        <Link to={`/courses/${courseSlug(course.code)}`} className="hover:underline">
-          {course.code} · {course.name}
-        </Link>
-      </p>
+      {onCard ? null : (
+        <p className="font-semibold text-primary">
+          <Link to={`/courses/${courseSlug(course.code)}`} className="hover:underline">
+            {course.code} · {course.name}
+          </Link>
+        </p>
+      )}
       {([
         [t("coursesAdminDescEn"), en, setEn],
         [t("coursesAdminDescKz"), kz, setKz],

@@ -564,7 +564,9 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   `programs` (portal code "10107", title, level B/M/DR/DS, tag DD/MBA/EMBA,
   language, faculty F_ENG/F_PHIL/F_LAW; 103 seeded from the portal lists),
   `courses` (by code "MAT 101"; names from the portal, English only;
-  descriptions in 3 languages written by admins and kept on re-import),
+  descriptions in 3 languages written by admins and kept on re-import;
+  staff also edit them right on the course card, students see none while
+  empty),
   `curricula`, `curriculum_items` (a course or a slot with `options`),
   `curriculum_electives`, `user_programs` (a student's program + entry year).
   `/courses` (`CoursesPage`) opens on the student's program and current

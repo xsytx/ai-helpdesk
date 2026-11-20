@@ -7,7 +7,11 @@ import { Button } from "@/shared/ui/Button";
 import { Card } from "@/shared/ui/Card";
 import { Mascot } from "@/shared/ui/Mascot";
 import { PageSkeleton } from "@/shared/ui/Skeleton";
-import { ArrowLeft, MessagesSquare } from "lucide-react";
+import { ArrowLeft, MessagesSquare, PenLine } from "lucide-react";
+import { useState } from "react";
+import { useAuth } from "@/app/AuthContext";
+import { isStaffRole } from "@/features/moderation/api";
+import { DescriptionForm } from "@/features/courses/components/CoursesAdminSection";
 import { Link, useParams } from "react-router-dom";
 import { fill, kindKey, levelKey } from "@/features/courses/labels";
 import { CourseReviews } from "@/features/courses/components/CourseReviews";
@@ -17,6 +21,10 @@ export function CoursePage() {
   const { code: slug = "" } = useParams();
   const code = courseFromSlug(slug);
   const { data: course, isPending, isError } = useCourse(code);
+  const { user } = useAuth();
+  const staff = isStaffRole(user?.role);
+  // Staff write the description right here.
+  const [editing, setEditing] = useState(false);
 
   const back = (
     <Link to="/courses" viewTransition className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand hover:underline dark:text-primary">
@@ -72,9 +80,22 @@ export function CoursePage() {
           </div>
         </div>
 
-        <p className={description ? "whitespace-pre-wrap text-sm text-primary" : "text-sm text-label"}>
-          {description || t("courseNoDescription")}
-        </p>
+        {/* No description: students see nothing; staff can add one here. */}
+        {description ? <p className="whitespace-pre-wrap text-sm text-primary">{description}</p> : null}
+        {staff ? (
+          editing ? (
+            <DescriptionForm course={course} onCard onClose={() => setEditing(false)} />
+          ) : (
+            <button
+              type="button"
+              onClick={() => setEditing(true)}
+              className="inline-flex items-center gap-1.5 rounded-lg px-1.5 py-1 text-xs font-semibold text-brand hover:bg-background-2 dark:text-primary"
+            >
+              <PenLine className="h-3.5 w-3.5" />
+              {t(description ? "courseEditDescription" : "courseAddDescription")}
+            </button>
+          )
+        ) : null}
 
         <Button asChild size="sm" variant="secondary">
           <Link to={`/forum?q=${encodeURIComponent(course.code)}`} viewTransition>
@@ -101,7 +122,7 @@ export function CoursePage() {
                   >
                     {p.program_title} · {p.lang}
                   </Link>
-                  <span className="text-label"> · {t(levelKey(p.level))} · {p.year}{p.track && !/^main/i.test(p.track) ? ` · ${p.track}` : ""}</span>
+                  <span className="text-label"> · {t(levelKey(p.level))} · {p.program_code} · {p.year}{p.track && !/^main/i.test(p.track) ? ` · ${p.track}` : ""}</span>
                   <div className="mt-1 flex flex-wrap gap-1.5">
                     {list.map((x, i) => (
                       <span

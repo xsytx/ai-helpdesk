@@ -244,7 +244,12 @@ export function useUpdateCourse() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (c: { code: string; description: string; description_kz: string; description_ru: string }) =>
-      (await apiClient.put<Course>(`/admin/courses/${encodeURIComponent(courseSlug(c.code))}`, c)).data,
+      // The code goes in the address only: the backend refuses unknown fields in the body.
+      (await apiClient.put<Course>(`/admin/courses/${encodeURIComponent(courseSlug(c.code))}`, {
+        description: c.description,
+        description_kz: c.description_kz,
+        description_ru: c.description_ru,
+      })).data,
     onSettled: () => queryClient.invalidateQueries({ queryKey: ["courses"] }),
   });
 }
