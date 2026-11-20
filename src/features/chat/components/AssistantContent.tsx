@@ -1,10 +1,13 @@
 import type { UiChatMessage } from "@/features/chat/api";
+import { LANG_NAME, sourceInOtherLanguage } from "@/features/chat/answerLanguage";
 import { MapLinks } from "@/features/locations/components/MapLinks";
 import { useLocale } from "@/i18n/LocaleContext";
 import { RichText } from "@/shared/ui/RichText";
 import { CheckCircle2, ShieldCheck, ThumbsUp, Users, Zap } from "lucide-react";
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
+
+const fill = (s: string, vars: Record<string, string>) => s.replace(/\{(\w+)\}/g, (_, k: string) => vars[k] ?? "");
 
 function showsKnowledgeBase(msg: UiChatMessage): boolean {
   if (msg.status === "fallback") return false;
@@ -111,6 +114,39 @@ function AssistantBody({ msg }: { msg: UiChatMessage & { onRetry?: () => void } 
 
   if (showsKnowledgeBase(msg)) {
     const fromForum = msg.sourceType === "forum";
+    const discussion = fromForum && msg.sourceThreadId ? (
+      <Link
+        viewTransition
+        // Straight to the answer it came from, which blinks (ThreadDetailPage).
+        to={`/forum/${msg.sourceThreadId}${msg.sourceCommentId ? `#answer-${msg.sourceCommentId}` : ""}`}
+        className="mt-1.5 inline-flex items-center gap-0.5 text-xs font-medium text-primary-light hover:underline"
+      >
+        {t("chatOpenDiscussion")} →
+      </Link>
+    ) : null;
+    // The stored answer is in another language than the reply (an English
+    // question found a Russian entry): the explanation is the answer, the
+    // original is folded under it.
+    const other = sourceInOtherLanguage(msg);
+    if (other) {
+      return (
+        <div className="space-y-2">
+          <RichText text={msg.aiExplanation!} />
+          <details className="group rounded-xl bg-surface/60 px-2.5 py-1.5 text-sm">
+            <summary className="flex cursor-pointer list-none items-center gap-1 text-xs font-semibold text-label hover:text-primary">
+              {fromForum ? <Users className="h-3 w-3 text-accent" aria-hidden /> : null}
+              {fill(t(fromForum ? "chatCommunitySourceOther" : "chatKbSourceOther"), { lang: LANG_NAME[other] })}
+              <span className="transition-transform group-open:rotate-90" aria-hidden>›</span>
+            </summary>
+            <div className="mt-1.5">
+              {fromForum ? <RichText text={msg.forumAnswer!} /> : <p className="whitespace-pre-wrap">{msg.forumAnswer}</p>}
+            </div>
+          </details>
+          {fromForum ? <TrustBadges msg={msg} /> : null}
+          {discussion}
+        </div>
+      );
+    }
     return (
       <div className="space-y-3">
         <div>
@@ -120,16 +156,7 @@ function AssistantBody({ msg }: { msg: UiChatMessage & { onRetry?: () => void } 
           </p>
           {fromForum ? <RichText text={msg.forumAnswer!} /> : <p className="whitespace-pre-wrap">{msg.forumAnswer}</p>}
           {fromForum ? <TrustBadges msg={msg} /> : null}
-          {fromForum && msg.sourceThreadId ? (
-            <Link
-              viewTransition
-              // Straight to the answer it came from, which blinks (ThreadDetailPage).
-              to={`/forum/${msg.sourceThreadId}${msg.sourceCommentId ? `#answer-${msg.sourceCommentId}` : ""}`}
-              className="mt-1.5 inline-flex items-center gap-0.5 text-xs font-medium text-primary-light hover:underline"
-            >
-              {t("chatOpenDiscussion")} →
-            </Link>
-          ) : null}
+          {discussion}
         </div>
         {msg.aiExplanation ? (
           <div>

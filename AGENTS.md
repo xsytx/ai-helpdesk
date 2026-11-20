@@ -173,6 +173,13 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   `LLM_NUM_PREDICT` is 450 for the extra room). Saved in
   `chat_messages.followups`; shown as buttons under the latest answer only
   (`FollowupQuestions` in `ChatPage`), one tap asks it.
+- **Answers in another language than the source (`features/chat/answerLanguage.ts`).**
+  Many knowledge-base entries exist in one language only; the search finds
+  them from any language and the AI explains them in the student's. When the
+  quoted source and the explanation are in different languages (by their
+  letters), the chat shows the explanation as the answer and folds the
+  original under "Source in the knowledge base (Русский)"; copy takes the
+  explanation only.
 - **Follow-up questions.** `ChatAsk` sends the chat's last 6 messages as
   `history` to `/generate-answer`. `ai_ml` (`kb/generation.py`) searches the
   knowledge base with the question alone and with the previous question
@@ -703,6 +710,9 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   the fallback; each model has its own free limit). Google retires model names
   (`gemini-2.5-flash` stopped working in 2026-11): a 404 in `logs ai_ml` = pick
   a current name in AI Studio. The laptop keeps Ollama.
+  Moderation eval on the server with `gemini-3.5-flash-lite` (2026-11-21,
+  `--pause 4.5` for the free 15-a-minute limit): 100% recall, 0 false positives
+  on the 60 cases, same as qwen3.5:4b.
 - The small local model (`qwen3.5:4b`, fits a 4 GB GPU) is weak in Kazakh and
   sometimes picks an odd moderation category; decisions are measured by the
   eval above (last run: 100% recall, 0% false positives on 60 + 24 cases).
