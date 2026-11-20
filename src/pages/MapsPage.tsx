@@ -11,6 +11,7 @@ import { highlight } from "@/shared/lib/highlight";
 import { useLocale } from "@/i18n/LocaleContext";
 import type { TranslationKey } from "@/i18n/translations";
 import { cn } from "@/shared/lib/cn";
+import { safeSession } from "@/shared/lib/storage";
 import { Button } from "@/shared/ui/Button";
 import { Card } from "@/shared/ui/Card";
 import { Armchair, BookOpen, Building2, ConciergeBell, MapPin, Rotate3d, Search, Sparkles, UtensilsCrossed } from "lucide-react";
@@ -31,6 +32,8 @@ const KINDS: { kind: PlaceKind | "all"; key: TranslationKey; icon: typeof MapPin
 
 
 const EXAMPLES = ["F205", "асхана", "library", "SDU Life"];
+/** The start, remembered for this browser session (students usually ask from the room they sit in). */
+const START_KEY = "ai_helpdesk_map_from";
 
 export function MapsPage() {
   const { t, locale } = useLocale();
@@ -96,6 +99,12 @@ export function MapsPage() {
     const name = "room" in target ? target.code : target.kind === "block" && target.block ? fill(t("mapsBlock"), { block: target.block }) : target.name[locale];
     const floor = target.floor;
     const level = "room" in target ? levelOf(target.floor, target.room) : floor;
+    // From a room or place: say where from (and no "up": the way may go down first).
+    if (start && startRoutable && start.code !== target.code) {
+      return floor && floor > 1
+        ? fill(t("mapsGuideFromFloor"), { start: startName, name, floor: level ?? floor })
+        : fill(t("mapsGuideFrom"), { start: startName, name });
+    }
     return floor && floor > 1 ? fill(t("mapsGuideFloor"), { name, floor: level ?? floor }) : fill(t("mapsGuide"), { name });
   })();
 
@@ -137,6 +146,28 @@ export function MapsPage() {
         }
       : { title: target.name[locale], text: target.where[locale] };
 
+  // (b) Remember the start for the session, and bring it back on the next visit to the map.
+  useEffect(() => {
+    if (!params.get("from")) {
+      const saved = safeSession.get(START_KEY);
+      if (saved) update({ from: saved });
+    }
+    // Once, when the page opens.
+  }, []);
+  useEffect(() => {
+    if (startCode) safeSession.set(START_KEY, startCode);
+  }, [startCode]);
+  const setStart = (code: string | null) => {
+    if (!code) safeSession.remove(START_KEY);
+    update({ from: code });
+  };
+  // (a) "Start from here": this place becomes the start; then the student types where they go.
+  const startHere = (code: string) => {
+    update({ from: code, q: null, place: null, cat: null });
+    setDraft("");
+    requestAnimationFrame(() => document.getElementById("maps-search")?.focus({ preventScroll: true }));
+  };
+
   const submit = (e: FormEvent) => {
     e.preventDefault();
     update({ q: draft.trim() || null, place: null });
@@ -173,9 +204,9 @@ export function MapsPage() {
           extra={extra}
           onEntrance={(e) => {
             setFrom(e);
-            update({ from: null });
+            setStart(null);
           }}
-          onStart={(code) => update({ from: code })}
+          onStart={setStart}
         />
         <p className="mt-2 text-xs text-label">
           {t("mapsTry")}{" "}
@@ -222,6 +253,7 @@ export function MapsPage() {
             onPointPick={openPoint}
             popup={popup}
             onMore={() => document.getElementById("place-details")?.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth" })}
+            onStartHere={target && target.code !== startCode ? () => startHere(target.code) : undefined}
             onClosePopup={() => setMapPick(false)}
             onClear={() => update({ q: null, place: null })}
             guide={guide}
@@ -241,6 +273,7 @@ export function MapsPage() {
               startRoutable={startRoutable}
               mapFloor={mapFloor}
               onShowFloor={showFloor}
+              onStartHere={target.code !== startCode ? () => startHere(target.code) : undefined}
               onPlace={(code) => update({ q: null, place: code })}
             />
           ) : q.trim() ? (
@@ -354,6 +387,7 @@ function SearchBox({ draft, setDraft, extra, onSubmit, onPickPlace, onPickRoom }
           aria-controls="maps-suggestions"
           aria-autocomplete="list"
           role="combobox"
+          id="maps-search"
           autoComplete="off"
           className="min-w-0 flex-1 bg-transparent py-1.5 text-base text-primary outline-none placeholder:text-label/70"
         />

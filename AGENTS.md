@@ -358,6 +358,11 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   ("Floor 3A") that shows that floor (`showFloor` on `CampusMap`, scrolling
   the map into view on phones), and the floor on screen (`onFloorChange`)
   highlights its steps.
+  "Start from here" (on the place card and the map's card) makes that place
+  the start, clears the destination and focuses the search; the start is
+  remembered for the browser session (`ai_helpdesk_map_from` in
+  `safeSession`, restored when /navigation opens without `from`; × forgets
+  it), and Barys names it ("From F205 to I310, floor 3A!").
 - **Link previews (`handlers/preview.go`).** Telegram, WhatsApp and other
   link-preview bots don't run JS, so nginx sends their page requests (by
   User-Agent, `map $link_preview_bot`; real files like `/og-image.png`

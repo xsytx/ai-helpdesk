@@ -110,7 +110,7 @@ function steps(t: (k: TranslationKey) => string, block: string | undefined, floo
   return out;
 }
 
-export function PlaceDetails({ target, from, start, startRoutable, mapFloor, onShowFloor, onPlace }: {
+export function PlaceDetails({ target, from, start, startRoutable, mapFloor, onShowFloor, onStartHere, onPlace }: {
   target: Place | RoomCode;
   from: Entrance;
   /** A room or place the route starts from instead of the entrance (chosen above the map). */
@@ -121,6 +121,8 @@ export function PlaceDetails({ target, from, start, startRoutable, mapFloor, onS
   mapFloor?: MapFloor;
   /** A step tapped: show its floor on the map. */
   onShowFloor?: (floor: MapFloor) => void;
+  /** "Start from here": this place becomes the route's start (none when it already is). */
+  onStartHere?: () => void;
   /** Open another place (a block's floor switch: "BLOCK_F" → "BLOCK_F_2"). */
   onPlace?: (code: string) => void;
 }) {
@@ -210,7 +212,19 @@ export function PlaceDetails({ target, from, start, startRoutable, mapFloor, onS
               </div>
             </div>
           ) : null}
-          <CopyLink path={room ? `/navigation?q=${encodeURIComponent(room.code)}` : `/navigation?place=${encodeURIComponent(place!.code)}`} />
+          <div className="mt-2 flex flex-wrap items-center gap-1">
+            <CopyLink path={room ? `/navigation?q=${encodeURIComponent(room.code)}` : `/navigation?place=${encodeURIComponent(place!.code)}`} />
+            {onStartHere ? (
+              <button
+                type="button"
+                onClick={onStartHere}
+                className="inline-flex items-center gap-1.5 rounded-lg px-1.5 py-1 text-xs font-semibold text-brand hover:bg-background-2 dark:text-primary"
+              >
+                <MapPin className="h-3.5 w-3.5" />
+                {t("mapsStartHere")}
+              </button>
+            ) : null}
+          </div>
         </div>
       </div>
 
@@ -334,7 +348,7 @@ function CopyLink({ path }: { path: string }) {
     <button
       type="button"
       onClick={async () => setCopied(await copyText(`${window.location.origin}${path}`))}
-      className="mt-2 inline-flex items-center gap-1.5 rounded-lg px-1.5 py-1 text-xs font-semibold text-brand hover:bg-background-2 dark:text-primary"
+      className="inline-flex items-center gap-1.5 rounded-lg px-1.5 py-1 text-xs font-semibold text-brand hover:bg-background-2 dark:text-primary"
     >
       {copied ? <Check className="h-3.5 w-3.5" /> : <Link2 className="h-3.5 w-3.5" />}
       {copied ? t("mapsLinkCopied") : t("mapsCopyLink")}

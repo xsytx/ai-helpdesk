@@ -10,7 +10,7 @@ import { useLocale } from "@/i18n/LocaleContext";
 import { cn } from "@/shared/lib/cn";
 import { safeStorage } from "@/shared/lib/storage";
 import { Mascot } from "@/shared/ui/Mascot";
-import { ArrowDown, ArrowLeft, ArrowRight, ChevronDown, Eraser, Expand, Footprints, Layers, Shrink, X } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowRight, ChevronDown, Eraser, Expand, Footprints, Layers, MapPin, Shrink, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { PLAN_SCALE, WING_DOOR_X, placeAtPlan, planToUnit, routeBetween, routePoints, upperToFloor1, type Pt } from "../campusShapes";
@@ -80,7 +80,7 @@ function locate(target: Place | RoomCode, points: MapPoint[] | undefined) {
   return { room, place, code, matches, block, schemeBlock, spot, floor, level, upWing };
 }
 
-export function CampusMap({ target, marked, from, start, showFloor, onFloorChange, onPick, onPointPick, popup, onMore, onClosePopup, onClear, guide }: {
+export function CampusMap({ target, marked, from, start, showFloor, onFloorChange, onPick, onPointPick, popup, onMore, onStartHere, onClosePopup, onClear, guide }: {
   /** The room or place you look for (none = the whole campus). */
   target?: Place | RoomCode;
   /** A category chip's places, marked on the map while nothing is picked. */
@@ -103,6 +103,8 @@ export function CampusMap({ target, marked, from, start, showFloor, onFloorChang
   /** The card shown on the map for the place picked there. */
   popup?: MapPopup;
   onMore?: () => void;
+  /** "Start from here": the picked place becomes the route's start. */
+  onStartHere?: () => void;
   /** Closes only the card; the outline and the route stay. */
   onClosePopup?: () => void;
   /** Clears the picked place: no outline, no route. */
@@ -486,10 +488,18 @@ export function CampusMap({ target, marked, from, start, showFloor, onFloorChang
               </button>
             </div>
             <p className="mt-1 text-sm text-label">{popup.text}</p>
-            <button type="button" onClick={onMore} className="mt-2 inline-flex items-center gap-1 text-sm font-semibold text-brand hover:underline dark:text-primary">
-              <ArrowDown className="h-4 w-4" />
-              {t("mapsMore")}
-            </button>
+            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+              <button type="button" onClick={onMore} className="inline-flex items-center gap-1 text-sm font-semibold text-brand hover:underline dark:text-primary">
+                <ArrowDown className="h-4 w-4" />
+                {t("mapsMore")}
+              </button>
+              {onStartHere ? (
+                <button type="button" onClick={onStartHere} className="inline-flex items-center gap-1 text-sm font-semibold text-brand hover:underline dark:text-primary">
+                  <MapPin className="h-4 w-4" />
+                  {t("mapsStartHere")}
+                </button>
+              ) : null}
+            </div>
           </div>
         ) : null}
       </div>
