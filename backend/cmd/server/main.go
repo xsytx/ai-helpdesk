@@ -294,6 +294,8 @@ func main() {
 	mux.Handle("POST /api/chat/conversations/{id}/share", authMw(writeLimiter(http.HandlerFunc(h.ShareChatConversation))))
 	mux.Handle("DELETE /api/chat/conversations/{id}/share", authMw(writeLimiter(http.HandlerFunc(h.UnshareChatConversation))))
 	mux.HandleFunc("GET /api/shared-chats/{token}", h.GetSharedChat)
+	// Link-preview cards for Telegram/WhatsApp/... (nginx sends their bots here).
+	mux.HandleFunc("GET /api/preview/{path...}", h.LinkPreview)
 	mux.Handle("POST /api/chat/ask", authMw(chatLimiter.Wrap(http.HandlerFunc(h.ChatAsk))))
 	// The same, streamed: the answer appears while the model writes it.
 	mux.Handle("POST /api/chat/ask/stream", authMw(chatLimiter.Wrap(http.HandlerFunc(h.ChatAskStream))))
