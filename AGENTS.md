@@ -645,7 +645,9 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   /api/courses/{code}/reviews/ai-summary?lang=en|kz|ru` → `ready` (summary,
   liked, warnings, review_count), `too_few` (< 3 published reviews; the card
   shows a note) or `unavailable` (AI off: a short "try later"). The card asks
-  only when the student clicks "Summarize reviews with AI" ("Hide" closes it). Made by
+  only when the student clicks "Summarize reviews with AI" ("Hide" closes it)
+  and types the finished summary out word by word (`useTyping`, a display
+  effect: the server sends it whole; reduced motion = at once). Made by
   `ai_ml` `POST /summarize-reviews` from `ok` reviews only (never checking or
   held: the text may still be hidden; no author sent), at most 40, most
   helpful first; saved per course and language in `course_review_summaries`

@@ -12,11 +12,12 @@ import { Button } from "@/shared/ui/Button";
 import { Card } from "@/shared/ui/Card";
 import { Mascot } from "@/shared/ui/Mascot";
 import { Clock, EyeOff, Flag, PenLine, Sparkles, ThumbsDown, ThumbsUp, Trash2, TriangleAlert } from "lucide-react";
-import { useState } from "react";
+import { prefersReducedMotion } from "@/shared/lib/motion";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   useCourseReviews, useDeleteReview, useReportReview, useReviewAISummary, useReviewHelpful, useSaveReview,
-  type CourseReview, type ReviewInput, type ReviewSummary, type ReviewTerm,
+  type CourseReview, type ReviewAISummary, type ReviewInput, type ReviewSummary, type ReviewTerm,
 } from "../api";
 import { ReviewHexagon, type ReviewScores } from "./ReviewHexagon";
 
@@ -168,33 +169,90 @@ function AISummary({ code, reviewCount }: { code: string; reviewCount: number })
     );
   }
   if (data?.status !== "ready") return null;
-  const s = data.summary;
+  return <AISummaryCard summary={data.summary} onHide={() => setOpen(false)} />;
+}
+
+/** Text pieces split after spaces: the typing below shows them word by word. */
+const words = (text: string) => text.split(/(?<=\s)/);
+const TYPE_MS = 45;
+
+/**
+ * Shows the summary word by word, the way the chat's answers appear: first
+ * the overview, then each point. (The summary is already complete; this is
+ * only how it is shown. Less motion asked for: all at once.)
+ */
+function useTyping(parts: string[]) {
+  const pieces = parts.map(words);
+  const total = pieces.reduce((n, p) => n + p.length, 0);
+  const key = parts.join("\n");
+  const [shown, setShown] = useState(() => (prefersReducedMotion() ? total : 0));
+  useEffect(() => {
+    if (prefersReducedMotion()) {
+      setShown(total);
+      return;
+    }
+    setShown(0);
+    const timer = window.setInterval(() => {
+      setShown((n) => {
+        if (n + 1 >= total) window.clearInterval(timer);
+        return Math.min(total, n + 1);
+      });
+    }, TYPE_MS);
+    return () => window.clearInterval(timer);
+  }, [key, total]);
+  let start = 0;
+  const visible = pieces.map((p) => {
+    const text = p.slice(0, Math.max(0, shown - start)).join("");
+    start += p.length;
+    return text;
+  });
+  return { visible, done: shown >= total };
+}
+
+function AISummaryCard({ summary: s, onHide }: { summary: ReviewAISummary; onHide: () => void }) {
+  const { t } = useLocale();
+  const { visible, done } = useTyping([s.summary, ...s.liked, ...s.warnings]);
+  const text = visible[0];
+  const liked = visible.slice(1, 1 + s.liked.length).filter(Boolean);
+  const warnings = visible.slice(1 + s.liked.length).filter(Boolean);
+  // The blinking caret sits at the end of whatever is being typed now.
+  const typingIn = done ? "" : warnings.length ? "warnings" : liked.length ? "liked" : "summary";
   return (
-    <section className="space-y-2.5 rounded-2xl border border-brand/25 bg-background-2/50 p-3" aria-label={t("reviewsAiTitle")}>
+    <section className="space-y-2.5 rounded-2xl border border-brand/25 bg-background-2/50 p-3" aria-label={t("reviewsAiTitle")} aria-busy={!done}>
       <div className="flex items-start justify-between gap-2">
         <h3 className="flex items-center gap-1.5 text-sm font-semibold text-primary">
-          <Sparkles className="h-4 w-4 text-brand dark:text-primary" />
+          <Sparkles className={cn("h-4 w-4 text-brand dark:text-primary", !done && "animate-pulse")} />
           {t("reviewsAiTitle")}
         </h3>
-        <button type="button" onClick={() => setOpen(false)} className="text-xs font-semibold text-label hover:text-primary">
+        <button type="button" onClick={onHide} className="text-xs font-semibold text-label hover:text-primary">
           {t("reviewsAiHide")}
         </button>
       </div>
-      <p className="text-sm text-primary [overflow-wrap:anywhere]">{s.summary}</p>
-      {s.liked.length > 0 || s.warnings.length > 0 ? (
+      <p className="text-sm text-primary [overflow-wrap:anywhere]">
+        {text}
+        {typingIn === "summary" ? <Caret /> : null}
+      </p>
+      {liked.length > 0 || warnings.length > 0 ? (
         <div className="grid gap-3 sm:grid-cols-2">
-          <AIPoints title={t("reviewsAiLiked")} items={s.liked} good />
-          <AIPoints title={t("reviewsAiWarnings")} items={s.warnings} />
+          <AIPoints title={t("reviewsAiLiked")} items={liked} good caret={typingIn === "liked"} />
+          <AIPoints title={t("reviewsAiWarnings")} items={warnings} caret={typingIn === "warnings"} />
         </div>
       ) : null}
-      <p className="text-[11px] text-label">
-        {t("reviewsAiBasedOn").replace("{n}", String(s.review_count))} · {t("reviewsAiNote")}
-      </p>
+      {done ? (
+        <p className="text-[11px] text-label">
+          {t("reviewsAiBasedOn").replace("{n}", String(s.review_count))} · {t("reviewsAiNote")}
+        </p>
+      ) : null}
     </section>
   );
 }
 
-function AIPoints({ title, items, good }: { title: string; items: string[]; good?: boolean }) {
+/** The blinking bar after the text being typed. */
+function Caret() {
+  return <span aria-hidden="true" className="ml-0.5 inline-block h-[1em] w-0.5 translate-y-[0.15em] animate-pulse bg-brand dark:bg-primary" />;
+}
+
+function AIPoints({ title, items, good, caret }: { title: string; items: string[]; good?: boolean; caret?: boolean }) {
   if (items.length === 0) return null;
   return (
     <div>
@@ -203,10 +261,14 @@ function AIPoints({ title, items, good }: { title: string; items: string[]; good
         {title}
       </p>
       <ul className="mt-1 space-y-0.5 text-sm text-primary">
-        {items.map((item) => (
-          <li key={item} className="flex gap-1.5 [overflow-wrap:anywhere]">
+        {items.map((item, i) => (
+          // Index keys: while typing, the text of an item changes word by word.
+          <li key={i} className="flex gap-1.5 [overflow-wrap:anywhere]">
             <span aria-hidden="true" className="text-label">•</span>
-            {item}
+            <span>
+              {item}
+              {caret && i === items.length - 1 ? <Caret /> : null}
+            </span>
           </li>
         ))}
       </ul>
