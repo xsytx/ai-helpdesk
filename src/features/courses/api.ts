@@ -340,6 +340,39 @@ export function useCourseReviews(code: string, sort: "new" | "helpful") {
   });
 }
 
+export interface ReviewAISummary {
+  summary: string;
+  liked: string[];
+  warnings: string[];
+  review_count: number;
+  created_at: string;
+}
+
+export type ReviewAISummaryResult =
+  | { status: "ready"; summary: ReviewAISummary }
+  | { status: "too_few"; review_count: number; min: number }
+  | { status: "unavailable" };
+
+/**
+ * The AI's summary of a course's published reviews in the reader's language.
+ * The server keeps it until the reviews change, so asking again is cheap;
+ * `reviewCount` (the visible reviews) is in the key so a new review asks again.
+ */
+export function useReviewAISummary(code: string, locale: Locale, reviewCount: number, enabled: boolean) {
+  return useQuery({
+    queryKey: [...reviewKeys.all, code, "ai", locale, reviewCount] as const,
+    enabled: Boolean(code) && enabled,
+    staleTime: 5 * 60_000,
+    retry: false,
+    queryFn: async () =>
+      (await apiClient.get<ReviewAISummaryResult>(`/courses/${encodeURIComponent(courseSlug(code))}/reviews/ai-summary`, {
+        params: { lang: locale },
+        // Writing a summary can take the AI a while on the first visit after a change.
+        timeout: 150_000,
+      })).data,
+  });
+}
+
 /** Your own reviews of every course, any status (your profile's "My reviews"; only you see it). */
 export function useMyReviews() {
   return useQuery({

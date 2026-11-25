@@ -17,6 +17,7 @@ from .audit import RequestJournal
 from .config import ROOT, Settings, resolve_path
 from .llm import LLMError
 from .moderation import ModerationService
+from .summary import SummaryService
 
 LOGGER = logging.getLogger(__name__)
 TRANSIENT = {'llm_overloaded', 'llm_timeout', 'llm_unavailable'}
@@ -111,6 +112,34 @@ class ModerationError(BaseModel):
     error: str
 
 
+class SummaryReview(BaseModel):
+    """One published review of a course (the backend never sends who wrote it)."""
+    model_config = ConfigDict(extra='forbid', strict=True)
+    text: str = Field(max_length=4000)
+    recommend: bool = False
+    difficulty: int | None = Field(default=None, ge=1, le=5)
+    workload: int | None = Field(default=None, ge=1, le=5)
+    usefulness: int | None = Field(default=None, ge=1, le=5)
+    interest: int | None = Field(default=None, ge=1, le=5)
+    practical: int | None = Field(default=None, ge=1, le=5)
+    beginner: int | None = Field(default=None, ge=1, le=5)
+
+
+class SummaryRequest(BaseModel):
+    model_config = ConfigDict(extra='forbid', strict=True)
+    course: str = Field(min_length=1, max_length=300)
+    language: Literal['ru', 'kk', 'en']
+    reviews: list[SummaryReview] = Field(min_length=1, max_length=100)
+    averages: dict[str, float] = Field(default_factory=dict)
+
+
+class SummaryResponse(BaseModel):
+    request_id: str
+    summary: str
+    liked: list[str]
+    warnings: list[str]
+
+
 def background(payload):
     """history/forum для сервиса — только непустые (сервис их не требует)."""
     out = {}
@@ -138,7 +167,7 @@ def build_runtime(settings):
     return service, ModerationService(client), client, len(index)
 
 
-def create_app(service=None, journal=None, moderator=None, llm_client=None, settings=None):
+def create_app(service=None, journal=None, moderator=None, llm_client=None, settings=None, summarizer=None):
     """service/journal/moderator можно подменить в тестах — тогда модели не загружаются."""
     state = {}
 
@@ -156,6 +185,7 @@ def create_app(service=None, journal=None, moderator=None, llm_client=None, sett
         app.state.service = svc
         app.state.moderator = mod if mod is not None else ModerationService(client)
         app.state.llm = client
+        app.state.summarizer = summarizer if summarizer is not None else SummaryService(client)
         app.state.index_size = size
         app.state.gate = threading.BoundedSemaphore(max(1, cfg.max_concurrency))
         app.state.queue_timeout = cfg.queue_timeout
@@ -317,6 +347,28 @@ def create_app(service=None, journal=None, moderator=None, llm_client=None, sett
         except Exception:
             LOGGER.exception('Moderation failed: %s', request_id)
             return JSONResponse(ModerationError(request_id=request_id, error='moderation_unavailable').model_dump(), status_code=503)
+        finally:
+            app.state.gate.release()
+
+    @app.post('/summarize-reviews', response_model=SummaryResponse,
+              responses={502: {'model': ErrorResponse}, 503: {'model': ErrorResponse}})
+    def summarize_reviews(payload: SummaryRequest):
+        """AI summary of one course's reviews (the backend caches it until the reviews change)."""
+        request_id = str(uuid4())
+        if not app.state.gate.acquire(timeout=app.state.queue_timeout):
+            return JSONResponse({'request_id': request_id, 'status': 'error', 'error': 'service_busy'}, status_code=503)
+        try:
+            out = app.state.summarizer.summarize(payload.course, payload.language,
+                                                 [r.model_dump() for r in payload.reviews], payload.averages)
+            LOGGER.info('Review summary %s: %s, %d reviews', request_id, payload.course, len(payload.reviews))
+            return SummaryResponse(request_id=request_id, **out)
+        except LLMError as exc:
+            code = 503 if exc.code in TRANSIENT else 502
+            return JSONResponse({'request_id': request_id, 'status': 'error', 'error': exc.code}, status_code=code)
+        except Exception:
+            LOGGER.exception('Review summary failed: %s', request_id)
+            return JSONResponse({'request_id': request_id, 'status': 'error', 'error': 'pipeline_unavailable'},
+                                status_code=503)
         finally:
             app.state.gate.release()
 

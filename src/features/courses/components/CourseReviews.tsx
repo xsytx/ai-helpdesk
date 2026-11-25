@@ -11,11 +11,11 @@ import { formatRelativeTime } from "@/shared/lib/format";
 import { Button } from "@/shared/ui/Button";
 import { Card } from "@/shared/ui/Card";
 import { Mascot } from "@/shared/ui/Mascot";
-import { Clock, EyeOff, Flag, PenLine, ThumbsDown, ThumbsUp, Trash2 } from "lucide-react";
+import { Clock, EyeOff, Flag, PenLine, Sparkles, ThumbsDown, ThumbsUp, Trash2, TriangleAlert } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import {
-  useCourseReviews, useDeleteReview, useReportReview, useReviewHelpful, useSaveReview,
+  useCourseReviews, useDeleteReview, useReportReview, useReviewAISummary, useReviewHelpful, useSaveReview,
   type CourseReview, type ReviewInput, type ReviewSummary, type ReviewTerm,
 } from "../api";
 import { ReviewHexagon, type ReviewScores } from "./ReviewHexagon";
@@ -66,6 +66,7 @@ export function CourseReviews({ code }: { code: string }) {
       {isPending ? <div className="h-24 animate-pulse rounded-2xl bg-background-2" /> : null}
       {isError ? <p className="text-sm text-error">{t("coursesLoadFailed")}</p> : null}
       {data && data.summary.count > 0 ? <Summary summary={data.summary} /> : null}
+      {data && data.summary.count > 0 ? <AISummary code={code} reviewCount={data.summary.count} /> : null}
 
       {data ? (
         editing || !mine ? (
@@ -118,6 +119,72 @@ function Summary({ summary }: { summary: ReviewSummary }) {
         <p className="text-xs text-label">{plural(summary.count, "reviewsCount")}</p>
         <p className="max-w-56 text-[11px] text-label">{t("reviewsHexHint")}</p>
       </div>
+    </div>
+  );
+}
+
+/**
+ * The AI's overview of the published reviews (made on the server, saved until
+ * the reviews change). Fewer than 3 published reviews: a short note instead;
+ * the AI off or failing: nothing, the reviews below are enough.
+ */
+function AISummary({ code, reviewCount }: { code: string; reviewCount: number }) {
+  const { t, locale } = useLocale();
+  const { data, isPending } = useReviewAISummary(code, locale, reviewCount, true);
+  if (isPending) {
+    return (
+      <p className="flex items-center gap-2 rounded-2xl border border-dashed border-border px-3 py-2.5 text-sm text-label" aria-live="polite">
+        <Sparkles className="h-4 w-4 shrink-0 animate-pulse motion-reduce:animate-none" />
+        {t("reviewsAiLoading")}
+      </p>
+    );
+  }
+  if (data?.status === "too_few") {
+    return (
+      <p className="flex items-center gap-2 text-xs text-label">
+        <Sparkles className="h-3.5 w-3.5 shrink-0" />
+        {t("reviewsAiSoon").replace("{n}", String(data.min))}
+      </p>
+    );
+  }
+  if (data?.status !== "ready") return null;
+  const s = data.summary;
+  return (
+    <section className="space-y-2.5 rounded-2xl border border-brand/25 bg-background-2/50 p-3" aria-label={t("reviewsAiTitle")}>
+      <h3 className="flex items-center gap-1.5 text-sm font-semibold text-primary">
+        <Sparkles className="h-4 w-4 text-brand dark:text-primary" />
+        {t("reviewsAiTitle")}
+      </h3>
+      <p className="text-sm text-primary [overflow-wrap:anywhere]">{s.summary}</p>
+      {s.liked.length > 0 || s.warnings.length > 0 ? (
+        <div className="grid gap-3 sm:grid-cols-2">
+          <AIPoints title={t("reviewsAiLiked")} items={s.liked} good />
+          <AIPoints title={t("reviewsAiWarnings")} items={s.warnings} />
+        </div>
+      ) : null}
+      <p className="text-[11px] text-label">
+        {t("reviewsAiBasedOn").replace("{n}", String(s.review_count))} · {t("reviewsAiNote")}
+      </p>
+    </section>
+  );
+}
+
+function AIPoints({ title, items, good }: { title: string; items: string[]; good?: boolean }) {
+  if (items.length === 0) return null;
+  return (
+    <div>
+      <p className={cn("flex items-center gap-1 text-xs font-semibold", good ? "text-green-700 dark:text-green-400" : "text-amber-800 dark:text-amber-300")}>
+        {good ? <ThumbsUp className="h-3.5 w-3.5" /> : <TriangleAlert className="h-3.5 w-3.5" />}
+        {title}
+      </p>
+      <ul className="mt-1 space-y-0.5 text-sm text-primary">
+        {items.map((item) => (
+          <li key={item} className="flex gap-1.5 [overflow-wrap:anywhere]">
+            <span aria-hidden="true" className="text-label">•</span>
+            {item}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

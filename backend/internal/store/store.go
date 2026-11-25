@@ -148,6 +148,12 @@ type Store interface {
 	// ListMyCourseReviews: all of a student's own reviews, any status (only they see them).
 	ListMyCourseReviews(ctx context.Context, userID int64) ([]models.CourseReview, error)
 	CourseReviewSummary(ctx context.Context, code string) (models.ReviewSummary, error)
+	// ReviewsForAISummary: the published reviews an AI summary is made from (at most limit),
+	// a fingerprint of all of them and how many there are.
+	ReviewsForAISummary(ctx context.Context, code string, limit int) ([]models.CourseReview, string, int, error)
+	// GetReviewAISummary: ErrNotFound when the course has none in that language yet.
+	GetReviewAISummary(ctx context.Context, code, lang string) (models.ReviewAISummary, error)
+	SaveReviewAISummary(ctx context.Context, code, lang string, v models.ReviewAISummary) (models.ReviewAISummary, error)
 	// ReviewBriefs: count and recommend % of the visible reviews, per course with any.
 	ReviewBriefs(ctx context.Context, codes []string) (map[string]models.ReviewBrief, error)
 	SetReviewStatus(ctx context.Context, id int64, status, reason, onlyIf, onlyText string) error

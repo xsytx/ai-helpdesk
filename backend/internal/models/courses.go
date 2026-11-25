@@ -174,6 +174,17 @@ type CourseReviewInput struct {
 }
 
 // ReviewSummary is the averages of a course's visible reviews.
+// ReviewAISummary is the AI's overview of a course's published reviews in
+// one language (saved until the reviews change; Fingerprint says which ones).
+type ReviewAISummary struct {
+	Summary     string    `json:"summary"`
+	Liked       []string  `json:"liked"`
+	Warnings    []string  `json:"warnings"`
+	ReviewCount int       `json:"review_count"`
+	CreatedAt   time.Time `json:"created_at"`
+	Fingerprint string    `json:"-"`
+}
+
 type ReviewSummary struct {
 	Count        int     `json:"count"`
 	Difficulty   float64 `json:"difficulty"`

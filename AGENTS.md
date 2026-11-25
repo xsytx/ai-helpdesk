@@ -639,6 +639,18 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   there; `MyReviews`, `GET /api/me/reviews`: all your reviews, any status,
   with the course name, a small hexagon and a link to the course); only you
   see it, never on a profile, since reviews are anonymous.
+  **AI summary of the reviews** (`028_review_ai_summaries.sql`,
+  `handlers/review_ai_summary.go`, `store/review_ai_summaries.go`,
+  `ai_ml/kb/summary.py`, `AISummary` in `CourseReviews.tsx`): `GET
+  /api/courses/{code}/reviews/ai-summary?lang=en|kz|ru` → `ready` (summary,
+  liked, warnings, review_count), `too_few` (< 3 published reviews; the card
+  shows a note) or `unavailable` (AI off: the card shows nothing). Made by
+  `ai_ml` `POST /summarize-reviews` from `ok` reviews only (never checking or
+  held: the text may still be hidden; no author sent), at most 40, most
+  helpful first; saved per course and language in `course_review_summaries`
+  with a fingerprint of those reviews (ids + edit times) and made again only
+  when it changes, one generation at a time per course and language. Works
+  for any course, also ones imported later.
   The card shows them as a hexagon (`ReviewHexagon`: averages big with each
   axis's value, a live one in the form, a small one per review); axes are
   "bigger is better", so difficulty and workload are flipped (6 − score) into
@@ -660,7 +672,7 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
 - **Every public SQL read must hide held posts**: use `threadVisible` /
   `commentVisible` in `backend/internal/store/postgres.go`.
 - **Schema changes** are idempotent SQL applied on every start
-  (`001_init.sql` + `003_chat.sql` + `004_faq.sql` + `005_search.sql` + `006_chat_feedback.sql` + `007_forum_extras.sql` + `008_reputation.sql` + `009_profiles.sql` + `010_tags.sql` + `011_forum_answers.sql` + `012_chat_followups.sql` + `013_chat_trust_share.sql` + `014_edits.sql` + `015_saved_restrict.sql` + `016_notification_events.sql` + `017_chat_source_comment.sql` + `018_location_reports.sql` + `019_map_points.sql` + `020_map_extras.sql` + `021_location_photos.sql` + `022_courses.sql` + `023_course_reviews.sql` + `024_floor4.sql` + `025_floor3.sql` + `026_map_tours.sql` + `027_review_axes.sql` in `Migrate`, `002_moderation.sql` in
+  (`001_init.sql` + `003_chat.sql` + `004_faq.sql` + `005_search.sql` + `006_chat_feedback.sql` + `007_forum_extras.sql` + `008_reputation.sql` + `009_profiles.sql` + `010_tags.sql` + `011_forum_answers.sql` + `012_chat_followups.sql` + `013_chat_trust_share.sql` + `014_edits.sql` + `015_saved_restrict.sql` + `016_notification_events.sql` + `017_chat_source_comment.sql` + `018_location_reports.sql` + `019_map_points.sql` + `020_map_extras.sql` + `021_location_photos.sql` + `022_courses.sql` + `023_course_reviews.sql` + `024_floor4.sql` + `025_floor3.sql` + `026_map_tours.sql` + `027_review_axes.sql` + `028_review_ai_summaries.sql` in `Migrate`, `002_moderation.sql` in
   `MigrateModeration`): `CREATE ... IF NOT EXISTS` /
   `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`.
 - **Store interface**: adding a method to `store.Store` also needs a stub on
@@ -745,8 +757,8 @@ streaming answers with a stop button; reputation, levels and top
 helpers; photos on questions and answers; avatars on the server; public
 profile pages.
 
-Courses: story 16 (catalogue) and reviews (17-18) done; an AI summary of
-reviews was postponed by the user. Maps: floors on the site are 1, 2, 3, 4 (students say 3A/3B);
+Courses: story 16 (catalogue) and reviews (17-18) done, with an AI summary
+of each course's reviews (2026-11-25). Maps: floors on the site are 1, 2, 3, 4 (students say 3A/3B);
 routes go to the wing elevator and on to the room upstairs. Ideas: search suggestions, Ctrl+K
 search everywhere, PWA, admin stats page, scheduled backups, CI checks on
 GitHub. Optional: stop admins approving their own flagged

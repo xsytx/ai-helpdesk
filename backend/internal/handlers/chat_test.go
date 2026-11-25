@@ -178,6 +178,15 @@ func (s *chatTestStore) ReviewBriefs(context.Context, []string) (map[string]mode
 func (s *chatTestStore) CourseReviewSummary(context.Context, string) (models.ReviewSummary, error) {
 	return models.ReviewSummary{}, nil
 }
+func (s *chatTestStore) ReviewsForAISummary(context.Context, string, int) ([]models.CourseReview, string, int, error) {
+	return nil, "", 0, nil
+}
+func (s *chatTestStore) GetReviewAISummary(context.Context, string, string) (models.ReviewAISummary, error) {
+	return models.ReviewAISummary{}, store.ErrNotFound
+}
+func (s *chatTestStore) SaveReviewAISummary(_ context.Context, _, _ string, v models.ReviewAISummary) (models.ReviewAISummary, error) {
+	return v, nil
+}
 func (s *chatTestStore) SetReviewStatus(context.Context, int64, string, string, string, string) error {
 	return nil
 }
