@@ -67,6 +67,9 @@ export interface ReviewBrief {
   count: number;
   /** The share of reviewers who recommend the course, 0-100. */
   recommend_pct: number;
+  /** Averages 1-5 (for sorting electives). */
+  difficulty: number;
+  usefulness: number;
 }
 
 export interface Course {
@@ -132,6 +135,7 @@ const keys = {
   course: (code: string) => ["courses", "course", code] as const,
   mine: ["courses", "mine"] as const,
   curricula: ["courses", "curricula"] as const,
+  missing: ["courses", "missing-descriptions"] as const,
 };
 
 export function usePrograms() {
@@ -245,6 +249,24 @@ export function useDeleteCurriculum() {
       await apiClient.delete(`/admin/curricula/${id}`);
     },
     onSettled: () => queryClient.invalidateQueries({ queryKey: ["courses"] }),
+  });
+}
+
+/** A taught course still without a description in some language (admin). */
+export interface DescriptionGap {
+  code: string;
+  name: string;
+  ects: number;
+  /** How many programs teach it. */
+  programs: number;
+  missing: ("en" | "kz" | "ru")[];
+}
+
+/** Admin: taught courses that still need a description, none at all first, then the most used. */
+export function useMissingDescriptions() {
+  return useQuery({
+    queryKey: keys.missing,
+    queryFn: async () => (await apiClient.get<{ courses: DescriptionGap[]; used: number }>("/admin/courses/missing-descriptions")).data,
   });
 }
 

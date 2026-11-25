@@ -332,6 +332,7 @@ func main() {
 	mux.Handle("GET /api/admin/curricula", authMw(http.HandlerFunc(h.ListCurricula)))
 	mux.Handle("DELETE /api/admin/curricula/{id}", authMw(writeLimiter(http.HandlerFunc(h.DeleteCurriculum))))
 	mux.Handle("PUT /api/admin/courses/{code}", authMw(writeLimiter(http.HandlerFunc(h.UpdateCourse))))
+	mux.Handle("GET /api/admin/courses/missing-descriptions", authMw(http.HandlerFunc(h.CoursesMissingDescriptions)))
 	mux.Handle("GET /api/map/photos", authMw(http.HandlerFunc(h.ListLocationPhotos)))
 	mux.Handle("POST /api/location-reports/{id}/photo", authMw(writeLimiter(http.HandlerFunc(h.UploadReportPhoto))))
 	mux.Handle("POST /api/location-photos", authMw(writeLimiter(http.HandlerFunc(h.SuggestLocationPhoto))))

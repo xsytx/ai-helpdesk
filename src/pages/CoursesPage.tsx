@@ -5,6 +5,7 @@ import {
   courseSlug, currentSemester, useCourseSearch, useCurriculum, useMyProgram, useMyReviews, usePrograms, useSetMyProgram,
   type CourseRef, type CurriculumItem, type Program, type ReviewBrief,
 } from "@/features/courses/api";
+import { ELECTIVE_ORDERS, asElectiveOrder, orderByReviews, type ElectiveOrder } from "@/features/courses/electiveOrder";
 import { facultyName, fill, kindKey, levelKey } from "@/features/courses/labels";
 import { useAuth } from "@/app/AuthContext";
 import { useLocale } from "@/i18n/LocaleContext";
@@ -15,7 +16,7 @@ import { Button } from "@/shared/ui/Button";
 import { Card } from "@/shared/ui/Card";
 import { Mascot } from "@/shared/ui/Mascot";
 import { PageSkeleton } from "@/shared/ui/Skeleton";
-import { BookOpen, ChevronDown, GraduationCap, MessageSquareText, Search, Shuffle } from "lucide-react";
+import { ArrowDownUp, BookOpen, ChevronDown, GraduationCap, MessageSquareText, Search, Shuffle, ThumbsUp } from "lucide-react";
 import { MyReviews } from "@/features/courses/components/MyReviews";
 import { RatingChip } from "@/features/courses/components/RatingChip";
 import { prefersReducedMotion } from "@/shared/lib/motion";
@@ -62,6 +63,13 @@ export function CoursesPage() {
   const asked = params.get("sem");
   const sem = asked && (asked === "all" || numbers.includes(Number(asked))) ? asked : nowSemester ? String(nowSemester) : "all";
   const shown = curriculum?.semesters.filter((s) => sem === "all" || String(s.number) === sem) ?? [];
+  // Electives ordered by their reviews (?order=); required courses keep their place.
+  const order = asElectiveOrder(params.get("order"));
+  const hasChoices = Boolean(
+    curriculum &&
+      (curriculum.semesters.some((s) => s.items.some((it) => (it.options?.length ?? 0) > 1)) ||
+        Object.values(curriculum.electives).some((l) => l.length > 1)),
+  );
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
@@ -172,7 +180,29 @@ export function CoursesPage() {
                 ) : (
                   <span className="text-xs text-label">{curriculum.track} · {curriculum.year}</span>
                 )}
+                {hasChoices ? (
+                  <label className="relative ml-auto inline-flex items-center">
+                    <span className="sr-only">{t("coursesOrder")}</span>
+                    <ArrowDownUp className="pointer-events-none absolute left-2.5 h-4 w-4 text-label" aria-hidden />
+                    <select
+                      value={order}
+                      onChange={(e) => set({ order: e.target.value || null })}
+                      title={t("coursesOrder")}
+                      className={cn(
+                        "h-9 rounded-xl border bg-surface pl-8 pr-2 text-sm font-semibold text-primary",
+                        order ? "border-brand" : "border-border",
+                      )}
+                    >
+                      {ELECTIVE_ORDERS.map((o) => (
+                        <option key={o.id} value={o.id}>
+                          {o.id ? t(o.key) : `${t("coursesOrder")}: ${t(o.key)}`}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ) : null}
               </div>
+              {order && hasChoices ? <p className="-mt-2 text-xs text-label">{t("coursesOrderHint")}</p> : null}
 
               <div className="space-y-5">
                 {shown.map((s) => (
@@ -184,14 +214,14 @@ export function CoursesPage() {
                     </h3>
                     <ul className="divide-y divide-border/60 overflow-hidden rounded-2xl border border-border/60">
                       {s.items.map((it, i) => (
-                        <ItemRow key={i} item={it} rating={it.course ? curriculum.ratings?.[it.course.code] : undefined} />
+                        <ItemRow key={i} item={it} ratings={curriculum.ratings} order={order} />
                       ))}
                     </ul>
                   </section>
                 ))}
               </div>
 
-              <ElectiveLists lists={curriculum.electives} />
+              <ElectiveLists lists={curriculum.electives} ratings={curriculum.ratings} order={order} />
             </>
           ) : curriculumPending ? (
             <PageSkeleton rows={2} title={false} />
@@ -233,8 +263,35 @@ function CourseLink({ course, className }: { course: CourseRef; className?: stri
   );
 }
 
-function ItemRow({ item, rating }: { item: CurriculumItem; rating?: ReviewBrief }) {
+/**
+ * How an elective is rated, in the measure the list is ordered by: a thumbs-up
+ * with the recommend %, "difficulty 2.1/5" or "useful 4.5/5". Nothing without reviews.
+ */
+function ElectiveScore({ rating, order }: { rating?: ReviewBrief; order: ElectiveOrder }) {
   const { t } = useLocale();
+  if (!rating || rating.count === 0) return null;
+  const text =
+    order === "easiest"
+      ? fill(t("coursesScoreDifficulty"), { n: rating.difficulty.toFixed(1) })
+      : order === "useful"
+        ? fill(t("coursesScoreUseful"), { n: rating.usefulness.toFixed(1) })
+        : null;
+  const title = fill(t("coursesRatingTitle"), { pct: rating.recommend_pct, n: rating.count });
+  return (
+    <span title={title} className="ml-1.5 inline-flex shrink-0 items-center gap-0.5 text-[11px] font-semibold text-green-700 dark:text-green-400">
+      {text ?? (
+        <>
+          <ThumbsUp className="h-3 w-3" aria-hidden />
+          {rating.recommend_pct}%
+        </>
+      )}
+    </span>
+  );
+}
+
+function ItemRow({ item, ratings, order }: { item: CurriculumItem; ratings?: Record<string, ReviewBrief>; order: ElectiveOrder }) {
+  const { t } = useLocale();
+  const rating = item.course ? ratings?.[item.course.code] : undefined;
   if (item.course) {
     return (
       <li className="flex items-center gap-3 bg-surface px-3 py-2.5 text-sm">
@@ -261,7 +318,7 @@ function ItemRow({ item, rating }: { item: CurriculumItem; rating?: ReviewBrief 
       {item.options && item.options.length > 0 ? (
         <div className="mt-1.5 flex flex-wrap items-center gap-1.5 sm:pl-[5.25rem]">
           <span className="text-xs text-label">{t("coursesElectivePick")}:</span>
-          {item.options.map((o) =>
+          {orderByReviews(item.options, ratings, order).map((o) =>
             o.name ? (
               <Link
                 key={o.code}
@@ -272,6 +329,7 @@ function ItemRow({ item, rating }: { item: CurriculumItem; rating?: ReviewBrief 
               >
                 <span className="shrink-0 font-mono font-semibold">{o.code}</span>
                 <span className="ml-1 truncate text-label">{o.name}</span>
+                <ElectiveScore rating={ratings?.[o.code]} order={order} />
               </Link>
             ) : (
               <span key={o.code} className="rounded-full border border-dashed border-border px-2.5 py-0.5 font-mono text-xs font-semibold text-label">
@@ -285,12 +343,13 @@ function ItemRow({ item, rating }: { item: CurriculumItem; rating?: ReviewBrief 
   );
 }
 
-function ElectiveLists({ lists }: { lists: Record<string, CourseRef[]> }) {
+function ElectiveLists({ lists, ratings, order }: { lists: Record<string, CourseRef[]>; ratings?: Record<string, ReviewBrief>; order: ElectiveOrder }) {
   const { t } = useLocale();
   const kinds = Object.keys(lists).filter((k) => lists[k].length > 0);
   if (kinds.length === 0) return null;
   return (
-    <details className="group rounded-2xl border border-border/60">
+    // Opened while the electives are ordered: the order is what the student asked to see.
+    <details className="group rounded-2xl border border-border/60" open={order ? true : undefined}>
       <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-2.5 text-sm font-semibold text-primary">
         {t("coursesElectiveLists")}
         <ChevronDown className="h-4 w-4 text-label transition-transform group-open:rotate-180" />
@@ -302,10 +361,13 @@ function ElectiveLists({ lists }: { lists: Record<string, CourseRef[]> }) {
               {k} · {t(kindKey(k))} ({lists[k].length})
             </h4>
             <ul className="grid gap-x-4 gap-y-1 sm:grid-cols-2">
-              {lists[k].map((c) => (
+              {orderByReviews(lists[k], ratings, order).map((c) => (
                 <li key={c.code} className="flex gap-2 text-sm">
                   <span className="w-[4.5rem] shrink-0 font-mono text-xs font-semibold leading-5 text-label">{c.code}</span>
-                  <CourseLink course={c} className="min-w-0 text-primary" />
+                  <span className="min-w-0">
+                    <CourseLink course={c} className="text-primary" />
+                    <ElectiveScore rating={ratings?.[c.code]} order={order} />
+                  </span>
                 </li>
               ))}
             </ul>

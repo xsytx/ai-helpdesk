@@ -55,10 +55,13 @@ type CurriculumView struct {
 	Ratings map[string]ReviewBrief `json:"ratings"`
 }
 
-// ReviewBrief is a course's reviews in one number, for lists.
+// ReviewBrief is a course's reviews in a few numbers, for lists (and for
+// sorting electives: easiest, most useful).
 type ReviewBrief struct {
-	Count        int `json:"count"`
-	RecommendPct int `json:"recommend_pct"`
+	Count        int     `json:"count"`
+	RecommendPct int     `json:"recommend_pct"`
+	Difficulty   float64 `json:"difficulty"` // average 1-5
+	Usefulness   float64 `json:"usefulness"` // average 1-5
 }
 
 // CurriculumSemester is one term.
@@ -85,6 +88,16 @@ type CourseRef struct {
 	Code string `json:"code"`
 	Name string `json:"name"`
 	ECTS int    `json:"ects"`
+}
+
+// CourseDescriptionGap is a course taught in some program that has no
+// description in one or more languages (admin panel → Courses).
+type CourseDescriptionGap struct {
+	Code     string   `json:"code"`
+	Name     string   `json:"name"`
+	ECTS     int      `json:"ects"`
+	Programs int      `json:"programs"` // how many programs teach it
+	Missing  []string `json:"missing"`  // en, kz, ru
 }
 
 // CourseDetail is the course card: the course and where it is taught.

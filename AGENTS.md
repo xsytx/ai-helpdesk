@@ -586,7 +586,11 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   `courses` (by code "MAT 101"; names from the portal, English only;
   descriptions in 3 languages written by admins and kept on re-import;
   staff also edit them right on the course card, students see none while
-  empty; many at once from a CSV in admin → Courses → "Import descriptions":
+  empty; admin → Courses → "Courses without descriptions"
+  (`GET /api/admin/courses/missing-descriptions`, `MissingDescriptions.tsx`)
+  lists taught courses missing a language, none at all first, then by how many
+  programs teach them, with "Write" and a CSV in the import format;
+  many at once from a CSV in admin → Courses → "Import descriptions":
   `descriptionsCsv.ts` reads code + description_en/kz/ru, comma or Excel's
   semicolon, BOM ok, empty cell = keep; saved one by one through PUT
   /api/admin/courses/{code}, retrying on 429. SDU has no public course
@@ -639,6 +643,11 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   defaults to the last finished one. The curriculum list shows each course's
   rating (`ratings` in `GET /api/curriculum`: count + recommend % of visible
   reviews, `ReviewBriefs`) as a small "👍 86% · 7" chip.
+  "Order electives" (`?order=recommended|easiest|useful`,
+  `features/courses/electiveOrder.ts`) sorts the options of elective slots and
+  the elective lists by those reviews (`ReviewBrief` also has the average
+  difficulty and usefulness); courses without reviews follow in plan order,
+  required courses never move.
   The Courses page ends with "My reviews" (a button in its top card jumps
   there; `MyReviews`, `GET /api/me/reviews`: all your reviews, any status,
   with the course name, a small hexagon and a link to the course); only you

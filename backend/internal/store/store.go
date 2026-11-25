@@ -134,6 +134,9 @@ type Store interface {
 	SearchCourses(ctx context.Context, q string) ([]models.Course, error)
 	GetCourse(ctx context.Context, code string) (models.CourseDetail, error)
 	UpdateCourseDescription(ctx context.Context, code, en, kz, ru string) (models.Course, error)
+	// CoursesMissingDescriptions: taught courses lacking a description in a language (none at all first,
+	// then by how many programs teach them), and how many courses programs teach in all.
+	CoursesMissingDescriptions(ctx context.Context, limit int) ([]models.CourseDescriptionGap, int, error)
 	// GetUserProgram: ErrNotFound until the student chooses. SetUserProgram: ErrNotFound for an unknown program.
 	GetUserProgram(ctx context.Context, userID int64) (models.UserProgram, error)
 	SetUserProgram(ctx context.Context, userID int64, programCode string, entryYear int) (models.UserProgram, error)
@@ -156,7 +159,7 @@ type Store interface {
 	// CoursesInText: the catalogue courses a chat question names by code or full name (at most limit).
 	CoursesInText(ctx context.Context, text string, limit int) ([]models.Course, error)
 	SaveReviewAISummary(ctx context.Context, code, lang string, v models.ReviewAISummary) (models.ReviewAISummary, error)
-	// ReviewBriefs: count and recommend % of the visible reviews, per course with any.
+	// ReviewBriefs: count, recommend %, average difficulty and usefulness of the visible reviews, per course with any.
 	ReviewBriefs(ctx context.Context, codes []string) (map[string]models.ReviewBrief, error)
 	SetReviewStatus(ctx context.Context, id int64, status, reason, onlyIf, onlyText string) error
 	ReviewsBeingChecked(ctx context.Context) ([]models.CourseReview, error)

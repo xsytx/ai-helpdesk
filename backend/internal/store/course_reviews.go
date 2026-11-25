@@ -143,15 +143,16 @@ func (s *PostgresStore) CourseReviewSummary(ctx context.Context, code string) (m
 	return sum, err
 }
 
-// ReviewBriefs: for each of the courses that has visible reviews, how many
-// and the share that recommend it.
+// ReviewBriefs: for each of the courses that has visible reviews, how many,
+// the share that recommend it and the average difficulty and usefulness.
 func (s *PostgresStore) ReviewBriefs(ctx context.Context, codes []string) (map[string]models.ReviewBrief, error) {
 	out := map[string]models.ReviewBrief{}
 	if len(codes) == 0 {
 		return out, nil
 	}
 	rows, err := s.pool.Query(ctx, `
-		SELECT r.course_code, count(*)::int, round(100.0 * count(*) FILTER (WHERE recommend) / count(*))::int
+		SELECT r.course_code, count(*)::int, round(100.0 * count(*) FILTER (WHERE recommend) / count(*))::int,
+		       round(avg(r.difficulty), 1)::float8, round(avg(r.usefulness), 1)::float8
 		FROM course_reviews r WHERE r.course_code = ANY($1) AND `+reviewVisible+`
 		GROUP BY r.course_code`, codes)
 	if err != nil {
@@ -161,7 +162,7 @@ func (s *PostgresStore) ReviewBriefs(ctx context.Context, codes []string) (map[s
 	for rows.Next() {
 		var code string
 		var b models.ReviewBrief
-		if err := rows.Scan(&code, &b.Count, &b.RecommendPct); err != nil {
+		if err := rows.Scan(&code, &b.Count, &b.RecommendPct, &b.Difficulty, &b.Usefulness); err != nil {
 			return nil, err
 		}
 		out[code] = b

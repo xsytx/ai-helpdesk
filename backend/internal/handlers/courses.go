@@ -269,6 +269,21 @@ func (h *Handlers) ImportCurriculum(w http.ResponseWriter, r *http.Request) {
 }
 
 // ListCurricula: GET /api/admin/curricula.
+// CoursesMissingDescriptions: GET /api/admin/courses/missing-descriptions
+// (staff). Which taught courses still need a description, most used first,
+// so the team knows whose syllabi to write up next.
+func (h *Handlers) CoursesMissingDescriptions(w http.ResponseWriter, r *http.Request) {
+	if _, ok := h.mapAdmin(w, r); !ok {
+		return
+	}
+	list, used, err := h.Store.CoursesMissingDescriptions(r.Context(), 5000)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "could not load the courses")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"courses": list, "used": used})
+}
+
 func (h *Handlers) ListCurricula(w http.ResponseWriter, r *http.Request) {
 	if _, ok := h.mapAdmin(w, r); !ok {
 		return
