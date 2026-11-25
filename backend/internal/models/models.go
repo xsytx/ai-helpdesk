@@ -384,9 +384,17 @@ type ChatMessage struct {
 	SourceStaff    bool `json:"source_staff,omitempty"`
 	// Followups: questions the student may ask next (buttons under an AI answer).
 	Followups []string `json:"followups,omitempty"`
+	// Courses the question named: links to their cards under the answer.
+	Courses []ChatCourse `json:"courses,omitempty"`
 	// Rating is the student's 👍 (1) / 👎 (-1) on an answer; nil = not rated.
 	Rating    *int16    `json:"rating,omitempty"`
 	CreatedAt time.Time `json:"created_at"`
+}
+
+// ChatCourse is a course an AI answer is about (029_chat_courses.sql).
+type ChatCourse struct {
+	Code string `json:"code"`
+	Name string `json:"name"`
 }
 
 // PostRevision is an earlier version of an edited question or answer.

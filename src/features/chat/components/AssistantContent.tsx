@@ -1,5 +1,6 @@
 import type { UiChatMessage } from "@/features/chat/api";
 import { LANG_NAME, sourceInOtherLanguage } from "@/features/chat/answerLanguage";
+import { CourseLinks } from "@/features/courses/components/CourseLinks";
 import { MapLinks } from "@/features/locations/components/MapLinks";
 import { useLocale } from "@/i18n/LocaleContext";
 import { RichText } from "@/shared/ui/RichText";
@@ -56,17 +57,19 @@ function TrustBadges({ msg }: { msg: UiChatMessage }) {
 }
 
 /**
- * The inside of an assistant's bubble, by what kind of answer it is, and
- * "Show on map" buttons when the student's question asked where a room or a
- * place is (question = the question it answers; none = no buttons).
+ * The inside of an assistant's bubble, by what kind of answer it is, links to
+ * the courses it is about, and "Show on map" buttons when the student's
+ * question asked where a room or a place is (question = the question it
+ * answers; none = no map buttons).
  */
 export function AssistantContent({ msg, question }: { msg: UiChatMessage & { onRetry?: () => void }; question?: string }) {
   const body = <AssistantBody msg={msg} />;
-  if (!question || msg.error) return body;
+  if (msg.error) return body;
   return (
     <>
       {body}
-      <MapLinks text={question} />
+      <CourseLinks courses={msg.courses} />
+      {question ? <MapLinks text={question} /> : null}
     </>
   );
 }

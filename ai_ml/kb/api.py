@@ -42,6 +42,30 @@ class ForumItem(BaseModel):
     staff: bool = False
 
 
+class CourseReviewText(BaseModel):
+    """A published review of the course (anonymous: no author)."""
+    model_config = ConfigDict(extra='forbid', strict=True)
+    text: str = Field(max_length=2000)
+    recommend: bool = False
+
+
+class CourseItem(BaseModel):
+    """A course the student's question names (from the SDU catalogue; the backend finds it by code or name)."""
+    model_config = ConfigDict(extra='forbid', strict=True)
+    code: str = Field(max_length=20)
+    name: str = Field(max_length=300)
+    ects: int = 0
+    theory: int = 0
+    practice: str = Field(default='', max_length=20)
+    hours: int = 0
+    description: dict[str, str] = Field(default_factory=dict)  # en/kk/ru, only the filled ones
+    taught_in: list[str] = Field(default_factory=list, max_length=20)
+    review_count: int = 0
+    recommend_pct: int | None = None
+    averages: dict[str, float] = Field(default_factory=dict)
+    reviews: list[CourseReviewText] = Field(default_factory=list, max_length=10)
+
+
 class AnswerRequest(BaseModel):
     model_config = ConfigDict(extra='forbid', strict=True)
     question: str = Field(min_length=1, max_length=2000)
@@ -51,6 +75,8 @@ class AnswerRequest(BaseModel):
     history: list[HistoryItem] = Field(default_factory=list, max_length=20)
     # Отвеченные вопросы форума: бот может взять лучший ответ как «ответ сообщества».
     forum: list[ForumItem] = Field(default_factory=list, max_length=500)
+    # Courses the question names (by code or name): facts and published reviews.
+    courses: list[CourseItem] = Field(default_factory=list, max_length=3)
 
     @field_validator('question')
     @classmethod
@@ -141,12 +167,14 @@ class SummaryResponse(BaseModel):
 
 
 def background(payload):
-    """history/forum для сервиса — только непустые (сервис их не требует)."""
+    """history/forum/courses для сервиса — только непустые (сервис их не требует)."""
     out = {}
     if payload.history:
         out['history'] = [h.model_dump() for h in payload.history]
     if payload.forum:
         out['forum'] = [f.model_dump() for f in payload.forum]
+    if payload.courses:
+        out['courses'] = [c.model_dump() for c in payload.courses]
     return out
 
 

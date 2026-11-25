@@ -662,6 +662,17 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   axis's value, a live one in the form, a small one per review); axes are
   "bigger is better", so difficulty and workload are flipped (6 − score) into
   Easy and Light load.
+- **Course questions in the AI chat (`029_chat_courses.sql`,
+  `handlers/chat_courses.go`, `store/chat_courses.go`, `CourseLinks`).** A
+  question naming a course by code ("Is CSS 331 hard?", "mat101") or full
+  name of two words or more ("Operating Systems", whole words, longest first)
+  is sent with that course (`CoursesInText`, at most 2; a follow-up without
+  one uses the latest earlier question that named one): catalogue facts,
+  where it is taught (program, semester, entry years) and up to 6 published
+  (`ok`) reviews, no authors, with the averages and recommend %. `ai_ml`
+  puts them in the prompt as COURSE FACTS (reviews = opinions, untrusted).
+  The answer saves the courses (`chat_messages.courses`) and shows
+  "CSS 331 · Operating Systems" links to the course cards.
 - **Auto-refresh.** React Query polling: feed 15 s, thread 10 s (1.5 s while
   a post is `checking`), admin queue 5 s, admin badge 10 s; paused in
   background tabs; never refetches over a like that is still saving.
@@ -679,7 +690,7 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
 - **Every public SQL read must hide held posts**: use `threadVisible` /
   `commentVisible` in `backend/internal/store/postgres.go`.
 - **Schema changes** are idempotent SQL applied on every start
-  (`001_init.sql` + `003_chat.sql` + `004_faq.sql` + `005_search.sql` + `006_chat_feedback.sql` + `007_forum_extras.sql` + `008_reputation.sql` + `009_profiles.sql` + `010_tags.sql` + `011_forum_answers.sql` + `012_chat_followups.sql` + `013_chat_trust_share.sql` + `014_edits.sql` + `015_saved_restrict.sql` + `016_notification_events.sql` + `017_chat_source_comment.sql` + `018_location_reports.sql` + `019_map_points.sql` + `020_map_extras.sql` + `021_location_photos.sql` + `022_courses.sql` + `023_course_reviews.sql` + `024_floor4.sql` + `025_floor3.sql` + `026_map_tours.sql` + `027_review_axes.sql` + `028_review_ai_summaries.sql` in `Migrate`, `002_moderation.sql` in
+  (`001_init.sql` + `003_chat.sql` + `004_faq.sql` + `005_search.sql` + `006_chat_feedback.sql` + `007_forum_extras.sql` + `008_reputation.sql` + `009_profiles.sql` + `010_tags.sql` + `011_forum_answers.sql` + `012_chat_followups.sql` + `013_chat_trust_share.sql` + `014_edits.sql` + `015_saved_restrict.sql` + `016_notification_events.sql` + `017_chat_source_comment.sql` + `018_location_reports.sql` + `019_map_points.sql` + `020_map_extras.sql` + `021_location_photos.sql` + `022_courses.sql` + `023_course_reviews.sql` + `024_floor4.sql` + `025_floor3.sql` + `026_map_tours.sql` + `027_review_axes.sql` + `028_review_ai_summaries.sql` + `029_chat_courses.sql` in `Migrate`, `002_moderation.sql` in
   `MigrateModeration`): `CREATE ... IF NOT EXISTS` /
   `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`.
 - **Store interface**: adding a method to `store.Store` also needs a stub on

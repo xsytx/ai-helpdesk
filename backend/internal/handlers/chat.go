@@ -46,6 +46,8 @@ type chatAskResp struct {
 	Source     *chatSourcePublic `json:"source"`
 	// Followups: questions the student may ask next (buttons under the answer).
 	Followups []string `json:"followups,omitempty"`
+	// Courses the question named: "Open course" links under the answer.
+	Courses []models.ChatCourse `json:"courses,omitempty"`
 	// Conversation the question and answer were saved to.
 	Conversation *models.ChatConversation `json:"conversation,omitempty"`
 	// MessageID is the saved answer (for 👍/👎); 0 if saving it failed.
@@ -60,11 +62,14 @@ const chatHistoryMessages = 6
 // the model with each question; it picks the closest ones by meaning.
 const chatForumCandidates = 200
 
-// chatBackground is what the model gets with a question: the chat so far
-// and the forum's answered questions (Stories 8-9). A failed forum read
-// only means the model answers without the forum.
-func (h *Handlers) chatBackground(ctx context.Context, uid int64, conv *models.ChatConversation) mlclient.Background {
+// chatBackground is what the model gets with a question: the chat so far,
+// the courses it names (chat_courses.go) and the forum's answered questions
+// (Stories 8-9). A failed forum read only means the model answers without the forum.
+func (h *Handlers) chatBackground(ctx context.Context, uid int64, conv *models.ChatConversation, question string) mlclient.Background {
 	bg := mlclient.Background{History: h.chatHistory(ctx, uid, conv)}
+	for _, c := range h.chatCourses(ctx, question, bg.History) {
+		bg.Courses = append(bg.Courses, h.courseFacts(ctx, c))
+	}
 	answers, err := h.Store.ForumAnswers(ctx, chatForumCandidates)
 	if err != nil {
 		log.Printf("forum answers for the model: %v", err)
@@ -191,7 +196,8 @@ func (h *Handlers) ChatAsk(w http.ResponseWriter, r *http.Request) {
 	}
 
 	started := time.Now()
-	mlResp, err := h.ML.GenerateAnswer(r.Context(), question, h.chatBackground(r.Context(), uid, conv))
+	background := h.chatBackground(r.Context(), uid, conv, question)
+	mlResp, err := h.ML.GenerateAnswer(r.Context(), question, background)
 	elapsed := time.Since(started)
 	if err != nil {
 		log.Printf("chat ask ml error (user=%d, duration=%s): %v", uid, elapsed, err)
@@ -202,6 +208,7 @@ func (h *Handlers) ChatAsk(w http.ResponseWriter, r *http.Request) {
 		uid, mlResp.RequestID, elapsed, mlResp.Basis, mlResp.Status)
 
 	assistant := assistantMessage(mlResp)
+	assistant.Courses = chatCourseRefs(background.Courses)
 	// Save with a context that survives a closed browser tab: the model already spent
 	// the time to answer, the answer should still land in the student's history.
 	conv, messageID, err := h.saveChatTurn(context.WithoutCancel(r.Context()), uid, conv, question, assistant)
@@ -211,6 +218,7 @@ func (h *Handlers) ChatAsk(w http.ResponseWriter, r *http.Request) {
 	}
 
 	resp := buildChatAskResp(mlResp)
+	resp.Courses = assistant.Courses
 	resp.Conversation = conv
 	resp.MessageID = messageID
 	writeJSON(w, http.StatusOK, resp)

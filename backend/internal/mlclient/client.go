@@ -116,13 +116,37 @@ type ForumCandidate struct {
 	Staff    bool   `json:"staff"`
 }
 
+// CourseFacts is a course the question names: catalogue facts and its
+// published reviews (anonymous), so the model can answer "is CSS 331 hard?".
+type CourseFacts struct {
+	Code         string             `json:"code"`
+	Name         string             `json:"name"`
+	ECTS         int                `json:"ects"`
+	Theory       int                `json:"theory"`
+	Practice     string             `json:"practice"`
+	Hours        int                `json:"hours"`
+	Description  map[string]string  `json:"description"` // en / kk / ru, only the filled ones
+	TaughtIn     []string           `json:"taught_in"`
+	ReviewCount  int                `json:"review_count"`
+	RecommendPct *int               `json:"recommend_pct"`
+	Averages     map[string]float64 `json:"averages"`
+	Reviews      []CourseReviewText `json:"reviews"`
+}
+
+// CourseReviewText is one published review of a course, without its author.
+type CourseReviewText struct {
+	Text      string `json:"text"`
+	Recommend bool   `json:"recommend"`
+}
+
 // Background is what the model gets besides the question.
 type Background struct {
 	History []HistoryItem    // earlier messages of the chat, oldest first
 	Forum   []ForumCandidate // answered forum questions it may use
+	Courses []CourseFacts    // courses the question names (by code or name)
 }
 
-// askBody is {"question": …, "history": […], "forum": […]} — language is
+// askBody is {"question": …, "history": […], "forum": […], "courses": […]} — language is
 // omitted so the ML service auto-detects it; empty lists are left out.
 func askBody(question string, bg Background) ([]byte, error) {
 	payload := map[string]any{"question": question}
@@ -131,6 +155,9 @@ func askBody(question string, bg Background) ([]byte, error) {
 	}
 	if len(bg.Forum) > 0 {
 		payload["forum"] = bg.Forum
+	}
+	if len(bg.Courses) > 0 {
+		payload["courses"] = bg.Courses
 	}
 	return json.Marshal(payload)
 }

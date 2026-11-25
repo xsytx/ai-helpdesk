@@ -181,6 +181,9 @@ func (s *chatTestStore) CourseReviewSummary(context.Context, string) (models.Rev
 func (s *chatTestStore) ReviewsForAISummary(context.Context, string, int) ([]models.CourseReview, string, int, error) {
 	return nil, "", 0, nil
 }
+func (s *chatTestStore) CoursesInText(context.Context, string, int) ([]models.Course, error) {
+	return nil, nil
+}
 func (s *chatTestStore) GetReviewAISummary(context.Context, string, string) (models.ReviewAISummary, error) {
 	return models.ReviewAISummary{}, store.ErrNotFound
 }

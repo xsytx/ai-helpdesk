@@ -19,7 +19,15 @@ export interface ChatHistoryMessage {
   source_accepted?: boolean;
   source_likes?: number;
   source_staff?: boolean;
+  /** Courses the question named: links to their cards under the answer. */
+  courses?: ChatCourseRef[] | null;
   rating?: ChatRating | null;
+}
+
+/** A course an answer is about (the AI got its facts and reviews). */
+export interface ChatCourseRef {
+  code: string;
+  name: string;
 }
 
 /** A student's 👍 (1) / 👎 (-1) on an answer. */
@@ -38,6 +46,7 @@ export interface ChatAskResponse {
   source?: { question: string; category: string; thread_id?: number; comment_id?: number; accepted?: boolean; likes?: number; staff?: boolean } | null;
   /** Questions the student may ask next (buttons under the answer). */
   followups?: string[];
+  courses?: ChatCourseRef[];
   conversation: ApiConversation;
   /** The saved answer, for 👍/👎 (missing if saving it failed). */
   message_id?: number;
@@ -336,6 +345,7 @@ export function historyToUiMessages(rows: ChatHistoryMessage[]): UiChatMessage[]
     sourceThreadId: m.source_thread_id ? String(m.source_thread_id) : undefined,
     sourceCommentId: m.source_comment_id ? String(m.source_comment_id) : undefined,
     followups: m.followups ?? undefined,
+    courses: m.courses?.length ? m.courses : undefined,
     sourceAccepted: m.source_accepted,
     sourceLikes: m.source_likes,
     sourceStaff: m.source_staff,
@@ -359,6 +369,8 @@ export interface UiChatMessage {
   sourceCommentId?: string;
   /** Questions the student may ask next, shown as buttons under the latest answer. */
   followups?: string[];
+  /** Courses the answer is about ("Open course" links). */
+  courses?: ChatCourseRef[];
   /** A community answer: accepted by the asker, its likes, written by staff. */
   sourceAccepted?: boolean;
   sourceLikes?: number;
@@ -385,6 +397,7 @@ export function askResponseToUiMessage(res: ChatAskResponse): UiChatMessage {
     sourceThreadId: res.source_type === "forum" && res.source?.thread_id ? String(res.source.thread_id) : undefined,
     sourceCommentId: res.source_type === "forum" && res.source?.comment_id ? String(res.source.comment_id) : undefined,
     followups: res.followups,
+    courses: res.courses?.length ? res.courses : undefined,
     ...(res.source_type === "forum"
       ? { sourceAccepted: res.source?.accepted, sourceLikes: res.source?.likes, sourceStaff: res.source?.staff }
       : {}),

@@ -153,6 +153,8 @@ type Store interface {
 	ReviewsForAISummary(ctx context.Context, code string, limit int) ([]models.CourseReview, string, int, error)
 	// GetReviewAISummary: ErrNotFound when the course has none in that language yet.
 	GetReviewAISummary(ctx context.Context, code, lang string) (models.ReviewAISummary, error)
+	// CoursesInText: the catalogue courses a chat question names by code or full name (at most limit).
+	CoursesInText(ctx context.Context, text string, limit int) ([]models.Course, error)
 	SaveReviewAISummary(ctx context.Context, code, lang string, v models.ReviewAISummary) (models.ReviewAISummary, error)
 	// ReviewBriefs: count and recommend % of the visible reviews, per course with any.
 	ReviewBriefs(ctx context.Context, codes []string) (map[string]models.ReviewBrief, error)

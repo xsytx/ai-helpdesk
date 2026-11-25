@@ -101,7 +101,7 @@ func (h *Handlers) ChatAskStream(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	background := h.chatBackground(r.Context(), uid, conv)
+	background := h.chatBackground(r.Context(), uid, conv, question)
 	var partial strings.Builder
 	started := false
 	// begin creates the chat (if new) and saves the question, then opens the
@@ -186,6 +186,8 @@ func (h *Handlers) ChatAskStream(w http.ResponseWriter, r *http.Request) {
 	log.Printf("chat stream ok (user=%d, request_id=%s, duration=%s, basis=%s)", uid, result.RequestID, time.Since(startedAt), result.Basis)
 	resp := buildChatAskResp(result)
 	assistant := assistantMessage(result)
+	assistant.Courses = chatCourseRefs(background.Courses)
+	resp.Courses = assistant.Courses
 	assistant.ConversationID = conv.ID
 	if saved, serr := h.Store.CreateChatMessage(saveCtx, uid, assistant); serr != nil {
 		log.Printf("chat stream save answer: %v", serr)
