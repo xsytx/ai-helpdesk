@@ -574,7 +574,11 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   an import whose rows don't add up is refused (`ImportProblem`:
   unreadable_rows, empty_semester, ects_mismatch), so a row the parser misses
   can never silently replace a good import. `CleanText` turns
-  Cyrillic look-alike letters in Latin words into Latin ("Еconomy"). Test samples
+  Cyrillic look-alike letters in Latin words into Latin ("Еconomy"). Both parsers (`squeeze` in `portalPage.ts`, `cleanLine` in
+  `parse.go`) also drop zero-width characters and turn a reversed placeholder
+  ("XXX ECO" → "ECO XXX"); keep them doing the same. Saved pages are imported
+  one by one with `paced` (waits on 429), so hundreds at once are fine; pages
+  that are blank on the portal ("TOTAL ECTS: 0") are refused (empty_semester). Test samples
   in `internal/curricula/testdata/` (a pasted page and a saved page's
   curriculum lines). Tables:
   `programs` (portal code "10107", title, level B/M/DR/DS, tag DD/MBA/EMBA,

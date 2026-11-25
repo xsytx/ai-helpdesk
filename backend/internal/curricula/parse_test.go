@@ -318,3 +318,22 @@ func TestPortalTyposInCodesAndOptions(t *testing.T) {
 		t.Fatalf("options with one prefix: %+v", s)
 	}
 }
+
+// Saved portal pages of 2023-2026: zero-width spaces in a title, a
+// placeholder written "XXX ECO" instead of "ECO XXX".
+func TestPortalInvisibleCharsAndReversedPlaceholder(t *testing.T) {
+	text := "2024-10338 Russian language and literature in schools with non-Russian languages\u200b\u200bo (RU)\nMain Track\nBachelor\n1\n" +
+		"1 ECO 101 Microeconomics 2 1+0 3 5\n" +
+		"2 XXX ECO * [ AE ] ECO 521 / ECO 633 2 1+0 3 5\n" +
+		"Total ects: 10\nTOTAL ECTS: 10\n"
+	c, err := Parse(text)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.ImportProblem() != "" || c.Title != "Russian language and literature in schools with non-Russian languageso" {
+		t.Fatalf("problem %q, title %q, warnings %q", c.ImportProblem(), c.Title, c.Warnings)
+	}
+	if s := c.Semesters[0].Items[1].Slot; s == nil || s.Kind != "AE" {
+		t.Fatalf("reversed placeholder: %+v", c.Semesters[0].Items[1])
+	}
+}

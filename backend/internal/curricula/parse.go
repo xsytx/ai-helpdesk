@@ -114,6 +114,19 @@ func (e *ParseError) Error() string { return e.Code }
 // the copy split over several lines.
 var rowStartRx = regexp.MustCompile(`^\d{1,3}\s?\*?\s+[A-Za-z]{3,5}\s?[0-9Xx]{3,4}\b`)
 
+// Invisible characters the portal sometimes has in titles ("languages​​o").
+var invisible = strings.NewReplacer("\u200b", "", "\u200c", "", "\u200d", "", "\u2060", "", "\ufeff", "", "\u00a0", " ")
+
+// A placeholder written the wrong way round on the portal: "7 XXX ECO * [ AE ] …" = "7 ECO XXX …".
+var reversedSlotRx = regexp.MustCompile(`^(\d{1,3}\s?\*?\s+)XXX\s+([A-Za-z]{3,5})\s`)
+
+// cleanLine squeezes spaces, drops invisible characters, fixes look-alike
+// letters and reversed placeholders (the same as squeeze in portalPage.ts).
+func cleanLine(raw string) string {
+	line := CleanText(strings.TrimSpace(spaceRx.ReplaceAllString(invisible.Replace(raw), " ")))
+	return reversedSlotRx.ReplaceAllString(line, "${1}${2} XXX ")
+}
+
 // Parse reads one copied curriculum page.
 func Parse(text string) (Curriculum, error) {
 	c := Curriculum{Electives: map[string][]Course{}, Semesters: []Semester{}, Warnings: []string{}}
@@ -177,7 +190,7 @@ func Parse(text string) (Curriculum, error) {
 
 	for _, raw := range strings.Split(text, "\n") {
 		// Cyrillic look-alike letters typed into codes on the portal ("PED 4ХХ") become Latin.
-		line := CleanText(strings.TrimSpace(spaceRx.ReplaceAllString(strings.ReplaceAll(raw, " ", " "), " ")))
+		line := cleanLine(raw)
 		if line == "" {
 			continue
 		}

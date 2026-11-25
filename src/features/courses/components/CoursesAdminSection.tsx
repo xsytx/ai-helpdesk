@@ -16,7 +16,7 @@ import {
 } from "../api";
 import { fill, importErrorKey } from "../labels";
 import { curriculumFromFile, curriculumFromPaste } from "../portalPage";
-import { DescriptionsImport } from "./DescriptionsImport";
+import { DescriptionsImport, paced } from "./DescriptionsImport";
 
 const field = "w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm text-primary outline-none focus:border-brand";
 
@@ -258,7 +258,7 @@ function SavedPagesImport() {
     for (const page of pages.filter((p) => p.status === "ready")) {
       update(page.key, { status: "importing" });
       try {
-        await importer.mutateAsync(page.text);
+        await paced(() => importer.mutateAsync(page.text));
         update(page.key, { status: "imported" });
       } catch (err) {
         update(page.key, { status: "problem", error: errorText(err) });

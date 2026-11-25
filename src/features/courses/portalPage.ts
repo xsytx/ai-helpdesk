@@ -27,7 +27,7 @@ export interface PortalCurriculum {
 /** Course prefixes of the SDU departments (portal: Curricula → departments), and XXX placeholders. */
 const PREFIXES = new Set([
   "EXT", "CSS", "CYB", "HOF", "INF", "MAT", "MCM", "MMS", "SDS", "SOE",
-  "BIO", "BIR", "CHE", "EDU", "FFA", "FPH", "HPE", "IBCTL", "KZL", "KZP", "PED", "PHT", "PHY", "PRE", "PRI", "PSY", "RLL", "SPS", "TFL", "TRA",
+  "BIO", "BIR", "CHE", "EDU", "FFA", "FPH", "HPE", "IBCTL", "KZL", "KZP", "PED", "PHT", "PHY", "PRE", "PRI", "PSY", "RLL", "SPS", "TFL", "TRA", "TUR",
   "ACC", "ECO", "EUR", "FIN", "HIS", "HSS", "IRN", "JSC", "JUR", "LAW", "MAN", "MAR", "PSYC", "RUS",
   "CEC", "MDE", "FOU", "PDI", "XXX",
 ]);
@@ -115,8 +115,18 @@ function latinLookalikes(line: string): string {
   });
 }
 
-/** One line with all spaces (tabs too) squeezed and look-alike letters fixed: what the patterns check, and what is sent. */
-const squeeze = (line: string) => latinLookalikes(line.replace(/ /g, " ").replace(/\s+/g, " ").trim());
+/** Invisible characters the portal sometimes has in titles (zero-width spaces, word joiner, BOM). */
+const INVISIBLE = new RegExp(`[${String.fromCharCode(0x200b, 0x200c, 0x200d, 0x2060, 0xfeff)}]`, "g");
+/** A placeholder written the wrong way round on the portal: "7 XXX ECO * [ AE ] …" = "7 ECO XXX …". */
+const REVERSED_SLOT = /^(\d{1,3} ?\*? )XXX ([A-Za-z]{3,5}) /;
+
+/**
+ * One line with all spaces (tabs and no-break spaces too) squeezed, invisible
+ * characters dropped, look-alike letters and reversed placeholders fixed: what
+ * the patterns check, and what is sent (the backend's cleanLine does the same).
+ */
+const squeeze = (line: string) =>
+  latinLookalikes(line.replace(INVISIBLE, "").replace(/\s+/g, " ").trim()).replace(REVERSED_SLOT, "$1$2 XXX ");
 
 /**
  * Keeps only certain curriculum lines. `trustedTrack`: the line after the

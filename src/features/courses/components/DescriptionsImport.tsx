@@ -19,8 +19,9 @@ const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 /**
  * The backend allows about 2 saves a second (bursts of 20): on "too many
  * requests" wait and try again, so a long file is paced instead of failing.
+ * Also used for importing many saved curriculum pages.
  */
-async function paced<T>(call: () => Promise<T>): Promise<T> {
+export async function paced<T>(call: () => Promise<T>): Promise<T> {
   for (let attempt = 0; ; attempt++) {
     try {
       return await call();
