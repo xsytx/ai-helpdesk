@@ -644,7 +644,8 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   `ai_ml/kb/summary.py`, `AISummary` in `CourseReviews.tsx`): `GET
   /api/courses/{code}/reviews/ai-summary?lang=en|kz|ru` → `ready` (summary,
   liked, warnings, review_count), `too_few` (< 3 published reviews; the card
-  shows a note) or `unavailable` (AI off: the card shows nothing). Made by
+  shows a note) or `unavailable` (AI off: a short "try later"). The card asks
+  only when the student clicks "Summarize reviews with AI" ("Hide" closes it). Made by
   `ai_ml` `POST /summarize-reviews` from `ok` reviews only (never checking or
   held: the text may still be hidden; no author sent), at most 40, most
   helpful first; saved per course and language in `course_review_summaries`

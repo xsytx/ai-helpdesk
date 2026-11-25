@@ -123,14 +123,42 @@ function Summary({ summary }: { summary: ReviewSummary }) {
   );
 }
 
+const AI_SUMMARY_MIN = 3;
+
 /**
- * The AI's overview of the published reviews (made on the server, saved until
- * the reviews change). Fewer than 3 published reviews: a short note instead;
- * the AI off or failing: nothing, the reviews below are enough.
+ * The AI's overview of the published reviews, shown when the student asks for
+ * it (a button). Made on the server and saved until the reviews change, so a
+ * click usually shows the saved one at once. Fewer than 3 reviews: a short
+ * note instead; the AI off or failing: a short message.
  */
 function AISummary({ code, reviewCount }: { code: string; reviewCount: number }) {
   const { t, locale } = useLocale();
-  const { data, isPending } = useReviewAISummary(code, locale, reviewCount, true);
+  const [open, setOpen] = useState(false);
+  const { data, isPending, isError } = useReviewAISummary(code, locale, reviewCount, open);
+  if (reviewCount < AI_SUMMARY_MIN || data?.status === "too_few") {
+    return (
+      <p className="flex items-center gap-2 text-xs text-label">
+        <Sparkles className="h-3.5 w-3.5 shrink-0" />
+        {t("reviewsAiSoon").replace("{n}", String(data?.status === "too_few" ? data.min : AI_SUMMARY_MIN))}
+      </p>
+    );
+  }
+  if (!open) {
+    return (
+      <Button size="sm" variant="secondary" onClick={() => setOpen(true)}>
+        <Sparkles className="h-4 w-4" />
+        {t("reviewsAiButton")}
+      </Button>
+    );
+  }
+  if (isError || data?.status === "unavailable") {
+    return (
+      <p className="flex items-center gap-2 text-sm text-label" role="status">
+        <Sparkles className="h-4 w-4 shrink-0" />
+        {t("reviewsAiUnavailable")}
+      </p>
+    );
+  }
   if (isPending) {
     return (
       <p className="flex items-center gap-2 rounded-2xl border border-dashed border-border px-3 py-2.5 text-sm text-label" aria-live="polite">
@@ -139,22 +167,19 @@ function AISummary({ code, reviewCount }: { code: string; reviewCount: number })
       </p>
     );
   }
-  if (data?.status === "too_few") {
-    return (
-      <p className="flex items-center gap-2 text-xs text-label">
-        <Sparkles className="h-3.5 w-3.5 shrink-0" />
-        {t("reviewsAiSoon").replace("{n}", String(data.min))}
-      </p>
-    );
-  }
   if (data?.status !== "ready") return null;
   const s = data.summary;
   return (
     <section className="space-y-2.5 rounded-2xl border border-brand/25 bg-background-2/50 p-3" aria-label={t("reviewsAiTitle")}>
-      <h3 className="flex items-center gap-1.5 text-sm font-semibold text-primary">
-        <Sparkles className="h-4 w-4 text-brand dark:text-primary" />
-        {t("reviewsAiTitle")}
-      </h3>
+      <div className="flex items-start justify-between gap-2">
+        <h3 className="flex items-center gap-1.5 text-sm font-semibold text-primary">
+          <Sparkles className="h-4 w-4 text-brand dark:text-primary" />
+          {t("reviewsAiTitle")}
+        </h3>
+        <button type="button" onClick={() => setOpen(false)} className="text-xs font-semibold text-label hover:text-primary">
+          {t("reviewsAiHide")}
+        </button>
+      </div>
       <p className="text-sm text-primary [overflow-wrap:anywhere]">{s.summary}</p>
       {s.liked.length > 0 || s.warnings.length > 0 ? (
         <div className="grid gap-3 sm:grid-cols-2">
