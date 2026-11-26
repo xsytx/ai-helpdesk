@@ -359,6 +359,7 @@ func main() {
 	mux.Handle("DELETE /api/faq/{id}", authMw(http.HandlerFunc(h.DeleteFAQ)))
 	mux.Handle("POST /api/faq/reorder", authMw(http.HandlerFunc(h.ReorderFAQs)))
 	mux.Handle("GET /api/admin/chat-insights", authMw(http.HandlerFunc(h.ChatInsights)))
+	mux.Handle("GET /api/admin/dashboard", authMw(http.HandlerFunc(h.AdminDashboard)))
 
 	// --- Uploaded attachments --- (the website itself is the React app,
 	// served separately by nginx; see the repository root)

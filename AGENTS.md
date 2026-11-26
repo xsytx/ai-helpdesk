@@ -206,6 +206,22 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   or got 👎). Admin panel → "AI chat" (`/admin?section=chat`,
   `GET /api/admin/chat-insights?kind=disliked|unanswered|frequent`, no
   student names): "Make it an FAQ" opens the FAQ editor prefilled.
+- **Admin dashboard (sprint 7, story 19; `handlers/dashboard.go`,
+  `store/dashboard.go`, `features/admin/`).** The admin panel opens on it
+  (`/admin`, tab "Dashboard"; the sidebar link goes to `?section=moderation`
+  while posts wait). `GET /api/admin/dashboard?days=7|30|90` (staff): totals
+  for the period (chat questions, AI answers from `ai_usage` incl. today, FAQ
+  answers, no answer, 👍/👎, active/new/all students, new forum questions and
+  answers, open forum questions all time, new reviews), the chat per Almaty
+  day (answered by AI / FAQ / none, zeros included), top questions (same
+  wording: `normalizedQuestion`; FAQ-answered left out), the latest
+  unanswered (`ChatInsights`), courses asked about (`chat_messages.courses`)
+  and the newest open forum questions. No student names. "Make it an FAQ" as
+  in "AI chat"; the open-questions tile links to `/forum?sort=unanswered`.
+  The chart's colours are `--color-chart-ai/faq/none` (light and dark steps,
+  checked with the dataviz validator). Grouping questions by meaning with E5
+  was measured and rejected: it rates different questions on one topic
+  higher than one question in two languages.
 - **Saved questions (`015_saved_restrict.sql`, `saved_threads`).** The
   bookmark next to "Следить" (`PUT/DELETE /api/threads/{id}/save`; the
   question page gets `saved`); your own profile has a "Сохранённые" tab

@@ -16,6 +16,7 @@ import {
 import { useCategoryLabel } from "@/features/moderation/components/ModerationNoticeCard";
 import { FaqEditor } from "@/features/faq/components/FaqEditor";
 import { ChatInsightsSection } from "@/features/chat/components/ChatInsightsSection";
+import { DashboardSection } from "@/features/admin/components/DashboardSection";
 import { ReportsSection } from "@/features/moderation/components/ReportsSection";
 import { LocationReportsSection } from "@/features/locations/components/LocationReportsSection";
 import { MapEditorSection } from "@/features/locations/components/MapEditorSection";
@@ -153,6 +154,7 @@ function ModerationCard({ item }: { item: ModerationItem }) {
 }
 
 const SECTIONS = [
+  { id: "dashboard", key: "adminSectionDashboard" },
   { id: "moderation", key: "adminSectionModeration" },
   { id: "reports", key: "adminSectionReports" },
   { id: "faq", key: "adminSectionFaq" },
@@ -166,14 +168,14 @@ const SECTIONS = [
 
 type SectionId = (typeof SECTIONS)[number]["id"];
 
-/** The admin panel: moderation queue, FAQ editor (?section=faq), AI chat questions (?section=chat). */
+/** The admin panel: dashboard (default), moderation queue (?section=moderation), FAQ editor (?section=faq), AI chat questions (?section=chat)… */
 export function ModerationPage() {
   const { user } = useAuth();
   const { t } = useLocale();
   const [params, setParams] = useSearchParams();
-  const section: SectionId = SECTIONS.find((x) => x.id === params.get("section"))?.id ?? "moderation";
+  const section: SectionId = SECTIONS.find((x) => x.id === params.get("section"))?.id ?? "dashboard";
   const [faqDraft, setFaqDraft] = useState<FaqDraft>();
-  const openSection = (id: SectionId) => setParams(id === "moderation" ? {} : { section: id }, { replace: true });
+  const openSection = (id: SectionId) => setParams(id === "dashboard" ? {} : { section: id }, { replace: true });
   const pending = usePendingModerationCount().data ?? 0;
   const openReports = useReports("open", isStaffRole(user?.role)).data?.total ?? 0;
   const openMapReports = useLocationReports("open", isStaffRole(user?.role)).data?.length ?? 0;
@@ -186,7 +188,7 @@ export function ModerationPage() {
   }
 
   return (
-    <div className={cn("mx-auto space-y-4", section === "map-editor" ? "max-w-6xl" : "max-w-3xl")}>
+    <div className={cn("mx-auto space-y-4", section === "map-editor" ? "max-w-6xl" : section === "dashboard" ? "max-w-5xl" : "max-w-3xl")}>
       <h1 className="text-xl font-bold text-primary">{t("adminPanel")}</h1>
       <nav className="flex gap-1 overflow-x-auto border-b border-border/60 [scrollbar-width:none] sm:flex-wrap sm:overflow-visible [&::-webkit-scrollbar]:hidden" aria-label={t("adminPanel")}>
         {SECTIONS.map((s) => (
@@ -221,6 +223,14 @@ export function ModerationPage() {
         <CoursesAdminSection />
       ) : section === "restrictions" ? (
         <RestrictionsSection />
+      ) : section === "dashboard" ? (
+        <DashboardSection
+          onMakeFaq={(draft) => {
+            setFaqDraft(draft);
+            openSection("faq");
+          }}
+          onOpenSection={openSection}
+        />
       ) : section === "chat" ? (
         <ChatInsightsSection
           onMakeFaq={(draft) => {

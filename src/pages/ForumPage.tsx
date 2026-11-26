@@ -25,11 +25,12 @@ function listParams(q: string, tags: string[]): Record<string, string> {
 
 export function ForumPage() {
   const { t } = useLocale();
-  const [sort, setSort] = useState<ThreadSort>("top");
   const [createOpen, setCreateOpen] = useState(false);
   // Search and topics live in the address (/forum?q=… or /forum?tags=dorm,food),
   // so tag links work and "back" returns to the same list. ?tag= is the old form.
   const [params, setParams] = useSearchParams();
+  // ?sort=unanswered opens on the questions without an answer (the admin dashboard links there).
+  const [sort, setSort] = useState<ThreadSort>(() => (params.get("sort") === "unanswered" ? "unanswered" : "top"));
   const q = params.get("q")?.trim() ?? "";
   const tags = (params.get("tags") ?? params.get("tag") ?? "")
     .split(",")

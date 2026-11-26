@@ -21,6 +21,11 @@
   --color-label: #4b5563;
   --color-border: #d1d5db;
   --color-error: #900b09;
+  /* Admin dashboard chart (chat answers per day): AI / FAQ / no answer.
+     Checked with the dataviz validator (lightness, CVD, contrast) on white. */
+  --color-chart-ai: #5b62d6;
+  --color-chart-faq: #0891b2;
+  --color-chart-none: #d97706;
   --font-sans: "Inter Variable", "Inter", ui-sans-serif, system-ui, sans-serif;
 
   /* Odometer digits (RollingNumber). */
@@ -100,6 +105,10 @@ body {
   --color-label: #a3a9c6;
   --color-border: #363b62;
   --color-error: #ff8f87;
+  /* The same chart's own dark steps, checked on the dark card (#181b33). */
+  --color-chart-ai: #7a80ea;
+  --color-chart-faq: #14a3b8;
+  --color-chart-none: #d4860f;
 
   --color-amber-50: #2b2210;
   --color-amber-100: #3a2c10;

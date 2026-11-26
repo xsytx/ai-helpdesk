@@ -62,7 +62,8 @@ export function AppShell() {
             <NavLink
               viewTransition
               key={to}
-              to={to}
+              // The admin panel opens on its dashboard; with posts waiting, straight on the moderation queue.
+              to={to === "/admin" && pending > 0 ? "/admin?section=moderation" : to}
               data-tour={to === "/settings" ? "settings" : undefined}
               className={({ isActive }) =>
                 cn(
