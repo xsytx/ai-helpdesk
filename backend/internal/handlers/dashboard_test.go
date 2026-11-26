@@ -43,6 +43,7 @@ func TestAdminDashboard(t *testing.T) {
 	}))
 	t.Cleanup(ml.Close)
 	e.h.ML = mlclient.New(ml.URL, 5*time.Second)
+	e.h.AIDailyQuota = 1000
 
 	admin := e.user("admin")
 	dash := func() map[string]any {
@@ -85,10 +86,15 @@ func TestAdminDashboard(t *testing.T) {
 				t.Fatalf("rate: %d", code)
 			}
 		}
+		if ask.u == s2 && ask.q == question {
+			if code, _ := e.call(s2, http.MethodPut, "/api/chat/messages/"+jsonNum(out["message_id"])+"/rating", map[string]any{"value": -1}); code != http.StatusNoContent && code != http.StatusOK {
+				t.Fatalf("rate 👎: %d", code)
+			}
+		}
 	}
 
 	after := dash()
-	for key, want := range map[string]int64{"chat_questions": 4, "ai_answers": 3, "ai_answers_today": 3, "unanswered": 1, "liked": 1, "active_students": 2, "new_students": 2, "total_students": 2} {
+	for key, want := range map[string]int64{"chat_questions": 4, "ai_answers": 3, "ai_answers_today": 3, "unanswered": 1, "liked": 1, "disliked": 1, "active_students": 2, "new_students": 2, "total_students": 2} {
 		if got := totals(after, key) - totals(before, key); got < want {
 			t.Errorf("%s grew by %v, want at least %v", key, got, want)
 		}
@@ -108,6 +114,17 @@ func TestAdminDashboard(t *testing.T) {
 	}
 	if !found {
 		t.Errorf("the question asked 3 times is not among the top: %v", after["top_questions"])
+	}
+	// 👎 answers are listed; today's AI calls grew by the 3 answered questions; the quota is passed on.
+	if disliked := list(after["disliked"]); len(disliked) == 0 || !strings.EqualFold(disliked[0]["question"].(string), question) {
+		t.Errorf("disliked: %v", after["disliked"])
+	}
+	calls := func(d map[string]any) int64 { return num(d["ai_calls_today"].(map[string]any)["chat"]) }
+	if got := calls(after) - calls(before); got != 3 || num(after["ai_quota"]) != 1000 {
+		t.Errorf("ai calls today grew by %d, quota %v", got, after["ai_quota"])
+	}
+	if _, ok := after["previous"].(map[string]any)["chat_questions"]; !ok {
+		t.Errorf("no previous period: %v", after["previous"])
 	}
 	unanswered := list(after["unanswered"])
 	if len(unanswered) == 0 || unanswered[0]["question"] != "an unknowable question" {

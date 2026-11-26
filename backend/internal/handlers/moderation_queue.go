@@ -91,6 +91,10 @@ func (h *Handlers) verdictFor(ctx context.Context, text string) (v mlclient.Mode
 		log.Printf("moderation: no verdict from ML service: %v", err)
 		return mlclient.ModerationResult{}, false
 	}
+	// The word filter alone (an obvious swear word) and "no AI configured" don't reach the AI.
+	if res.Reason != "profanity_filter" && res.Reason != "ok_no_llm" {
+		h.countAICall(context.WithoutCancel(ctx), "moderation")
+	}
 	return res, true
 }
 

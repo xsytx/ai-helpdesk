@@ -45,6 +45,7 @@ services:
       MODERATION_ENABLED: "${MODERATION_ENABLED:-true}"
       CHAT_RETENTION_DAYS: "${CHAT_RETENTION_DAYS:-30}"
       CHAT_DAILY_LIMIT: "${CHAT_DAILY_LIMIT:-30}"
+      AI_DAILY_QUOTA: "${AI_DAILY_QUOTA:-0}"
     # Only reachable from this computer — used by `npm run dev`. Visitors go
     # through the web service above.
     ports:

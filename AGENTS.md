@@ -216,7 +216,13 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   day (answered by AI / FAQ / none, zeros included), top questions (same
   wording: `normalizedQuestion`; FAQ-answered left out), the latest
   unanswered (`ChatInsights`), courses asked about (`chat_messages.courses`)
-  and the newest open forum questions. No student names. "Make it an FAQ" as
+  and the newest open forum questions, the latest 👎 answers, the same totals
+  for the period just before (`previous`: "↑ 35% vs the previous 7 days"
+  under the tiles) and today's AI calls against `AI_DAILY_QUOTA` (0 = counts
+  only; the server's Gemini free tier ≈ 1000). Every call to the AI is
+  counted in `ai_calls` (day, kind: chat answers in `countAIQuestion`, full
+  moderation checks except the word-filter-only block, review summaries;
+  `countAICall`). No student names. "Make it an FAQ" as
   in "AI chat"; the open-questions tile links to `/forum?sort=unanswered`.
   The chart's colours are `--color-chart-ai/faq/none` (light and dark steps,
   checked with the dataviz validator). Grouping questions by meaning with E5
@@ -732,7 +738,7 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
 - **Every public SQL read must hide held posts**: use `threadVisible` /
   `commentVisible` in `backend/internal/store/postgres.go`.
 - **Schema changes** are idempotent SQL applied on every start
-  (`001_init.sql` + `003_chat.sql` + `004_faq.sql` + `005_search.sql` + `006_chat_feedback.sql` + `007_forum_extras.sql` + `008_reputation.sql` + `009_profiles.sql` + `010_tags.sql` + `011_forum_answers.sql` + `012_chat_followups.sql` + `013_chat_trust_share.sql` + `014_edits.sql` + `015_saved_restrict.sql` + `016_notification_events.sql` + `017_chat_source_comment.sql` + `018_location_reports.sql` + `019_map_points.sql` + `020_map_extras.sql` + `021_location_photos.sql` + `022_courses.sql` + `023_course_reviews.sql` + `024_floor4.sql` + `025_floor3.sql` + `026_map_tours.sql` + `027_review_axes.sql` + `028_review_ai_summaries.sql` + `029_chat_courses.sql` + `030_ai_usage.sql` in `Migrate`, `002_moderation.sql` in
+  (`001_init.sql` + `003_chat.sql` + `004_faq.sql` + `005_search.sql` + `006_chat_feedback.sql` + `007_forum_extras.sql` + `008_reputation.sql` + `009_profiles.sql` + `010_tags.sql` + `011_forum_answers.sql` + `012_chat_followups.sql` + `013_chat_trust_share.sql` + `014_edits.sql` + `015_saved_restrict.sql` + `016_notification_events.sql` + `017_chat_source_comment.sql` + `018_location_reports.sql` + `019_map_points.sql` + `020_map_extras.sql` + `021_location_photos.sql` + `022_courses.sql` + `023_course_reviews.sql` + `024_floor4.sql` + `025_floor3.sql` + `026_map_tours.sql` + `027_review_axes.sql` + `028_review_ai_summaries.sql` + `029_chat_courses.sql` + `030_ai_usage.sql` + `031_ai_calls.sql` in `Migrate`, `002_moderation.sql` in
   `MigrateModeration`): `CREATE ... IF NOT EXISTS` /
   `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`.
 - **Store interface**: adding a method to `store.Store` also needs a stub on

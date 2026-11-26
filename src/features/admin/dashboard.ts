@@ -35,7 +35,14 @@ export interface DashboardDay {
 export interface Dashboard {
   days: number;
   totals: DashboardTotals;
+  /** The same counts for the days just before the period (as many), to compare. */
+  previous: DashboardTotals;
   daily: DashboardDay[];
+  /** Today's calls to the AI by kind, and the free quota to compare with (0 = not set). */
+  ai_calls_today: { chat: number; moderation: number; summary: number };
+  ai_quota: number;
+  /** The latest answers students marked 👎. */
+  disliked: ChatInsight[];
   top_questions: { question: string; students: number; asks: number; last_at: string }[];
   unanswered: ChatInsight[];
   top_courses: { code: string; name: string; questions: number }[];

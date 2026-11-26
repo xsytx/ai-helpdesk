@@ -138,6 +138,7 @@ func (h *Handlers) ReviewAISummary(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]any{"status": "unavailable"})
 		return
 	}
+	h.countAICall(gen, "summary")
 	saved, err := h.Store.SaveReviewAISummary(gen, code, lang, models.ReviewAISummary{
 		Summary: out.Summary, Liked: out.Liked, Warnings: out.Warnings, ReviewCount: count, Fingerprint: fingerprint})
 	if err != nil {

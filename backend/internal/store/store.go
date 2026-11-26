@@ -163,10 +163,13 @@ type Store interface {
 	// AIQuestionsOn / CountAIQuestion: questions the AI chat answered for a user on a day (its date).
 	AIQuestionsOn(ctx context.Context, userID int64, day time.Time) (int, error)
 	CountAIQuestion(ctx context.Context, userID int64, day time.Time) (int, error)
+	// CountAICall: one call to the AI of a kind ("chat", "moderation", "summary") on a day (031_ai_calls.sql).
+	CountAICall(ctx context.Context, day time.Time, kind string) error
 
 	// --- Admin dashboard (story 19) ---
-	// AdminDashboard: counts from since; firstDay/today are the period's Almaty dates (YYYY-MM-DD).
-	AdminDashboard(ctx context.Context, since time.Time, firstDay, today string) (models.Dashboard, error)
+	// AdminDashboard: the days up to today, from since (the Almaty midnight that starts
+	// them), with the same number of days before as Previous.
+	AdminDashboard(ctx context.Context, since time.Time, days int) (models.Dashboard, error)
 	SaveReviewAISummary(ctx context.Context, code, lang string, v models.ReviewAISummary) (models.ReviewAISummary, error)
 	// ReviewBriefs: count, recommend %, average difficulty and usefulness of the visible reviews, per course with any.
 	ReviewBriefs(ctx context.Context, codes []string) (map[string]models.ReviewBrief, error)

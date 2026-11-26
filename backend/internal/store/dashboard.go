@@ -20,35 +20,71 @@ const (
 	basisAI   = `a.basis IN ('retrieved', 'context', 'general', 'stopped')`
 )
 
-// AdminDashboard counts the period from since (the Almaty midnight that
-// starts it) to now; firstDay and today are its Almaty dates (YYYY-MM-DD),
-// used for the per-day chart and the AI counter. Lists are left to the caller
-// except the ones only this file knows how to read.
-func (s *PostgresStore) AdminDashboard(ctx context.Context, since time.Time, firstDay, today string) (models.Dashboard, error) {
-	d := models.Dashboard{Daily: []models.DashboardDay{}, TopQuestions: []models.TopQuestion{},
-		TopCourses: []models.CourseAsked{}, OpenThreads: []models.OpenThread{}}
-	t := &d.Totals
+// dashboardTotals counts what happened from `from` up to (not including)
+// `to`; firstDay..lastDay are the same range as Almaty dates (for ai_usage).
+// The all-time counts (total students, open forum questions) and "today"
+// are the same whatever the range.
+func (s *PostgresStore) dashboardTotals(ctx context.Context, from, to time.Time, firstDay, lastDay, today string) (models.DashboardTotals, error) {
+	var t models.DashboardTotals
 	err := s.pool.QueryRow(ctx, `
 		SELECT
-		  (SELECT count(*) FROM chat_messages u WHERE u.role = 'user' AND u.created_at >= $1)::int,
-		  (SELECT COALESCE(sum(questions), 0) FROM ai_usage WHERE day >= $2::date)::int,
-		  (SELECT COALESCE(sum(questions), 0) FROM ai_usage WHERE day = $3::date)::int,
-		  (SELECT count(*) FROM chat_messages a WHERE a.role = 'assistant' AND `+basisFAQ+` AND a.created_at >= $1)::int,
-		  (SELECT count(*) FROM chat_messages a WHERE a.role = 'assistant' AND `+basisNone+` AND a.created_at >= $1)::int,
-		  (SELECT count(*) FROM chat_messages a WHERE a.rating = 1 AND a.rated_at >= $1)::int,
-		  (SELECT count(*) FROM chat_messages a WHERE a.rating = -1 AND a.rated_at >= $1)::int,
+		  (SELECT count(*) FROM chat_messages u WHERE u.role = 'user' AND u.created_at >= $1 AND u.created_at < $2)::int,
+		  (SELECT COALESCE(sum(questions), 0) FROM ai_usage WHERE day BETWEEN $3::date AND $4::date)::int,
+		  (SELECT COALESCE(sum(questions), 0) FROM ai_usage WHERE day = $5::date)::int,
+		  (SELECT count(*) FROM chat_messages a WHERE a.role = 'assistant' AND `+basisFAQ+` AND a.created_at >= $1 AND a.created_at < $2)::int,
+		  (SELECT count(*) FROM chat_messages a WHERE a.role = 'assistant' AND `+basisNone+` AND a.created_at >= $1 AND a.created_at < $2)::int,
+		  (SELECT count(*) FROM chat_messages a WHERE a.rating = 1 AND a.rated_at >= $1 AND a.rated_at < $2)::int,
+		  (SELECT count(*) FROM chat_messages a WHERE a.rating = -1 AND a.rated_at >= $1 AND a.rated_at < $2)::int,
 		  (SELECT count(DISTINCT u.user_id) FROM chat_messages u JOIN users us ON us.id = u.user_id
-		     WHERE u.role = 'user' AND us.role = 'user' AND u.created_at >= $1)::int,
-		  (SELECT count(*) FROM users WHERE role = 'user' AND created_at >= $1)::int,
+		     WHERE u.role = 'user' AND us.role = 'user' AND u.created_at >= $1 AND u.created_at < $2)::int,
+		  (SELECT count(*) FROM users WHERE role = 'user' AND created_at >= $1 AND created_at < $2)::int,
 		  (SELECT count(*) FROM users WHERE role = 'user')::int,
-		  (SELECT count(*) FROM threads t WHERE `+threadVisible+` AND t.created_at >= $1)::int,
-		  (SELECT count(*) FROM comments c WHERE `+commentVisible+` AND c.created_at >= $1)::int,
+		  (SELECT count(*) FROM threads t WHERE `+threadVisible+` AND t.created_at >= $1 AND t.created_at < $2)::int,
+		  (SELECT count(*) FROM comments c WHERE `+commentVisible+` AND c.created_at >= $1 AND c.created_at < $2)::int,
 		  (SELECT count(*) FROM threads t WHERE `+openThread+`)::int,
-		  (SELECT count(*) FROM course_reviews r WHERE `+reviewVisible+` AND r.created_at >= $1)::int`,
-		since, firstDay, today).Scan(&t.ChatQuestions, &t.AIAnswers, &t.AIAnswersToday, &t.FAQAnswers, &t.Unanswered,
+		  (SELECT count(*) FROM course_reviews r WHERE `+reviewVisible+` AND r.created_at >= $1 AND r.created_at < $2)::int`,
+		from, to, firstDay, lastDay, today).Scan(&t.ChatQuestions, &t.AIAnswers, &t.AIAnswersToday, &t.FAQAnswers, &t.Unanswered,
 		&t.Liked, &t.Disliked, &t.ActiveStudents, &t.NewStudents, &t.TotalStudents,
 		&t.ForumQuestions, &t.ForumAnswers, &t.ForumOpenTotal, &t.Reviews)
+	return t, err
+}
+
+// AdminDashboard counts the `days` days up to today, starting at since (the
+// Almaty midnight that begins them), and the same number of days before
+// them as Previous. Lists are left to the caller except the ones only this
+// file knows how to read.
+func (s *PostgresStore) AdminDashboard(ctx context.Context, since time.Time, days int) (models.Dashboard, error) {
+	d := models.Dashboard{Daily: []models.DashboardDay{}, TopQuestions: []models.TopQuestion{},
+		TopCourses: []models.CourseAsked{}, OpenThreads: []models.OpenThread{}, AICallsToday: map[string]int{}}
+	date := func(t time.Time) string { return t.Format(time.DateOnly) }
+	end := since.AddDate(0, 0, days)
+	firstDay, today := date(since), date(end.AddDate(0, 0, -1))
+	var err error
+	if d.Totals, err = s.dashboardTotals(ctx, since, end, firstDay, today, today); err != nil {
+		return d, err
+	}
+	prev := since.AddDate(0, 0, -days)
+	if d.Previous, err = s.dashboardTotals(ctx, prev, since, date(prev), date(since.AddDate(0, 0, -1)), today); err != nil {
+		return d, err
+	}
+	for _, k := range AICallKinds {
+		d.AICallsToday[k] = 0
+	}
+	calls, err := s.pool.Query(ctx, `SELECT kind, calls FROM ai_calls WHERE day = $1::date`, today)
 	if err != nil {
+		return d, err
+	}
+	for calls.Next() {
+		var kind string
+		var n int
+		if err := calls.Scan(&kind, &n); err != nil {
+			calls.Close()
+			return d, err
+		}
+		d.AICallsToday[kind] = n
+	}
+	calls.Close()
+	if err := calls.Err(); err != nil {
 		return d, err
 	}
 

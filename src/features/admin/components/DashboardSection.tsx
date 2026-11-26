@@ -14,10 +14,10 @@ import { useIsPhone } from "@/shared/lib/media";
 import { Button } from "@/shared/ui/Button";
 import { Card } from "@/shared/ui/Card";
 import { SkeletonBlock } from "@/shared/ui/Skeleton";
-import { BookPlus, ChevronRight, GraduationCap, MessageCircleQuestion, MessagesSquare } from "lucide-react";
+import { BookPlus, ChevronRight, Cpu, GraduationCap, MessageCircleQuestion, MessagesSquare, ThumbsDown } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { useAdminDashboard, type DashboardDay, type DashboardPeriod } from "../dashboard";
+import { useAdminDashboard, type Dashboard, type DashboardDay, type DashboardPeriod } from "../dashboard";
 
 const PERIODS: DashboardPeriod[] = [7, 30, 90];
 const fill = (s: string, vars: Record<string, string | number>) => s.replace(/\{(\w+)\}/g, (_, k: string) => String(vars[k] ?? ""));
@@ -39,7 +39,10 @@ export function DashboardSection({ onMakeFaq, onOpenSection }: {
   if (isError) return <p className="text-sm text-error">{t("dashLoadFailed")}</p>;
   if (isPending || !data) return <SkeletonBlock className="h-96" />;
   const s = data.totals;
+  const p = data.previous;
   const rated = s.liked + s.disliked;
+  // "↑ 35% vs the previous 7 days" under a tile (nothing when both are 0).
+  const vs = (now: number, before: number, badWhenUp = false) => <Delta now={now} before={before} days={days} badWhenUp={badWhenUp} />;
 
   return (
     <div className="space-y-4">
@@ -64,17 +67,24 @@ export function DashboardSection({ onMakeFaq, onOpenSection }: {
         </div>
       </div>
 
+      <AIQuota data={data} />
+
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Tile label={t("dashChatQuestions")} value={s.chat_questions}
-          sub={fill(t("dashUnansweredShare"), { n: s.unanswered, pct: pct(s.unanswered, s.chat_questions) })} warn={s.unanswered > 0} />
-        <Tile label={t("dashAiToday")} value={s.ai_answers_today} sub={fill(t("dashAiPeriod"), { n: s.ai_answers })} />
+          sub={fill(t("dashUnansweredShare"), { n: s.unanswered, pct: pct(s.unanswered, s.chat_questions) })} warn={s.unanswered > 0}
+          delta={vs(s.chat_questions, p.chat_questions)} />
+        <Tile label={t("dashAiToday")} value={s.ai_answers_today} sub={fill(t("dashAiPeriod"), { n: s.ai_answers })}
+          delta={vs(s.ai_answers, p.ai_answers)} />
         <Tile label={t("dashRatings")} value={`👍 ${s.liked} · 👎 ${s.disliked}`}
-          sub={rated > 0 ? fill(t("dashLikedShare"), { pct: pct(s.liked, rated) }) : t("dashNoRatings")} />
+          sub={rated > 0 ? fill(t("dashLikedShare"), { pct: pct(s.liked, rated) }) : t("dashNoRatings")}
+          delta={vs(s.disliked, p.disliked, true)} deltaLabel="👎" />
         <Tile label={t("dashStudents")} value={s.active_students}
-          sub={fill(t("dashStudentsSub"), { new: s.new_students, all: s.total_students })} />
-        <Tile label={t("dashForumQuestions")} value={s.forum_questions} sub={fill(t("dashForumAnswersSub"), { n: s.forum_answers })} />
+          sub={fill(t("dashStudentsSub"), { new: s.new_students, all: s.total_students })}
+          delta={vs(s.active_students, p.active_students)} />
+        <Tile label={t("dashForumQuestions")} value={s.forum_questions} sub={fill(t("dashForumAnswersSub"), { n: s.forum_answers })}
+          delta={vs(s.forum_questions, p.forum_questions)} />
         <Tile label={t("dashForumOpen")} value={s.forum_open_total} sub={t("dashForumOpenSub")} to="/forum?sort=unanswered" warn={s.forum_open_total > 0} />
-        <Tile label={t("dashReviews")} value={s.reviews} sub={t("dashReviewsSub")} />
+        <Tile label={t("dashReviews")} value={s.reviews} sub={t("dashReviewsSub")} delta={vs(s.reviews, p.reviews)} />
         <Tile label={t("dashModeration")} value={pending} sub={t("dashModerationSub")} onClick={() => onOpenSection("moderation")} warn={pending > 0} />
       </div>
 
@@ -83,7 +93,8 @@ export function DashboardSection({ onMakeFaq, onOpenSection }: {
         <DailyChart daily={data.daily} />
       </Card>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      {/* items-start: a short list keeps its own height next to a long one. */}
+      <div className="grid items-start gap-4 lg:grid-cols-2">
         <ListCard icon={<MessagesSquare className="h-4 w-4" />} title={t("dashTopQuestions")} hint={t("dashTopHint")}
           more={() => onOpenSection("chat")}>
           {data.top_questions.map((q, i) => (
@@ -101,6 +112,16 @@ export function DashboardSection({ onMakeFaq, onOpenSection }: {
               main={q.question || "—"}
               sub={`${q.context ? `${t("insightsEarlier")}: ${q.context} · ` : ""}${formatRelativeTime(q.at, locale)}`}
               action={q.question ? <MakeFaq onClick={() => onMakeFaq(insightToFaqDraft(q, "unanswered"))} /> : null}
+            />
+          ))}
+        </ListCard>
+        <ListCard icon={<ThumbsDown className="h-4 w-4" />} title={t("dashDisliked")} hint={t("dashDislikedHint")}
+          more={() => onOpenSection("chat")}>
+          {data.disliked.map((q, i) => (
+            <Row key={i}
+              main={q.question || "—"}
+              sub={`${q.answer ? `AI: ${q.answer} · ` : ""}${formatRelativeTime(q.at, locale)}`}
+              action={q.question ? <MakeFaq onClick={() => onMakeFaq(insightToFaqDraft(q, "disliked"))} /> : null}
             />
           ))}
         </ListCard>
@@ -126,13 +147,17 @@ export function DashboardSection({ onMakeFaq, onOpenSection }: {
 }
 
 /** A number with its label; a link or a button when there is somewhere to go. */
-function Tile({ label, value, sub, to, onClick, warn }: {
+function Tile({ label, value, sub, to, onClick, warn, delta, deltaLabel }: {
   label: string;
   value: ReactNode;
   sub: string;
   to?: string;
   onClick?: () => void;
   warn?: boolean;
+  /** The comparison with the previous period (a <Delta>). */
+  delta?: ReactNode;
+  /** What the comparison is about when it isn't the big number (e.g. "👎"). */
+  deltaLabel?: string;
 }) {
   const body = (
     <>
@@ -142,12 +167,83 @@ function Tile({ label, value, sub, to, onClick, warn }: {
         {sub}
         {to || onClick ? <ChevronRight className="h-3 w-3 shrink-0" aria-hidden /> : null}
       </p>
+      {delta ? <p className="mt-1 text-[11px] text-label">{deltaLabel ? `${deltaLabel} ` : ""}{delta}</p> : null}
     </>
   );
   const box = "block h-full rounded-2xl border border-border/60 bg-surface p-3 text-left shadow-sm";
   if (to) return <Link to={to} viewTransition className={cn(box, "hover:bg-background-2")}>{body}</Link>;
   if (onClick) return <button type="button" onClick={onClick} className={cn(box, "w-full hover:bg-background-2")}>{body}</button>;
   return <div className={box}>{body}</div>;
+}
+
+/**
+ * Compared with the same number of days before: "↑ 35% vs the previous 7
+ * days". Neutral grey, except for numbers where up is bad (👎): amber up,
+ * green down. Nothing when both periods are 0.
+ */
+function Delta({ now, before, days, badWhenUp }: { now: number; before: number; days: number; badWhenUp?: boolean }) {
+  const { t } = useLocale();
+  if (now === 0 && before === 0) return null;
+  if (now === before) return <>{fill(t("dashVsPrevSame"), { n: days })}</>;
+  const up = now > before;
+  const text = before === 0 ? fill(t("dashVsPrevFromZero"), { n: days }) : fill(t("dashVsPrev"), { arrow: up ? "↑" : "↓", pct: Math.round((100 * Math.abs(now - before)) / before), n: days });
+  return (
+    <span className={cn(badWhenUp && (up ? "text-amber-800 dark:text-amber-700" : "text-green-700"))}>{text}</span>
+  );
+}
+
+/**
+ * Today's calls to the AI (chat answers, moderation of new posts and reviews,
+ * review summaries) against the provider's free quota, as one bar split by
+ * kind. Without a quota set (AI_DAILY_QUOTA=0, e.g. a laptop with Ollama)
+ * just the counts.
+ */
+function AIQuota({ data }: { data: Dashboard }) {
+  const { t } = useLocale();
+  const c = data.ai_calls_today;
+  const parts = [
+    { key: "chat", label: t("dashCallsChat"), n: c.chat, color: "var(--color-chart-ai)" },
+    { key: "moderation", label: t("dashCallsModeration"), n: c.moderation, color: "var(--color-chart-faq)" },
+    { key: "summary", label: t("dashCallsSummary"), n: c.summary, color: "var(--color-chart-none)" },
+  ];
+  const used = c.chat + c.moderation + c.summary;
+  const quota = data.ai_quota;
+  const share = quota > 0 ? used / quota : 0;
+  return (
+    <Card className="space-y-2">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 className="flex items-center gap-1.5 text-sm font-semibold text-primary">
+          <Cpu className="h-4 w-4" />
+          {t("dashCallsTitle")}
+        </h2>
+        <p className="text-sm tabular-nums text-primary">
+          {quota > 0 ? fill(t("dashCallsOfQuota"), { n: used, quota, pct: pct(used, quota) }) : fill(t("dashCallsNoQuota"), { n: used })}
+        </p>
+      </div>
+      {quota > 0 ? (
+        <div className="flex h-3 gap-[2px] overflow-hidden rounded-full bg-background-2" role="img"
+          aria-label={fill(t("dashCallsOfQuota"), { n: used, quota, pct: pct(used, quota) })}>
+          {parts.map((part) =>
+            // At least 4px, so even 1 call of 1000 shows.
+            part.n > 0 ? <span key={part.key} style={{ width: `${Math.min(100, (100 * part.n) / quota)}%`, minWidth: 4, background: part.color }} /> : null,
+          )}
+        </div>
+      ) : null}
+      <ul className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-label">
+        {parts.map((part) => (
+          <li key={part.key} className="flex items-center gap-1.5">
+            <span className="h-2.5 w-2.5 rounded-sm" style={{ background: part.color }} aria-hidden />
+            {part.label}: <span className="font-semibold tabular-nums text-primary">{part.n}</span>
+          </li>
+        ))}
+      </ul>
+      {quota > 0 && share >= 0.8 ? (
+        <p className="text-xs font-semibold text-amber-800 dark:text-amber-700" role="status">{t("dashCallsNearLimit")}</p>
+      ) : (
+        <p className="text-xs text-label">{quota > 0 ? t("dashCallsHint") : t("dashCallsHintNoQuota")}</p>
+      )}
+    </Card>
+  );
 }
 
 function ListCard({ icon, title, hint, more, children }: {

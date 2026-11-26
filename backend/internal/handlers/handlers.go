@@ -39,6 +39,10 @@ type Handlers struct {
 	// ChatDailyLimit: AI chat questions a student may have answered per day
 	// (CHAT_DAILY_LIMIT; 0 = no limit; staff never limited). See chat_limit.go.
 	ChatDailyLimit int
+	// AIDailyQuota: how many AI calls a day the AI provider allows for free
+	// (AI_DAILY_QUOTA; 0 = unknown/unlimited). The dashboard compares the day's
+	// calls (chat, moderation, summaries: countAICall) with it.
+	AIDailyQuota int
 	// Events passes live notification signals to open pages (nil = off).
 	Events *events.Hub
 }

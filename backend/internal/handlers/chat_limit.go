@@ -62,10 +62,19 @@ func (h *Handlers) refuseOverLimit(w http.ResponseWriter, r *http.Request, uid i
 	return true
 }
 
+// countAICall records one call to the AI ("chat", "moderation", "summary")
+// for the dashboard's quota bar; a failed write is only logged.
+func (h *Handlers) countAICall(ctx context.Context, kind string) {
+	if err := h.Store.CountAICall(ctx, chatDay(), kind); err != nil {
+		log.Printf("count ai call (%s): %v", kind, err)
+	}
+}
+
 // countAIQuestion records an answered question (for everyone, also staff and
 // with no limit set: the admin dashboard shows the day's total) and returns
 // how many are left today (nil = no limit for uid).
 func (h *Handlers) countAIQuestion(ctx context.Context, uid int64) *int {
+	h.countAICall(ctx, "chat")
 	used, err := h.Store.CountAIQuestion(ctx, uid, chatDay())
 	if err != nil {
 		log.Printf("count ai question of user %d: %v", uid, err)

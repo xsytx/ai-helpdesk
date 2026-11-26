@@ -5,14 +5,22 @@ import "time"
 // Dashboard is the admin overview (story 19): counts for a period, the chat
 // per day, and the lists an admin acts on. No student names anywhere.
 type Dashboard struct {
-	Days   int              `json:"days"`
-	Totals DashboardTotals  `json:"totals"`
-	Daily  []DashboardDay   `json:"daily"`
+	Days   int             `json:"days"`
+	Totals DashboardTotals `json:"totals"`
+	// Previous: the same counts for the days just before (as many as Days), to compare.
+	Previous DashboardTotals `json:"previous"`
+	Daily    []DashboardDay  `json:"daily"`
+	// AICallsToday: what the AI was asked for today; AIQuota: the day's free
+	// quota to compare with (AI_DAILY_QUOTA; 0 = not set, no bar).
+	AICallsToday map[string]int `json:"ai_calls_today"`
+	AIQuota      int            `json:"ai_quota"`
 	// TopQuestions: the most asked chat questions (same wording, ignoring case,
 	// spaces and the final "?"), FAQ-answered ones left out: they are covered.
 	TopQuestions []TopQuestion `json:"top_questions"`
 	// Unanswered: the latest questions the AI had no answer for.
 	Unanswered []ChatInsight `json:"unanswered"`
+	// Disliked: the latest answers students marked 👎 (the answers to fix first).
+	Disliked []ChatInsight `json:"disliked"`
 	// TopCourses: the courses students asked the chat about most.
 	TopCourses []CourseAsked `json:"top_courses"`
 	// OpenThreads: the newest forum questions with no answer yet.

@@ -202,6 +202,10 @@ func main() {
 	if n, err := strconv.Atoi(getenv("CHAT_DAILY_LIMIT", "30")); err == nil && n >= 0 {
 		h.ChatDailyLimit = n
 	}
+	// The AI provider's free calls per day, shown on the admin dashboard (0 = not shown).
+	if n, err := strconv.Atoi(getenv("AI_DAILY_QUOTA", "0")); err == nil && n >= 0 {
+		h.AIDailyQuota = n
+	}
 
 	// Live notifications: the database announces every change, and the
 	// open pages of that user hear it at once (GET /api/notifications/stream).
