@@ -42,7 +42,8 @@ export function DashboardSection({ onMakeFaq, onOpenSection }: {
   const p = data.previous;
   const rated = s.liked + s.disliked;
   // "↑ 35% vs the previous 7 days" under a tile (nothing when both are 0).
-  const vs = (now: number, before: number, badWhenUp = false) => <Delta now={now} before={before} days={days} badWhenUp={badWhenUp} />;
+  const vs = (now: number, before: number, badWhenUp = false) =>
+    now === 0 && before === 0 ? undefined : <Delta now={now} before={before} days={days} badWhenUp={badWhenUp} />;
 
   return (
     <div className="space-y-4">
@@ -93,9 +94,9 @@ export function DashboardSection({ onMakeFaq, onOpenSection }: {
         <DailyChart daily={data.daily} />
       </Card>
 
-      {/* Two independent columns (CSS columns), so a short list leaves no gap under it
-          next to a long one; each card stays whole (break-inside-avoid in ListCard). */}
-      <div className="gap-4 lg:columns-2 [&>*]:mb-4">
+      {/* Rows of two cards of equal height (grid rows stretch), so expanding one list
+          grows its neighbour with it instead of leaving a gap; the last card spans both. */}
+      <div className="grid gap-4 lg:grid-cols-2">
         <ListCard icon={<MessagesSquare className="h-4 w-4" />} title={t("dashTopQuestions")} hint={t("dashTopHint")}
           more={() => onOpenSection("chat")}>
           {data.top_questions.map((q, i) => (
@@ -108,20 +109,20 @@ export function DashboardSection({ onMakeFaq, onOpenSection }: {
         </ListCard>
         <ListCard icon={<MessageCircleQuestion className="h-4 w-4" />} title={t("dashUnanswered")} hint={t("dashUnansweredHint")}
           more={() => onOpenSection("chat")}>
-          {data.unanswered.map((q, i) => (
+          {sameOnce(data.unanswered).map(({ item: q, times }, i) => (
             <Row key={i}
               main={q.question || "—"}
-              sub={`${q.context ? `${t("insightsEarlier")}: ${q.context} · ` : ""}${formatRelativeTime(q.at, locale)}`}
+              sub={`${times > 1 ? `${plural(times, "dashTimes")} · ` : ""}${q.context ? `${t("insightsEarlier")}: ${q.context} · ` : ""}${formatRelativeTime(q.at, locale)}`}
               action={q.question ? <MakeFaq onClick={() => onMakeFaq(insightToFaqDraft(q, "unanswered"))} /> : null}
             />
           ))}
         </ListCard>
         <ListCard icon={<ThumbsDown className="h-4 w-4" />} title={t("dashDisliked")} hint={t("dashDislikedHint")}
           more={() => onOpenSection("chat")}>
-          {data.disliked.map((q, i) => (
+          {sameOnce(data.disliked).map(({ item: q, times }, i) => (
             <Row key={i}
               main={q.question || "—"}
-              sub={`${q.answer ? `AI: ${q.answer} · ` : ""}${formatRelativeTime(q.at, locale)}`}
+              sub={`${times > 1 ? `${plural(times, "dashTimes")} · ` : ""}${q.answer ? `AI: ${q.answer} · ` : ""}${formatRelativeTime(q.at, locale)}`}
               action={q.question ? <MakeFaq onClick={() => onMakeFaq(insightToFaqDraft(q, "disliked"))} /> : null}
             />
           ))}
@@ -134,7 +135,7 @@ export function DashboardSection({ onMakeFaq, onOpenSection }: {
             />
           ))}
         </ListCard>
-        <ListCard icon={<MessageCircleQuestion className="h-4 w-4" />} title={t("dashOpenThreads")} hint={t("dashOpenThreadsHint")}>
+        <ListCard icon={<MessageCircleQuestion className="h-4 w-4" />} title={t("dashOpenThreads")} hint={t("dashOpenThreadsHint")} wide>
           {data.open_threads.map((o) => (
             <Row key={o.id}
               main={<Link to={`/forum/${o.id}`} viewTransition className="hover:underline">{o.title}</Link>}
@@ -250,18 +251,38 @@ function AIQuota({ data }: { data: Dashboard }) {
 /** Rows a list shows before "Show all": keeps the two columns of cards close in height. */
 const LIST_ROWS = 5;
 
-function ListCard({ icon, title, hint, more, children }: {
+/**
+ * The same question asked several times (newest first in the list) shown once,
+ * with how many times: "How is GPA calculated?" twice is one row, "2 times".
+ */
+function sameOnce<T extends { question: string }>(items: T[]): { item: T; times: number }[] {
+  const out: { item: T; times: number }[] = [];
+  const at = new Map<string, number>();
+  for (const item of items) {
+    const key = item.question.trim().toLowerCase().replace(/\s+/g, " ").replace(/[\s?!.…]+$/, "");
+    const i = at.get(key);
+    if (i === undefined) {
+      at.set(key, out.length);
+      out.push({ item, times: 1 });
+    } else out[i]!.times += 1;
+  }
+  return out;
+}
+
+function ListCard({ icon, title, hint, more, children, wide }: {
   icon: ReactNode;
   title: string;
   hint: string;
   more?: () => void;
   children: ReactNode[];
+  /** Across both columns (the last card, so the grid ends evenly). */
+  wide?: boolean;
 }) {
   const { t } = useLocale();
   const [all, setAll] = useState(false);
   const rows = all ? children : children.slice(0, LIST_ROWS);
   return (
-    <Card className="space-y-2 break-inside-avoid">
+    <Card className={cn("space-y-2", wide && "lg:col-span-2")}>
       <div className="flex items-start justify-between gap-2">
         <div>
           <h2 className="flex items-center gap-1.5 text-sm font-semibold text-primary">{icon}{title}</h2>
