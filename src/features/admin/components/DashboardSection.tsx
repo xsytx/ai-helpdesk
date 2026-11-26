@@ -93,8 +93,9 @@ export function DashboardSection({ onMakeFaq, onOpenSection }: {
         <DailyChart daily={data.daily} />
       </Card>
 
-      {/* items-start: a short list keeps its own height next to a long one. */}
-      <div className="grid items-start gap-4 lg:grid-cols-2">
+      {/* Two independent columns (CSS columns), so a short list leaves no gap under it
+          next to a long one; each card stays whole (break-inside-avoid in ListCard). */}
+      <div className="gap-4 lg:columns-2 [&>*]:mb-4">
         <ListCard icon={<MessagesSquare className="h-4 w-4" />} title={t("dashTopQuestions")} hint={t("dashTopHint")}
           more={() => onOpenSection("chat")}>
           {data.top_questions.map((q, i) => (
@@ -255,7 +256,7 @@ function ListCard({ icon, title, hint, more, children }: {
 }) {
   const { t } = useLocale();
   return (
-    <Card className="space-y-2">
+    <Card className="space-y-2 break-inside-avoid">
       <div className="flex items-start justify-between gap-2">
         <div>
           <h2 className="flex items-center gap-1.5 text-sm font-semibold text-primary">{icon}{title}</h2>
