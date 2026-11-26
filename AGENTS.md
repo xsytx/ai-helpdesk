@@ -674,8 +674,10 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
 - **Course questions in the AI chat (`029_chat_courses.sql`,
   `handlers/chat_courses.go`, `store/chat_courses.go`, `CourseLinks`).** A
   question naming a course by code ("Is CSS 331 hard?", "mat101") or full
-  name of two words or more ("Operating Systems", whole words, longest first)
-  is sent with that course (`CoursesInText`, at most 2; a follow-up without
+  name of two words or more ("Operating Systems", whole words, longest first;
+  names are English only, so a Kazakh or Russian name finds nothing; a name
+  shared by several codes prefers the student's program, then more reviews,
+  then more programs) is sent with that course (`CoursesInText`, at most 2; a follow-up without
   one uses the latest earlier question that named one): catalogue facts,
   where it is taught (program, semester, entry years) and up to 6 published
   (`ok`) reviews, no authors, with the averages and recommend %. `ai_ml`

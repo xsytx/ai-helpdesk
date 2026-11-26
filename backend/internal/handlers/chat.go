@@ -67,7 +67,7 @@ const chatForumCandidates = 200
 // (Stories 8-9). A failed forum read only means the model answers without the forum.
 func (h *Handlers) chatBackground(ctx context.Context, uid int64, conv *models.ChatConversation, question string) mlclient.Background {
 	bg := mlclient.Background{History: h.chatHistory(ctx, uid, conv)}
-	for _, c := range h.chatCourses(ctx, question, bg.History) {
+	for _, c := range h.chatCourses(ctx, uid, question, bg.History) {
 		bg.Courses = append(bg.Courses, h.courseFacts(ctx, c))
 	}
 	answers, err := h.Store.ForumAnswers(ctx, chatForumCandidates)

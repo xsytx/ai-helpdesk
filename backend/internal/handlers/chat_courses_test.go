@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	"campus-forum/internal/middleware"
 	"campus-forum/internal/mlclient"
 )
@@ -114,6 +116,16 @@ func TestChatQuestionsAboutCourses(t *testing.T) {
 	}
 
 	// By the full name (not "Mathematical analysis 1" inside "... 10"), two at once; unknown codes and other questions: none.
+	// Another course with the same name that no program teaches loses to the one in the plan.
+	conn, err := pgx.Connect(ctx, e.dsn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = conn.Exec(ctx, `INSERT INTO courses (code, name) VALUES ('AAA 141', 'Mathematical analysis 2') ON CONFLICT DO NOTHING`)
+	conn.Close(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
 	ask("Compare mathematical analysis 2 and MAT 203", nil)
 	if c := sent(); len(c) != 2 || c[0].Code != "MAT 203" || c[1].Code != "MAT 141" {
 		t.Fatalf("two courses: %+v", c)

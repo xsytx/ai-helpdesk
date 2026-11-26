@@ -29,7 +29,7 @@ const (
 
 // chatCourses finds the courses the question is about: named in it, or in
 // the latest earlier question of the chat that named any.
-func (h *Handlers) chatCourses(ctx context.Context, question string, history []mlclient.HistoryItem) []models.Course {
+func (h *Handlers) chatCourses(ctx context.Context, uid int64, question string, history []mlclient.HistoryItem) []models.Course {
 	texts := []string{question}
 	for i := len(history) - 1; i >= 0; i-- {
 		if history[i].Role == "user" {
@@ -37,7 +37,7 @@ func (h *Handlers) chatCourses(ctx context.Context, question string, history []m
 		}
 	}
 	for _, text := range texts {
-		list, err := h.Store.CoursesInText(ctx, text, chatCourseLimit)
+		list, err := h.Store.CoursesInText(ctx, text, chatCourseLimit, uid)
 		if err != nil {
 			log.Printf("chat courses in question: %v", err)
 			return nil

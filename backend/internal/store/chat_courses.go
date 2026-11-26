@@ -21,8 +21,11 @@ var courseCodeInText = regexp.MustCompile(`(?i)\b([a-z]{3,5})[ -]?(\d{3,4})\b`)
 // limit: course codes first (in the order typed), then full course names
 // ("Operating Systems", any letter case, punctuation ignored; names of two
 // words or more, longest first, so "Linear Algebra 2" wins over "Linear
-// Algebra"). Codes not in the catalogue are skipped.
-func (s *PostgresStore) CoursesInText(ctx context.Context, text string, limit int) ([]models.Course, error) {
+// Algebra"). Codes not in the catalogue are skipped. When several courses
+// share a name ("Machine Learning" is taught under five codes), the one in
+// the asking student's program comes first, then the one with more published
+// reviews, then the one more programs teach.
+func (s *PostgresStore) CoursesInText(ctx context.Context, text string, limit int, userID int64) ([]models.Course, error) {
 	out := []models.Course{}
 	if limit <= 0 || strings.TrimSpace(text) == "" {
 		return out, nil
@@ -60,12 +63,21 @@ func (s *PostgresStore) CoursesInText(ctx context.Context, text string, limit in
 	// A name counts only as whole words ("Physics 1" is not found in "Physics 10"),
 	// and only a name of two words or more: "Internship" alone is too general.
 	rows, err := s.pool.Query(ctx, `
-		SELECT `+courseColumns+` FROM courses
+		WITH mine AS (
+			SELECT c.id FROM curricula c JOIN user_programs up ON up.program_code = c.program_code WHERE up.user_id = $2
+		)
+		SELECT `+courseColumns+` FROM courses co
 		WHERE char_length(name) >= 8 AND name LIKE '% %'
 		  AND strpos(' ' || regexp_replace(lower($1), '[^[:alnum:]]+', ' ', 'g') || ' ',
 		             ' ' || trim(regexp_replace(lower(name), '[^[:alnum:]]+', ' ', 'g')) || ' ') > 0
-		ORDER BY char_length(name) DESC, code
-		LIMIT 10`, text)
+		ORDER BY char_length(name) DESC,
+		  EXISTS (SELECT 1 FROM curriculum_items i WHERE i.curriculum_id IN (SELECT id FROM mine) AND (i.course_code = co.code OR co.code = ANY(i.options)))
+		  OR EXISTS (SELECT 1 FROM curriculum_electives e WHERE e.curriculum_id IN (SELECT id FROM mine) AND e.course_code = co.code) DESC,
+		  (SELECT count(*) FROM course_reviews r WHERE r.course_code = co.code AND r.status = 'ok') DESC,
+		  (SELECT count(DISTINCT c.program_code) FROM curriculum_items i JOIN curricula c ON c.id = i.curriculum_id
+		   WHERE i.course_code = co.code OR co.code = ANY(i.options)) DESC,
+		  code
+		LIMIT 10`, text, userID)
 	if err != nil {
 		return nil, err
 	}
