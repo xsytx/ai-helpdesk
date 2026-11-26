@@ -7,15 +7,16 @@ import { cn } from "@/shared/lib/cn";
 import { safeStorage } from "@/shared/lib/storage";
 import { Mascot, type MascotMood } from "@/shared/ui/Mascot";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowUp, Maximize2, Square, X } from "lucide-react";
+import { ArrowUp, Hourglass, Maximize2, Square, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   askChatStream,
   askResponseToUiMessage,
   chatErrorMessage,
   chatKeys,
   fetchChatStatus,
+  isDailyLimit,
   upsertConversation,
   type ConversationList,
   type UiChatMessage,
@@ -85,7 +86,7 @@ export function MascotAssistant() {
 }
 
 function Widget({ pathname, onHide }: { pathname: string; onHide: () => void }) {
-  const { t } = useLocale();
+  const { t, plural } = useLocale();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -113,6 +114,9 @@ function Widget({ pathname, onHide }: { pathname: string; onHide: () => void }) 
   const [streaming, setStreaming] = useState<string | null>(null);
   const [conversationId, setConversationId] = useState<string>();
   const [status, setStatus] = useState<"ok" | "degraded" | "unknown">("unknown");
+  // AI questions left today (null = no daily limit for this account).
+  const [daily, setDaily] = useState<{ limit: number; left: number } | null>(null);
+  const usedUp = daily?.left === 0;
   const abortRef = useRef<AbortController | null>(null);
   const streamedRef = useRef("");
   const listRef = useRef<HTMLDivElement>(null);
@@ -124,7 +128,11 @@ function Widget({ pathname, onHide }: { pathname: string; onHide: () => void }) 
     inputRef.current?.focus();
     let cancelled = false;
     fetchChatStatus().then(
-      (s) => !cancelled && setStatus(s.status),
+      (s) => {
+        if (cancelled) return;
+        setStatus(s.status);
+        setDaily(s.dailyLimit !== undefined && s.dailyLeft !== undefined ? { limit: s.dailyLimit, left: s.dailyLeft } : null);
+      },
       () => !cancelled && setStatus("degraded"),
     );
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
@@ -146,7 +154,7 @@ function Widget({ pathname, onHide }: { pathname: string; onHide: () => void }) 
 
   async function ask(question: string) {
     const q = question.trim();
-    if (!q || busy) return;
+    if (!q || busy || usedUp) return;
     setInput("");
     setMessages((m) => [...m, { id: crypto.randomUUID(), role: "user", text: q }]);
     setStreaming("");
@@ -176,6 +184,10 @@ function Widget({ pathname, onHide }: { pathname: string; onHide: () => void }) 
         controller.signal,
       );
       setStatus("ok");
+      if (res.daily_left !== undefined) {
+        const left = res.daily_left;
+        setDaily((d) => (d ? { ...d, left } : d));
+      }
       setMessages((m) => [...m, askResponseToUiMessage(res)]);
     } catch (err) {
       if (controller.signal.aborted) {
@@ -184,6 +196,7 @@ function Widget({ pathname, onHide }: { pathname: string; onHide: () => void }) 
         if (text) setMessages((m) => [...m, { id: crypto.randomUUID(), role: "assistant", text, status: "answered" }]);
       } else {
         if ((err as { status?: number })?.status === 503) setStatus("degraded");
+        if (isDailyLimit(err)) setDaily((d) => ({ limit: d?.limit ?? 0, left: 0 }));
         setMessages((m) => [
           ...m,
           { id: crypto.randomUUID(), role: "assistant", text: chatErrorMessage(err, t), error: true },
@@ -203,7 +216,7 @@ function Widget({ pathname, onHide }: { pathname: string; onHide: () => void }) 
   const noAnswer = last?.role === "assistant" && (last.error || last.status === "fallback");
   const mood: MascotMood = busy
     ? "think"
-    : status === "degraded"
+    : status === "degraded" || usedUp
       ? "sleep"
       : hover
         ? "hello"
@@ -230,7 +243,13 @@ function Widget({ pathname, onHide }: { pathname: string; onHide: () => void }) 
             <div className="min-w-0 flex-1">
               <p className="text-sm font-bold text-primary">{t("assistantName")}</p>
               <p className="truncate text-xs text-label">
-                {status === "degraded" ? t("assistantSleeping") : busy ? t("assistantThinking") : t("assistantRole")}
+                {status === "degraded"
+                  ? t("assistantSleeping")
+                  : usedUp
+                    ? t("assistantResting")
+                    : busy
+                      ? t("assistantThinking")
+                      : t("assistantRole")}
               </p>
             </div>
             {conversationId ? (
@@ -289,7 +308,7 @@ function Widget({ pathname, onHide }: { pathname: string; onHide: () => void }) 
                 </div>
               )
             ) : null}
-            {!busy && suggestions.length > 0 && status !== "degraded" ? (
+            {!busy && suggestions.length > 0 && status !== "degraded" && !usedUp ? (
               <div className="flex flex-wrap gap-1.5 pt-1">
                 {suggestions.map((s) => (
                   <button
@@ -305,8 +324,39 @@ function Widget({ pathname, onHide }: { pathname: string; onHide: () => void }) 
             ) : null}
           </div>
 
+          {usedUp ? (
+            // Today's AI questions are used up: say when they come back and where else to look.
+            <div className="flex items-start gap-2 border-t border-border/50 bg-amber-50 p-3 text-sm dark:bg-amber-950/30" role="status">
+              <Hourglass className="mt-0.5 h-4 w-4 shrink-0 text-amber-700 dark:text-amber-300" aria-hidden />
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold text-primary">{t("chatDailyLimitTitle").replace("{n}", String(daily?.limit ?? ""))}</p>
+                <p className="text-xs text-label">{t("chatDailyLimitBody")}</p>
+                <div className="mt-2 flex gap-2">
+                  {(["/faq", "/forum"] as const).map((to) => (
+                    <Link
+                      key={to}
+                      to={to}
+                      viewTransition
+                      onClick={() => setOpen(false)}
+                      className="rounded-full border border-border bg-surface px-3 py-1 text-xs font-semibold text-primary hover:bg-background-2"
+                    >
+                      {t(to === "/faq" ? "faq" : "forum")}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : null}
+          {daily && daily.left > 0 && daily.left <= 5 ? (
+            <p className="flex items-center gap-1 border-t border-border/50 px-3 pt-1.5 text-xs text-label" aria-live="polite">
+              <Hourglass className="h-3 w-3" aria-hidden />
+              {plural(daily.left, "chatDailyLeft")}
+            </p>
+          ) : null}
           <form
-            className="flex items-end gap-2 border-t border-border/50 p-2"
+            hidden={usedUp}
+            // The "left today" line above already draws the border.
+            className={cn("flex items-end gap-2 p-2", !(daily && daily.left > 0 && daily.left <= 5) && "border-t border-border/50")}
             onSubmit={(e) => {
               e.preventDefault();
               void ask(input);

@@ -146,7 +146,10 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   (the per-minute limiter's 429 has no code); `/api/chat/status` and every
   answer carry `daily_left`. `ChatPage` shows "N AI questions left today" at
   5 or fewer and `DailyLimitNotice` (FAQ buttons and "Ask on the forum" stay)
-  at 0; streamed errors keep their JSON body (`HttpStatusError.data`).
+  at 0; the corner chat (`MascotAssistant`) shows the same line, and at 0 a
+  short notice with FAQ / Forum links instead of its box (Barys sleeps,
+  "Resting until midnight"); streamed errors keep their JSON body
+  (`HttpStatusError.data`).
 - **Streaming answers + stop.** The website uses `POST /api/chat/ask/stream`
   (`ChatAskStream`, NDJSON lines: `conversation` → `delta`… / `reset` →
   `done`; `error` only after text was sent; earlier problems are plain HTTP
