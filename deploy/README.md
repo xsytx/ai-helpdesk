@@ -108,6 +108,9 @@ Everyone signs in again once (the server has its own login key).
 ## Later
 
 - **Update** after new commits: `git pull` and the `up -d --build` command from step 4.
+  When `deploy/Caddyfile` changed, Caddy also has to be recreated (it reads
+  the file only when its container is made, and `git pull` replaces the file):
+  `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --force-recreate caddy`.
 - **Backups** every night at 3:00 (`crontab -e`, add the line):
   `0 3 * * * cd /home/azureuser/sdu-helpdesk && bash scripts/backup.sh /home/azureuser/backups`
   and now and then copy one to the laptop with `scp`.
