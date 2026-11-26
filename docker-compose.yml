@@ -28,6 +28,9 @@ services:
       JWT_SECRET_FILE: "/data/jwt.secret"
       UPLOAD_DIR: "/data/uploads"
       BASE_URL: "${PUBLIC_URL:-http://localhost:3000}"
+      # Which other website may call the API from a browser: on a server the
+      # site's own address (PUBLIC_URL), so no other site can; "*" on a laptop.
+      CORS_ALLOWED_ORIGIN: "${CORS_ALLOWED_ORIGIN:-${PUBLIC_URL:-*}}"
       ADMIN_EMAILS: "${ADMIN_EMAILS:-}"
       # Real email delivery for verification / password reset codes. Left
       # empty, codes are shown on screen instead (local testing only).

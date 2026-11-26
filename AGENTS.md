@@ -760,6 +760,22 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   gets a new random name: keep it that way); `index.html` is always
   re-checked so a deploy's new bundles load.
 
+- **Security headers (sprint 7).** nginx sends them on every response from
+  `nginx-security-headers.conf` (copied into the image as
+  `/etc/nginx/snippets/security-headers.conf`): included at the top AND in
+  every `location` with its own `add_header` (nginx drops inherited
+  add_header lines there: a new such location needs the include too). The
+  Content-Security-Policy allows only the site's own scripts (no inline
+  ones: the theme script is `public/theme-init.js`), its own API, images
+  from itself + data:/blob:, frames of `vrmir3d.com` only, and no framing by
+  other sites. A new outside service (image host, analytics, another tour
+  site) must be added there, or the browser blocks it (console: "Content
+  Security Policy"). `server_tokens off` hides nginx's version; Caddy
+  (`deploy/Caddyfile`) adds HSTS and removes every `Server` header. CORS:
+  `CORS_ALLOWED_ORIGIN` defaults to `PUBLIC_URL` in docker-compose, so on the
+  server only the site itself may call the API from a browser ("*" on a
+  laptop without PUBLIC_URL).
+
 - Windows checkout with `core.autocrlf=true`: files are CRLF in the working
   tree (Git stores LF). Editing tools that write LF create mixed endings;
   `gofmt -l` lists every Go file for the same reason — not a real problem.

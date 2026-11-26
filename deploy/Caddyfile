@@ -3,8 +3,15 @@
 # be open), and everything forwarded to the website container, whose nginx
 # serves the app and passes /api and /uploads on to the backend.
 {$SITE_ADDRESS} {
+	# HTTPS only from now on: browsers remember it for a year and never try
+	# plain http for this address again (the other security headers come
+	# from the website's nginx, nginx-security-headers.conf).
+	header Strict-Transport-Security "max-age=31536000"
+	# Don't tell visitors which server software runs here.
+	header -Server
 	reverse_proxy web:80 {
 		# Live notifications and streamed AI answers go out as they come.
 		flush_interval -1
+		header_down -Server
 	}
 }
