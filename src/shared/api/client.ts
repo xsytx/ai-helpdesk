@@ -32,13 +32,14 @@ export function getAuthToken(): string | null {
 
 /** A failed fetch() request (streaming calls don't go through axios). */
 export class HttpStatusError extends Error {
-  constructor(readonly status: number, message = `HTTP ${status}`) {
+  constructor(readonly status: number, message = `HTTP ${status}`, readonly data?: Record<string, unknown>) {
     super(message);
   }
 }
 
 /** The JSON body of a failed request (e.g. {code, until, reason} for a restriction). */
 export function getErrorData(err: unknown): Record<string, unknown> | undefined {
+  if (err instanceof HttpStatusError) return err.data;
   if (!isAxiosError(err)) return undefined;
   const data = err.response?.data;
   return data && typeof data === "object" ? (data as Record<string, unknown>) : undefined;
@@ -63,7 +64,10 @@ export async function postStream(path: string, body: unknown, signal?: AbortSign
     body: JSON.stringify(body),
     signal,
   });
-  if (!res.ok) throw new HttpStatusError(res.status);
+  if (!res.ok) {
+    const data: unknown = await res.json().catch(() => undefined);
+    throw new HttpStatusError(res.status, `HTTP ${res.status}`, data && typeof data === "object" ? (data as Record<string, unknown>) : undefined);
+  }
   return res;
 }
 

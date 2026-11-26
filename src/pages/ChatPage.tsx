@@ -8,6 +8,7 @@ import {
   chatErrorMessage,
   chatKeys,
   fetchChatStatus,
+  isDailyLimit,
   toConversation,
   upsertConversation,
   useChatMessages,
@@ -26,11 +27,11 @@ import { useFaqs } from "@/features/faq/api";
 import { UserAvatar } from "@/features/profile/components/UserAvatar";
 import { useLocale } from "@/i18n/LocaleContext";
 import { cn } from "@/shared/lib/cn";
-import { getErrorStatus } from "@/shared/api/client";
+import { getErrorData, getErrorStatus } from "@/shared/api/client";
 import { Button } from "@/shared/ui/Button";
 import { Card } from "@/shared/ui/Card";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowUp, ChevronDown, CornerDownRight, History, Loader2, Plus, Square, X, Zap } from "lucide-react";
+import { ArrowUp, ChevronDown, CornerDownRight, History, Hourglass, Loader2, MessageSquarePlus, Plus, Square, X, Zap } from "lucide-react";
 import { createPortal } from "react-dom";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -126,8 +127,31 @@ function ChatListSheet({ activeId, onClose }: { activeId?: string; onClose: () =
   );
 }
 
+/**
+ * In place of a question box when today's AI questions are used up: when they
+ * come back, and that the FAQ buttons and the forum still work.
+ */
+function DailyLimitNotice({ limit, onForum }: { limit: number; onForum: () => void }) {
+  const { t } = useLocale();
+  return (
+    <div className="mb-2 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm dark:border-amber-900/60 dark:bg-amber-950/30" role="status">
+      <Hourglass className="mt-0.5 h-4 w-4 shrink-0 text-amber-700 dark:text-amber-300" aria-hidden />
+      <div className="min-w-0 flex-1 sm:flex sm:items-center sm:gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="font-semibold text-primary">{t("chatDailyLimitTitle").replace("{n}", String(limit))}</p>
+          <p className="text-label">{t("chatDailyLimitBody")}</p>
+        </div>
+        <Button size="sm" variant="secondary" onClick={onForum} className="mt-2 shrink-0 sm:mt-0">
+          <MessageSquarePlus className="h-4 w-4" />
+          {t("searchAskForum")}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export function ChatPage() {
-  const { t, locale } = useLocale();
+  const { t, locale, plural } = useLocale();
   const { user } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
@@ -157,6 +181,8 @@ export function ChatPage() {
   const [forumDraft, setForumDraft] = useState<string | null>(null);
   const closeForumDraft = useCallback(() => setForumDraft(null), []);
   const [assistantStatus, setAssistantStatus] = useState<"ok" | "degraded" | "unknown">("unknown");
+  // AI questions left today (null = no daily limit for this account).
+  const [daily, setDaily] = useState<{ limit: number; left: number } | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const initialHandled = useRef(false);
@@ -170,7 +196,11 @@ export function ChatPage() {
   useEffect(() => {
     let cancelled = false;
     fetchChatStatus().then(
-      (status) => !cancelled && setAssistantStatus(status),
+      (s) => {
+        if (cancelled) return;
+        setAssistantStatus(s.status);
+        setDaily(s.dailyLimit !== undefined && s.dailyLeft !== undefined ? { limit: s.dailyLimit, left: s.dailyLeft } : null);
+      },
       () => !cancelled && setAssistantStatus("degraded"),
     );
     return () => {
@@ -252,6 +282,10 @@ export function ChatPage() {
               ac.signal,
             );
         setAssistantStatus("ok");
+        if (res.daily_left !== undefined) {
+          const left = res.daily_left;
+          setDaily((d) => (d ? { ...d, left } : d));
+        }
         const conv = toConversation(res.conversation);
         adoptConversation(conv);
         const answer = askResponseToUiMessage(res);
@@ -325,6 +359,10 @@ export function ChatPage() {
           },
         ]);
         if (getErrorStatus(err) === 503) setAssistantStatus("degraded");
+        if (isDailyLimit(err)) {
+          const limit = Number(getErrorData(err)?.limit) || 0;
+          setDaily((d) => ({ limit: d?.limit ?? limit, left: 0 }));
+        }
       } finally {
         setStreaming(null);
         if (abortRef.current === ac) abortRef.current = null;
@@ -533,6 +571,7 @@ export function ChatPage() {
                 ) : null}
               </div>
             ) : null}
+            {daily && daily.left === 0 ? <DailyLimitNotice limit={daily.limit} onForum={() => setForumDraft(input.trim())} /> : null}
             {busyElsewhere ? (
               <p className="mb-2 flex items-center gap-2 text-xs text-label" aria-live="polite">
                 <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
@@ -545,7 +584,7 @@ export function ChatPage() {
               onChange={(e) => setInput(e.target.value)}
               placeholder={t("askPlaceholder")}
               rows={2}
-              disabled={inputDisabled}
+              disabled={inputDisabled || daily?.left === 0}
               className="w-full resize-none rounded-xl border border-border px-3 py-2 pr-12 text-sm focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
@@ -554,6 +593,12 @@ export function ChatPage() {
                 }
               }}
             />
+            {daily && daily.left > 0 && daily.left <= 5 ? (
+              <p className="mt-1 flex items-center gap-1 text-xs text-label" aria-live="polite">
+                <Hourglass className="h-3 w-3" aria-hidden />
+                {plural(daily.left, "chatDailyLeft")}
+              </p>
+            ) : null}
             {loading ? (
               <button
                 type="button"
@@ -567,7 +612,7 @@ export function ChatPage() {
             ) : (
               <button
                 type="button"
-                disabled={inputDisabled || !input.trim()}
+                disabled={inputDisabled || !input.trim() || daily?.left === 0}
                 onClick={send}
                 className="absolute bottom-5 right-2 flex h-8 w-8 items-center justify-center rounded-full bg-brand text-white hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-50"
                 aria-label={t("send")}

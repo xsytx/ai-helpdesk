@@ -1,4 +1,4 @@
-import { apiClient, getErrorStatus, HttpStatusError, postStream } from "@/shared/api/client";
+import { apiClient, getErrorData, getErrorStatus, HttpStatusError, postStream } from "@/shared/api/client";
 import type { Locale, TranslationKey } from "@/i18n/translations";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -50,6 +50,8 @@ export interface ChatAskResponse {
   conversation: ApiConversation;
   /** The saved answer, for 👍/👎 (missing if saving it failed). */
   message_id?: number;
+  /** AI questions the student has left today (missing = no daily limit). */
+  daily_left?: number;
 }
 
 interface ApiConversation {
@@ -318,13 +320,24 @@ export async function askFaq(
   return data;
 }
 
-export async function fetchChatStatus(): Promise<"ok" | "degraded"> {
-  const { data } = await apiClient.get<{ status: string }>("/chat/status");
-  return data.status === "ok" ? "ok" : "degraded";
+/** The assistant's state and, for a student with a daily limit, the AI questions left today. */
+export interface ChatStatus {
+  status: "ok" | "degraded";
+  dailyLimit?: number;
+  dailyLeft?: number;
 }
+
+export async function fetchChatStatus(): Promise<ChatStatus> {
+  const { data } = await apiClient.get<{ status: string; daily_limit?: number; daily_left?: number }>("/chat/status");
+  return { status: data.status === "ok" ? "ok" : "degraded", dailyLimit: data.daily_limit, dailyLeft: data.daily_left };
+}
+
+/** The question was refused because the student used today's AI questions. */
+export const isDailyLimit = (err: unknown) => getErrorStatus(err) === 429 && getErrorData(err)?.code === "daily_limit";
 
 export function chatErrorMessage(err: unknown, t: (key: TranslationKey) => string): string {
   const status = getErrorStatus(err);
+  if (isDailyLimit(err)) return t("chatDailyLimitReached");
   if (status === 429) return t("chatTooManyRequests");
   if (status === 503) return t("chatAssistantUnavailable");
   if (status === 502 || status === 504) return t("chatAssistantError");

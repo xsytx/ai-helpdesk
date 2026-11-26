@@ -158,6 +158,11 @@ type Store interface {
 	GetReviewAISummary(ctx context.Context, code, lang string) (models.ReviewAISummary, error)
 	// CoursesInText: the catalogue courses a chat question names by code or full name (at most limit).
 	CoursesInText(ctx context.Context, text string, limit int, userID int64) ([]models.Course, error)
+
+	// --- AI daily limit (030_ai_usage.sql) ---
+	// AIQuestionsOn / CountAIQuestion: questions the AI chat answered for a user on a day (its date).
+	AIQuestionsOn(ctx context.Context, userID int64, day time.Time) (int, error)
+	CountAIQuestion(ctx context.Context, userID int64, day time.Time) (int, error)
 	SaveReviewAISummary(ctx context.Context, code, lang string, v models.ReviewAISummary) (models.ReviewAISummary, error)
 	// ReviewBriefs: count, recommend %, average difficulty and usefulness of the visible reviews, per course with any.
 	ReviewBriefs(ctx context.Context, codes []string) (map[string]models.ReviewBrief, error)

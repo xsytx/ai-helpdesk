@@ -36,6 +36,9 @@ type Handlers struct {
 	// ChatRetentionDays: unpinned AI chats with no message for this many days
 	// are deleted (0 = keep forever).
 	ChatRetentionDays int
+	// ChatDailyLimit: AI chat questions a student may have answered per day
+	// (CHAT_DAILY_LIMIT; 0 = no limit; staff never limited). See chat_limit.go.
+	ChatDailyLimit int
 	// Events passes live notification signals to open pages (nil = off).
 	Events *events.Hub
 }

@@ -198,6 +198,10 @@ func main() {
 		h.ChatRetentionDays = n
 	}
 	go h.CleanupChatConversations(ctx)
+	// AI chat questions per student per day (0 = no limit; staff never limited).
+	if n, err := strconv.Atoi(getenv("CHAT_DAILY_LIMIT", "30")); err == nil && n >= 0 {
+		h.ChatDailyLimit = n
+	}
 
 	// Live notifications: the database announces every change, and the
 	// open pages of that user hear it at once (GET /api/notifications/stream).

@@ -135,6 +135,18 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   to `/chat/:id`. Rename/pin/delete in the list (`ConversationList`; a side
   panel on wide screens, a sheet on phones). Unpinned chats idle for
   `CHAT_RETENTION_DAYS` (30) are deleted hourly.
+- **AI daily limit (sprint 7, `030_ai_usage.sql`, `handlers/chat_limit.go`).**
+  A student gets `CHAT_DAILY_LIMIT` (30; 0 = off) AI chat answers per day,
+  Almaty date (UTC+5): the AI's free quota is shared by everyone. Counted in
+  `ai_usage` (user, day, questions), apart from the chat history, so deleting
+  chats doesn't reset it: answered questions and stopped answers count; FAQ
+  answers and failed questions don't. Staff are never limited but are counted
+  too (the admin dashboard sums the day). Over the limit `ChatAsk` /
+  `ChatAskStream` answer 429 `{code: "daily_limit", limit, used, resets_at}`
+  (the per-minute limiter's 429 has no code); `/api/chat/status` and every
+  answer carry `daily_left`. `ChatPage` shows "N AI questions left today" at
+  5 or fewer and `DailyLimitNotice` (FAQ buttons and "Ask on the forum" stay)
+  at 0; streamed errors keep their JSON body (`HttpStatusError.data`).
 - **Streaming answers + stop.** The website uses `POST /api/chat/ask/stream`
   (`ChatAskStream`, NDJSON lines: `conversation` → `delta`… / `reset` →
   `done`; `error` only after text was sent; earlier problems are plain HTTP
@@ -701,7 +713,7 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
 - **Every public SQL read must hide held posts**: use `threadVisible` /
   `commentVisible` in `backend/internal/store/postgres.go`.
 - **Schema changes** are idempotent SQL applied on every start
-  (`001_init.sql` + `003_chat.sql` + `004_faq.sql` + `005_search.sql` + `006_chat_feedback.sql` + `007_forum_extras.sql` + `008_reputation.sql` + `009_profiles.sql` + `010_tags.sql` + `011_forum_answers.sql` + `012_chat_followups.sql` + `013_chat_trust_share.sql` + `014_edits.sql` + `015_saved_restrict.sql` + `016_notification_events.sql` + `017_chat_source_comment.sql` + `018_location_reports.sql` + `019_map_points.sql` + `020_map_extras.sql` + `021_location_photos.sql` + `022_courses.sql` + `023_course_reviews.sql` + `024_floor4.sql` + `025_floor3.sql` + `026_map_tours.sql` + `027_review_axes.sql` + `028_review_ai_summaries.sql` + `029_chat_courses.sql` in `Migrate`, `002_moderation.sql` in
+  (`001_init.sql` + `003_chat.sql` + `004_faq.sql` + `005_search.sql` + `006_chat_feedback.sql` + `007_forum_extras.sql` + `008_reputation.sql` + `009_profiles.sql` + `010_tags.sql` + `011_forum_answers.sql` + `012_chat_followups.sql` + `013_chat_trust_share.sql` + `014_edits.sql` + `015_saved_restrict.sql` + `016_notification_events.sql` + `017_chat_source_comment.sql` + `018_location_reports.sql` + `019_map_points.sql` + `020_map_extras.sql` + `021_location_photos.sql` + `022_courses.sql` + `023_course_reviews.sql` + `024_floor4.sql` + `025_floor3.sql` + `026_map_tours.sql` + `027_review_axes.sql` + `028_review_ai_summaries.sql` + `029_chat_courses.sql` + `030_ai_usage.sql` in `Migrate`, `002_moderation.sql` in
   `MigrateModeration`): `CREATE ... IF NOT EXISTS` /
   `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`.
 - **Store interface**: adding a method to `store.Store` also needs a stub on

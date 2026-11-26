@@ -124,7 +124,7 @@ function Widget({ pathname, onHide }: { pathname: string; onHide: () => void }) 
     inputRef.current?.focus();
     let cancelled = false;
     fetchChatStatus().then(
-      (s) => !cancelled && setStatus(s),
+      (s) => !cancelled && setStatus(s.status),
       () => !cancelled && setStatus("degraded"),
     );
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);

@@ -100,6 +100,9 @@ func (h *Handlers) ChatAskStream(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusServiceUnavailable, "the assistant is temporarily unavailable")
 		return
 	}
+	if h.refuseOverLimit(w, r, uid) {
+		return
+	}
 
 	background := h.chatBackground(r.Context(), uid, conv, question)
 	var partial strings.Builder
@@ -172,6 +175,8 @@ func (h *Handlers) ChatAskStream(w http.ResponseWriter, r *http.Request) {
 			}); serr != nil {
 				log.Printf("chat stream save stopped answer: %v", serr)
 			}
+			// The AI worked on it: a stopped answer counts towards the daily limit.
+			h.countAIQuestion(saveCtx, uid)
 		}
 		if !stopped {
 			status := http.StatusBadGateway
@@ -188,6 +193,9 @@ func (h *Handlers) ChatAskStream(w http.ResponseWriter, r *http.Request) {
 	assistant := assistantMessage(result)
 	assistant.Courses = chatCourseRefs(background.Courses)
 	resp.Courses = assistant.Courses
+	if result.Status == "answered" {
+		resp.DailyLeft = h.countAIQuestion(saveCtx, uid)
+	}
 	assistant.ConversationID = conv.ID
 	if saved, serr := h.Store.CreateChatMessage(saveCtx, uid, assistant); serr != nil {
 		log.Printf("chat stream save answer: %v", serr)

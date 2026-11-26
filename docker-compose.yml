@@ -41,6 +41,7 @@ services:
       ML_REQUEST_TIMEOUT_SECONDS: "${ML_REQUEST_TIMEOUT_SECONDS:-180}"
       MODERATION_ENABLED: "${MODERATION_ENABLED:-true}"
       CHAT_RETENTION_DAYS: "${CHAT_RETENTION_DAYS:-30}"
+      CHAT_DAILY_LIMIT: "${CHAT_DAILY_LIMIT:-30}"
     # Only reachable from this computer — used by `npm run dev`. Visitors go
     # through the web service above.
     ports:

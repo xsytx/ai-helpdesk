@@ -52,6 +52,8 @@ type chatAskResp struct {
 	Conversation *models.ChatConversation `json:"conversation,omitempty"`
 	// MessageID is the saved answer (for 👍/👎); 0 if saving it failed.
 	MessageID int64 `json:"message_id,omitempty"`
+	// DailyLeft: AI questions the student has left today (absent = no limit).
+	DailyLeft *int `json:"daily_left,omitempty"`
 }
 
 // chatHistoryMessages is how much of the conversation the model gets with
@@ -194,6 +196,9 @@ func (h *Handlers) ChatAsk(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusServiceUnavailable, "the assistant is temporarily unavailable")
 		return
 	}
+	if h.refuseOverLimit(w, r, uid) {
+		return
+	}
 
 	started := time.Now()
 	background := h.chatBackground(r.Context(), uid, conv, question)
@@ -221,6 +226,9 @@ func (h *Handlers) ChatAsk(w http.ResponseWriter, r *http.Request) {
 	resp.Courses = assistant.Courses
 	resp.Conversation = conv
 	resp.MessageID = messageID
+	if mlResp.Status == "answered" {
+		resp.DailyLeft = h.countAIQuestion(context.WithoutCancel(r.Context()), uid)
+	}
 	writeJSON(w, http.StatusOK, resp)
 }
 
@@ -510,19 +518,19 @@ func (h *Handlers) CleanupChatConversations(ctx context.Context) {
 	}
 }
 
+// ChatStatus: {status: "ok"|"degraded"} and, for a student with a daily
+// limit, daily_limit and daily_left (AI questions left today).
 func (h *Handlers) ChatStatus(w http.ResponseWriter, r *http.Request) {
-	if h.ML == nil {
-		writeJSON(w, http.StatusOK, map[string]string{"status": "degraded"})
-		return
+	out := map[string]any{"status": "degraded"}
+	if uid, ok := h.userID(r); ok {
+		if limited, _, left := h.chatQuota(r.Context(), uid); limited {
+			out["daily_limit"], out["daily_left"] = h.ChatDailyLimit, left
+		}
 	}
-	health, err := h.ML.Health(r.Context())
-	if err != nil {
-		writeJSON(w, http.StatusOK, map[string]string{"status": "degraded"})
-		return
+	if h.ML != nil {
+		if health, err := h.ML.Health(r.Context()); err == nil && health.Status != "" {
+			out["status"] = health.Status
+		}
 	}
-	status := health.Status
-	if status == "" {
-		status = "degraded"
-	}
-	writeJSON(w, http.StatusOK, map[string]string{"status": status})
+	writeJSON(w, http.StatusOK, out)
 }
