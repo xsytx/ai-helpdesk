@@ -247,6 +247,9 @@ function AIQuota({ data }: { data: Dashboard }) {
   );
 }
 
+/** Rows a list shows before "Show all": keeps the two columns of cards close in height. */
+const LIST_ROWS = 5;
+
 function ListCard({ icon, title, hint, more, children }: {
   icon: ReactNode;
   title: string;
@@ -255,6 +258,8 @@ function ListCard({ icon, title, hint, more, children }: {
   children: ReactNode[];
 }) {
   const { t } = useLocale();
+  const [all, setAll] = useState(false);
+  const rows = all ? children : children.slice(0, LIST_ROWS);
   return (
     <Card className="space-y-2 break-inside-avoid">
       <div className="flex items-start justify-between gap-2">
@@ -269,7 +274,14 @@ function ListCard({ icon, title, hint, more, children }: {
         ) : null}
       </div>
       {children.length > 0 ? (
-        <ul className="divide-y divide-border/60">{children}</ul>
+        <>
+          <ul className="divide-y divide-border/60">{rows}</ul>
+          {children.length > LIST_ROWS ? (
+            <button type="button" onClick={() => setAll(!all)} className="text-xs font-semibold text-brand hover:underline dark:text-primary">
+              {all ? t("dashShowLess") : fill(t("dashShowAllRows"), { n: children.length })}
+            </button>
+          ) : null}
+        </>
       ) : (
         <p className="py-2 text-sm text-label">{t("dashEmpty")}</p>
       )}
