@@ -34,3 +34,23 @@ export function sourceInOtherLanguage(msg: Pick<UiChatMessage, "forumAnswer" | "
   const reply = textLang(msg.aiExplanation);
   return source && reply && source !== reply ? source : undefined;
 }
+
+/** The words of a text that carry meaning (3+ letters or any digits), lower case. */
+function contentWords(text: string): string[] {
+  return (text.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? []).filter((w) => w.length >= 3 || /\d/.test(w));
+}
+
+/**
+ * Does the AI explanation only restate the stored answer (same language, at
+ * least 70% of the answer's words in it, and not much longer)? Then the chat
+ * shows the answer once instead of the same thing twice.
+ */
+export function explanationRestatesSource(msg: Pick<UiChatMessage, "forumAnswer" | "aiExplanation">): boolean {
+  if (!msg.forumAnswer || !msg.aiExplanation || sourceInOtherLanguage(msg)) return false;
+  const source = contentWords(msg.forumAnswer);
+  const explanation = contentWords(msg.aiExplanation);
+  if (source.length < 4) return false;
+  const said = new Set(explanation);
+  const covered = source.filter((w) => said.has(w)).length / source.length;
+  return covered >= 0.7 && explanation.length <= source.length * 1.6;
+}

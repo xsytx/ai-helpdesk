@@ -10,21 +10,29 @@ export type MapTarget =
   | { kind: "place"; code: string; label: string; to: string };
 
 const LETTER = /[\p{L}\p{N}]/u;
+/** Endings an English word may add and still be the same word ("print" → "printed"). */
+const ENGLISH_ENDINGS = ["s", "es", "ed", "ing", "er", "ers"];
 const norm = (s: string) => s.toLowerCase().replace(/ё/g, "е");
 
 /**
- * Does `text` mention `term`? At a word start; one-word terms of 5+ letters
- * also match their word forms ("столовая" → "столовую", "библиотеке"), and so
- * does a multi-word term whose last word has 6+ letters ("басып шығару" →
- * "басып шығаруға").
+ * Does `text` mention `term`? At a word start. Russian and Kazakh words change
+ * their endings, so a one-word term of 5+ letters also matches its word forms
+ * ("столовая" → "столовую", "библиотеке"), as does a multi-word term whose
+ * last word has 6+ letters ("басып шығару" → "басып шығаруға"); the stem keeps
+ * at least 5 letters ("студия" → "студи…", never "студ…" = "студент").
+ * English words keep their letters and may add only a common ending
+ * (-s, -es, -ed, -ing, -er, -ers: "canteens", "printed"), so "studio" never
+ * matches "student".
  */
 function mentions(text: string, term: string): boolean {
   const t = norm(term).trim();
   if (t.length < 3) return false;
+  const latin = !/[Ѐ-ӿ]/.test(t);
   const oneWord = /^\p{L}+$/u.test(t);
   const lastWord = /^[\p{L} ]+$/u.test(t) ? (t.split(" ").pop() ?? "") : "";
   const stem =
-    oneWord && t.length >= 6 ? t.slice(0, -2)
+    latin ? t
+    : oneWord && t.length >= 6 ? t.slice(0, Math.max(5, t.length - 2))
     : oneWord && t.length === 5 ? t.slice(0, -1)
     : !oneWord && lastWord.length >= 6 ? t.slice(0, -2)
     : t;
@@ -33,14 +41,19 @@ function mentions(text: string, term: string): boolean {
     const i = text.indexOf(stem, from);
     if (i < 0) return false;
     const before = i === 0 ? "" : text[i - 1];
-    const after = text[i + stem.length] ?? "";
+    const rest = text.slice(i + stem.length);
     const startOk = !before || !LETTER.test(before);
-    // A short or multi-word term must end at a word end too ("ssc" not in "sscx").
-    const endOk = stem !== t ? true : !after || !LETTER.test(after);
+    const wordEnd = (k: number) => !rest[k] || !LETTER.test(rest[k]);
+    // The term ends at a word end ("ssc" not in "sscx"); a Russian/Kazakh stem may
+    // go on into its ending; an English word may add a common ending.
+    const endOk = stem !== t || wordEnd(0) || (latin && ENGLISH_ENDINGS.some((e) => rest.startsWith(e) && wordEnd(e.length)));
     if (startOk && endOk) return true;
     from = i + 1;
   }
 }
+
+/** A place's name without its bracket part: "Student Service Center (SSC)" → "Student Service Center". */
+const shortName = (name: string) => name.replace(/\s*\([^)]*\)\s*$/, "");
 
 /**
  * Aliases that name a thing several places deal with ("documents": the SSC
@@ -91,7 +104,8 @@ export function findMapTargets(raw: string, locale: Locale, max = 2): MapTarget[
   // Names (in any language) are surer than aliases; popular places win ties.
   const byPopular = [...PLACES].sort((a, b) => Number(Boolean(b.popular)) - Number(Boolean(a.popular)));
   for (const p of byPopular) {
-    if ([p.name.en, p.name.ru, p.name.kz].some((n) => mentions(text, n))) add(toPlace(p));
+    // The full name or the name without its bracket part ("Student Service Center").
+    if ([p.name.en, p.name.ru, p.name.kz].some((n) => mentions(text, n) || (shortName(n) !== n && mentions(text, shortName(n))))) add(toPlace(p));
   }
   // Aliases: one place per word ("canteen" is the Red Canteen, not every canteen);
   // specific words first, general ones only if nothing else matched.

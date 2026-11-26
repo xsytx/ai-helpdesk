@@ -1,5 +1,5 @@
 import { useRateAnswer, type ChatRating, type UiChatMessage } from "@/features/chat/api";
-import { sourceInOtherLanguage } from "@/features/chat/answerLanguage";
+import { explanationRestatesSource, sourceInOtherLanguage } from "@/features/chat/answerLanguage";
 import { useLocale } from "@/i18n/LocaleContext";
 import { cn } from "@/shared/lib/cn";
 import { copyText } from "@/shared/lib/clipboard";
@@ -12,6 +12,8 @@ function answerText(msg: UiChatMessage): string {
   if (msg.forumAnswer && msg.basis !== "faq") {
     // A source in another language than the reply: copy the reply only (what the student read).
     if (sourceInOtherLanguage(msg)) return msg.aiExplanation ?? msg.text;
+    // The explanation only repeats the answer: copy the answer once.
+    if (explanationRestatesSource(msg)) return plainText(msg.forumAnswer);
     return [plainText(msg.forumAnswer), msg.aiExplanation].filter(Boolean).join("\n\n");
   }
   return msg.text;

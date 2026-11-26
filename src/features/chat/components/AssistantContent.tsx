@@ -1,5 +1,5 @@
 import type { UiChatMessage } from "@/features/chat/api";
-import { LANG_NAME, sourceInOtherLanguage } from "@/features/chat/answerLanguage";
+import { LANG_NAME, explanationRestatesSource, sourceInOtherLanguage } from "@/features/chat/answerLanguage";
 import { CourseLinks } from "@/features/courses/components/CourseLinks";
 import { MapLinks } from "@/features/locations/components/MapLinks";
 import { useLocale } from "@/i18n/LocaleContext";
@@ -161,7 +161,8 @@ function AssistantBody({ msg }: { msg: UiChatMessage & { onRetry?: () => void } 
           {fromForum ? <TrustBadges msg={msg} /> : null}
           {discussion}
         </div>
-        {msg.aiExplanation ? (
+        {/* No "AI explanation" when it only repeats the answer above in other words. */}
+        {msg.aiExplanation && !explanationRestatesSource(msg) ? (
           <div>
             <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-label">{t("chatAiExplanation")}</p>
             <RichText text={msg.aiExplanation} />

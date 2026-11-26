@@ -194,7 +194,10 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   quoted source and the explanation are in different languages (by their
   letters), the chat shows the explanation as the answer and folds the
   original under "Source in the knowledge base (Русский)"; copy takes the
-  explanation only.
+  explanation only. When the explanation only restates the source in the same
+  language (≥ 70% of its words, at most 1.6× longer:
+  `explanationRestatesSource`), the source is shown once, without the "AI
+  explanation" block, and copy takes the source.
 - **Follow-up questions.** `ChatAsk` sends the chat's last 6 messages as
   `history` to `/generate-answer`. `ai_ml` (`kb/generation.py`) searches the
   knowledge base with the question alone and with the previous question
@@ -581,6 +584,12 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   `GENERAL_ALIASES` and count only when nothing more specific matched
   ("where can I print documents?" = `COPY_CENTRE`, linked to its map point
   through the point's place). Multi-word aliases match word forms too.
+  Matching (`mentions`): Russian/Kazakh terms match their word forms by a stem
+  of at least 5 letters ("студия" → "студи…", never "студ…" = "студент");
+  English terms keep all their letters plus an ending (-s/-es/-ed/-ing/-er/-ers:
+  "printed"), so "studio" never matches "student" (it once sent "Where is the
+  Student Service Center?" to the studio). A name also matches without its
+  bracket part ("Student Service Center").
 - **Courses (Sprint 6, story 16; `022_courses.sql`, `internal/curricula`,
   `store/courses.go`, `handlers/courses.go`, `features/courses/`).** The data
   comes from the SDU portal's public "Curricula" pages, given to admin panel
