@@ -1,3 +1,5 @@
+import { getErrorStatus } from "@/shared/api/client";
+import { LoadError } from "@/shared/ui/LoadError";
 import { AnswerList } from "@/features/forum/components/AnswerList";
 import { HiddenPostNotice } from "@/features/moderation/components/HiddenPostNotice";
 import { ReplyForm } from "@/features/forum/components/ReplyForm";
@@ -31,7 +33,8 @@ import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 export function ThreadDetailPage() {
   const { threadId = "" } = useParams();
   const { t } = useLocale();
-  const { data: thread, isLoading, isError } = useThread(threadId);
+  const threadQuery = useThread(threadId);
+  const { data: thread, isLoading, isError } = threadQuery;
   const answersQuery = useAnswers(threadId);
   const answers = answersQuery.data ?? [];
   // Placeholder data (the thread from the list) has no answers yet.
@@ -39,6 +42,20 @@ export function ThreadDetailPage() {
 
   if (isLoading) {
     return <PageSkeleton rows={2} className="mx-auto max-w-3xl" />;
+  }
+
+  // A failed request is not a missing question: offer Retry instead.
+  if (isError && !thread && getErrorStatus(threadQuery.error) !== 404) {
+    return (
+      <div className="mx-auto max-w-2xl">
+        <Card>
+          <LoadError onRetry={() => void threadQuery.refetch()} retrying={threadQuery.isFetching} />
+          <Link viewTransition to="/forum" className="mt-1 inline-block text-sm font-medium text-primary-light hover:underline">
+            ← {t("backToForum")}
+          </Link>
+        </Card>
+      </div>
+    );
   }
 
   if (isError || !thread) {
@@ -77,6 +94,8 @@ export function ThreadDetailPage() {
         </div>
         {answersLoading ? (
           <SkeletonList rows={2} className="mt-4" />
+        ) : answersQuery.isError && !answersQuery.data ? (
+          <LoadError onRetry={() => void answersQuery.refetch()} retrying={answersQuery.isFetching} />
         ) : (
           <div className="mt-4">
             <AnswerList

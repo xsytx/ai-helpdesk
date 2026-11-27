@@ -1,3 +1,4 @@
+import { returnToPath } from "@/features/auth/returnTo";
 import { useAuth } from "@/app/AuthContext";
 import {
   clearPending,
@@ -31,7 +32,7 @@ export function VerifyCodePage() {
   const [resending, setResending] = useState(false);
 
   if (isAuthenticated) {
-    return <Navigate to="/" replace />;
+    return <Navigate to={returnToPath()} replace />;
   }
 
   if (!pending) {
@@ -56,7 +57,7 @@ export function VerifyCodePage() {
         clearPending();
         login({ ...pending.user, emailVerified: true }, pending.token);
         requestTour();
-        navigate("/", { viewTransition: true });
+        navigate(returnToPath(), { viewTransition: true });
       } else {
         // Checked here so a wrong code is caught before the new-password step;
         // the code is only used up by /reset-password itself.

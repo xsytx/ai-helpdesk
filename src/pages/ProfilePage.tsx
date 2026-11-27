@@ -1,3 +1,4 @@
+import { LoadError } from "@/shared/ui/LoadError";
 import { useSavedThreads } from "@/features/forum/api";
 import { isStaffRole } from "@/features/moderation/api";
 import { RestrictionPanel } from "@/features/moderation/components/Restrictions";
@@ -127,7 +128,9 @@ export function ProfilePage() {
 
 function SavedTab() {
   const { t } = useLocale();
-  const { data: threads = [], isPending } = useSavedThreads(true);
+  const query = useSavedThreads(true);
+  const { data: threads = [], isPending } = query;
+  if (query.isError && !query.data) return <LoadError onRetry={() => void query.refetch()} retrying={query.isFetching} />;
   if (isPending) return <SkeletonList rows={3} />;
   if (threads.length === 0) return <p className="py-4 text-center text-sm text-label">{t("profileNoSaved")}</p>;
   return <ThreadList threads={threads} />;
@@ -135,7 +138,9 @@ function SavedTab() {
 
 function QuestionsTab({ userId }: { userId: string }) {
   const { t } = useLocale();
-  const { data: threads = [], isPending } = useUserQuestions(userId);
+  const query = useUserQuestions(userId);
+  const { data: threads = [], isPending } = query;
+  if (query.isError && !query.data) return <LoadError onRetry={() => void query.refetch()} retrying={query.isFetching} />;
   if (isPending) return <SkeletonList rows={3} />;
   if (threads.length === 0) return <p className="py-4 text-center text-sm text-label">{t("profileNoQuestions")}</p>;
   return <ThreadList threads={threads} />;
@@ -143,14 +148,16 @@ function QuestionsTab({ userId }: { userId: string }) {
 
 function AnswersTab({ userId }: { userId: string }) {
   const { t, locale } = useLocale();
-  const { data: answers = [], isPending } = useUserAnswers(userId);
+  const query = useUserAnswers(userId);
+  const { data: answers = [], isPending } = query;
+  if (query.isError && !query.data) return <LoadError onRetry={() => void query.refetch()} retrying={query.isFetching} />;
   if (isPending) return <SkeletonList rows={3} />;
   if (answers.length === 0) return <p className="py-4 text-center text-sm text-label">{t("profileNoAnswers")}</p>;
   return (
     <ul className="divide-y divide-border/40">
       {answers.map((a) => (
         <li key={a.id}>
-          <Link viewTransition to={`/forum/${a.threadId}`} className="block rounded-xl p-2 transition-colors hover:bg-background-2/80">
+          <Link viewTransition to={`/forum/${a.threadId}#answer-${a.id}`} className="block rounded-xl p-2 transition-colors hover:bg-background-2/80">
             <p className="flex flex-wrap items-center gap-2 text-xs text-label">
               <span className="font-medium text-primary/80">{a.threadTitle}</span>
               <span>· {formatRelativeTime(a.createdAt, locale)}</span>

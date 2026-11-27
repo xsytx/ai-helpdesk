@@ -161,7 +161,7 @@ function PhotoRow({ photo, onOpen, onEarlier, onLater, onDelete, busy }: {
           placeholder={t("mapPhotosCaption")}
           aria-label={t("mapPhotosCaption")}
           className={cn(
-            "w-full rounded-lg border bg-surface px-2 py-1 text-xs text-primary outline-none placeholder:text-label/70 focus:border-brand",
+            "w-full rounded-lg border bg-surface px-2 py-1 text-xs text-primary outline-none placeholder:text-placeholder focus:border-brand",
             save.isError ? "border-error" : "border-border",
           )}
         />

@@ -21,6 +21,11 @@
   --color-label: #4b5563;
   --color-border: #d1d5db;
   --color-error: #900b09;
+  /* Filled delete/reject buttons (white text), apart from error text: the
+     dark theme's error text is pale and white on it would be unreadable. */
+  --color-danger: #900b09;
+  /* Hint text inside empty inputs: 4.8:1 on white (grey was 2.1:1). */
+  --color-placeholder: #6b7280;
   /* Admin dashboard chart (chat answers per day): AI / FAQ / no answer.
      Checked with the dataviz validator (lightness, CVD, contrast) on white. */
   --color-chart-ai: #5b62d6;
@@ -105,6 +110,8 @@ body {
   --color-label: #a3a9c6;
   --color-border: #363b62;
   --color-error: #ff8f87;
+  --color-danger: #b3261e;
+  --color-placeholder: #8b91b3;
   /* The same chart's own dark steps, checked on the dark card (#181b33). */
   --color-chart-ai: #7a80ea;
   --color-chart-faq: #14a3b8;

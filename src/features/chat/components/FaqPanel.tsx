@@ -1,3 +1,4 @@
+import { LoadError } from "@/shared/ui/LoadError";
 import { FAQ_CATEGORIES, faqText, type FaqEntry } from "@/entities/faq";
 import { useFaqs } from "@/features/faq/api";
 import { FAQ_CATEGORY_KEY } from "@/features/faq/categories";
@@ -14,7 +15,8 @@ import { useState } from "react";
 export function FaqPanel({ compact = true }: { compact?: boolean }) {
   const { t } = useLocale();
   const [openId, setOpenId] = useState<string | null>(null);
-  const { data: entries = [], isLoading, isError } = useFaqs();
+  const query = useFaqs();
+  const { data: entries = [], isLoading, isError } = query;
   const categories = FAQ_CATEGORIES.filter((c) => entries.some((e) => e.category === c));
   const grouped = !compact && categories.length > 1;
 
@@ -36,10 +38,8 @@ export function FaqPanel({ compact = true }: { compact?: boolean }) {
       <h3 className="text-lg font-bold text-primary">{t("faq")}</h3>
       <p className="mt-1 text-sm text-label">{t("faqSubtitle")}</p>
       {isLoading ? <p className="mt-4 text-sm text-label">{t("loading")}</p> : null}
-      {isError ? (
-        <p className="mt-4 text-sm text-error" role="alert">
-          {t("faqLoadFailed")}
-        </p>
+      {isError && !query.data ? (
+        <LoadError message={t("faqLoadFailed")} onRetry={() => void query.refetch()} retrying={query.isFetching} />
       ) : null}
       <div className="mt-4 space-y-5">
         {grouped

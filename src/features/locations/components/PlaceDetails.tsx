@@ -444,7 +444,7 @@ function ReportMistake({ target, placeCode, placeName, from }: { target: Place |
         rows={3}
         autoFocus
         placeholder={t("mapsReportPlaceholder")}
-        className="w-full resize-y rounded-xl border border-border bg-surface px-3 py-2 text-sm text-primary outline-none placeholder:text-label/70 focus:border-brand"
+        className="w-full resize-y rounded-xl border border-border bg-surface px-3 py-2 text-sm text-primary outline-none placeholder:text-placeholder focus:border-brand"
       />
       {points ? (
         picking ? (

@@ -1,3 +1,4 @@
+import { dailyResetTime, useDailyResetRefresh } from "@/features/chat/dailyReset";
 import { Mascot } from "@/shared/ui/Mascot";
 import { useAuth } from "@/app/AuthContext";
 import { faqText, type FaqEntry } from "@/entities/faq";
@@ -132,14 +133,14 @@ function ChatListSheet({ activeId, onClose }: { activeId?: string; onClose: () =
  * come back, and that the FAQ buttons and the forum still work.
  */
 function DailyLimitNotice({ limit, onForum }: { limit: number; onForum: () => void }) {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   return (
     <div className="mb-2 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm dark:border-amber-900/60 dark:bg-amber-950/30" role="status">
       <Hourglass className="mt-0.5 h-4 w-4 shrink-0 text-amber-700 dark:text-amber-300" aria-hidden />
       <div className="min-w-0 flex-1 sm:flex sm:items-center sm:gap-3">
         <div className="min-w-0 flex-1">
           <p className="font-semibold text-primary">{t("chatDailyLimitTitle").replace("{n}", String(limit))}</p>
-          <p className="text-label">{t("chatDailyLimitBody")}</p>
+          <p className="text-label">{t("chatDailyLimitBody").replace("{time}", dailyResetTime(locale))}</p>
         </div>
         <Button size="sm" variant="secondary" onClick={onForum} className="mt-2 shrink-0 sm:mt-0">
           <MessageSquarePlus className="h-4 w-4" />
@@ -193,21 +194,28 @@ export function ChatPage() {
     [t],
   );
 
-  useEffect(() => {
-    let cancelled = false;
+  // The assistant's state and today's questions; asked again after midnight
+  // while they're used up (useDailyResetRefresh).
+  const statusMounted = useRef(true);
+  const loadStatus = useCallback(() => {
     fetchChatStatus().then(
       (s) => {
-        if (cancelled) return;
+        if (!statusMounted.current) return;
         setAssistantStatus(s.status);
         setDaily(s.dailyLimit !== undefined && s.dailyLeft !== undefined ? { limit: s.dailyLimit, left: s.dailyLeft } : null);
       },
-      () => !cancelled && setAssistantStatus("degraded"),
+      () => statusMounted.current && setAssistantStatus("degraded"),
     );
+  }, []);
+  useEffect(() => {
+    statusMounted.current = true;
+    loadStatus();
     return () => {
-      cancelled = true;
+      statusMounted.current = false;
       abortRef.current?.abort();
     };
-  }, []);
+  }, [loadStatus]);
+  useDailyResetRefresh(daily?.left === 0, loadStatus);
 
   // The first answer after a pause can take up to a minute on a local model: tell the student we are still working.
   useEffect(() => {

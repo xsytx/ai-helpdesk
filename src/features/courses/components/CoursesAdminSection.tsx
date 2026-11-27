@@ -414,7 +414,7 @@ function DescriptionEditor() {
           onChange={(e) => setQ(e.target.value)}
           placeholder={t("coursesAdminFindCourse")}
           aria-label={t("coursesAdminFindCourse")}
-          className="min-w-0 flex-1 bg-transparent py-1 text-sm text-primary outline-none placeholder:text-label/70"
+          className="min-w-0 flex-1 bg-transparent py-1 text-sm text-primary outline-none placeholder:text-placeholder"
         />
       </div>
       {debounced.trim().length >= 2 && results && results.length > 0 && !picked ? (

@@ -16,6 +16,8 @@ export function Logo({ className, showText = true, textClassName, to = "/" }: Lo
     <Link
       viewTransition
       to={to}
+      // Named even when the text is hidden (narrow phones, showText false).
+      aria-label={t("brand")}
       className={cn("flex items-center gap-2.5 whitespace-nowrap", className)}
     >
       <img

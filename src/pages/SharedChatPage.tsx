@@ -1,3 +1,5 @@
+import { getErrorStatus } from "@/shared/api/client";
+import { LoadError } from "@/shared/ui/LoadError";
 import { useSharedChat } from "@/features/chat/api";
 import { AssistantContent } from "@/features/chat/components/AssistantContent";
 import { useLocale } from "@/i18n/LocaleContext";
@@ -14,7 +16,10 @@ import { Link, useParams } from "react-router-dom";
 export function SharedChatPage() {
   const { token = "" } = useParams();
   const { t, locale } = useLocale();
-  const { data, isLoading, isError } = useSharedChat(token);
+  const query = useSharedChat(token);
+  const { data, isLoading, isError } = query;
+  // Only a missing link means it was deleted or turned off; anything else may pass.
+  const gone = getErrorStatus(query.error) === 404;
 
   return (
     <div className="flex min-h-dvh flex-col bg-page">
@@ -29,6 +34,8 @@ export function SharedChatPage() {
         <Card>
           {isLoading ? (
             <p className="text-sm text-label">{t("loading")}</p>
+          ) : isError && !data && !gone ? (
+            <LoadError onRetry={() => void query.refetch()} retrying={query.isFetching} />
           ) : isError || !data ? (
             <p className="text-sm text-label">{t("sharedChatNotFound")}</p>
           ) : (

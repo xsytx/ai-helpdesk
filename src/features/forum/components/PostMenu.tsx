@@ -96,7 +96,7 @@ export function DeleteConfirm({
       aria-label={t(messageKey)}
     >
       <p className="mr-auto text-sm text-primary">{t(messageKey)}</p>
-      <Button size="sm" className="bg-error hover:bg-error/90" disabled={busy} onClick={onConfirm}>
+      <Button size="sm" className="bg-danger hover:bg-danger/90" disabled={busy} onClick={onConfirm}>
         {t("postDelete")}
       </Button>
       <Button size="sm" variant="secondary" onClick={onCancel}>

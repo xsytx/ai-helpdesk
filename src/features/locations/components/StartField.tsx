@@ -105,7 +105,7 @@ export function StartField({ from, start, note, extra, onEntrance, onStart }: {
               aria-label={t("mapsStartPlaceholder")}
               autoComplete="off"
               autoFocus
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm text-primary outline-none placeholder:text-label/70 focus:border-brand"
+              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm text-primary outline-none placeholder:text-placeholder focus:border-brand"
             />
           </form>
           {options.length > 0 ? (

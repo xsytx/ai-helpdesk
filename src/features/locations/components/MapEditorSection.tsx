@@ -324,7 +324,7 @@ export function MapEditorSection() {
             onChange={(e) => setQuery(e.target.value)}
             placeholder={t("mapEditorSearch")}
             aria-label={t("mapEditorSearch")}
-            className="min-w-0 flex-1 bg-transparent py-1 text-sm text-primary outline-none placeholder:text-label/70"
+            className="min-w-0 flex-1 bg-transparent py-1 text-sm text-primary outline-none placeholder:text-placeholder"
           />
         </form>
       </div>

@@ -1,6 +1,7 @@
 // Courses (Sprint 6, story 16): a program's courses by semester. Opens on the
 // student's own program and current semester; other programs can be browsed;
 // any course can be found by code or name. Each course links to its card.
+import { LoadError } from "@/shared/ui/LoadError";
 import {
   courseSlug, currentSemester, useCourseSearch, useCurriculum, useMyProgram, useMyReviews, usePrograms, useSetMyProgram,
   type CourseRef, type CurriculumItem, type Program, type ReviewBrief,
@@ -476,7 +477,7 @@ function ProgramChooser({ programs, initial, onDone, onCancel }: {
             maxLength={60}
             placeholder={t("coursesFindProgram")}
             aria-label={t("coursesFindProgram")}
-            className="min-w-0 flex-1 bg-transparent py-2 text-sm text-primary outline-none placeholder:text-label/70"
+            className="min-w-0 flex-1 bg-transparent py-2 text-sm text-primary outline-none placeholder:text-placeholder"
           />
         </div>
         {find.trim() ? (
@@ -555,7 +556,8 @@ function CourseSearch({ q, setQ }: { q: string; setQ: (v: string) => void }) {
     const timer = setTimeout(() => setDebounced(q), 250);
     return () => clearTimeout(timer);
   }, [q]);
-  const { data, isFetching } = useCourseSearch(debounced);
+  const search = useCourseSearch(debounced);
+  const { data, isFetching } = search;
   const results = useMemo(() => (debounced.trim().length >= 2 ? (data ?? []) : []), [data, debounced]);
   return (
     <div className="mt-4">
@@ -567,7 +569,7 @@ function CourseSearch({ q, setQ }: { q: string; setQ: (v: string) => void }) {
           maxLength={100}
           placeholder={hint}
           aria-label={t("coursesSearchPlaceholder")}
-          className="min-w-0 flex-1 bg-transparent py-1.5 text-base text-primary outline-none placeholder:text-label/70"
+          className="min-w-0 flex-1 bg-transparent py-1.5 text-base text-primary outline-none placeholder:text-placeholder"
         />
       </div>
       {debounced.trim().length >= 2 ? (
@@ -583,6 +585,8 @@ function CourseSearch({ q, setQ }: { q: string; setQ: (v: string) => void }) {
               </li>
             ))}
           </ul>
+        ) : search.isError ? (
+          <LoadError className="py-3" onRetry={() => void search.refetch()} retrying={isFetching} />
         ) : !isFetching ? (
           <p className="mt-2 text-sm text-label">{fill(t("coursesSearchEmpty"), { q: debounced.trim() })}</p>
         ) : null

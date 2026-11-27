@@ -1,3 +1,4 @@
+import { LoadError } from "@/shared/ui/LoadError";
 import { CreateThreadDialog } from "@/features/forum/components/CreateThreadDialog";
 import { FaqSearchMatches, SearchHelp } from "@/features/forum/components/SearchExtras";
 import { TagChip } from "@/features/forum/components/TagInput";
@@ -37,7 +38,8 @@ export function ForumPage() {
     .filter((x): x is string => (FORUM_TAGS as readonly string[]).includes(x));
   const tagsKey = tags.join(",");
   const [input, setInput] = useState(q);
-  const { data: threads = [], isLoading, isError, isPlaceholderData } = useThreads(sort, { q, tags: q ? undefined : tags });
+  const threadsQuery = useThreads(sort, { q, tags: q ? undefined : tags });
+  const { data: threads = [], isLoading, isError, isPlaceholderData } = threadsQuery;
   const trending = useTrendingTags().data ?? [];
   const uses = new Map(trending.map((x) => [x.name, x.count]));
   const tagsByUse = [...FORUM_TAGS].sort((a, b) => (uses.get(b) ?? 0) - (uses.get(a) ?? 0));
@@ -91,7 +93,7 @@ export function ForumPage() {
             placeholder={t("forumSearchPlaceholder")}
             aria-label={t("forumSearchPlaceholder")}
             maxLength={200}
-            className="h-10 w-full rounded-xl border border-border bg-surface pl-9 pr-9 text-sm text-primary placeholder:text-grey focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 [&::-webkit-search-cancel-button]:hidden"
+            className="h-10 w-full rounded-xl border border-border bg-surface pl-9 pr-9 text-sm text-primary placeholder:text-placeholder focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 [&::-webkit-search-cancel-button]:hidden"
           />
           {input ? (
             <button
@@ -141,7 +143,11 @@ export function ForumPage() {
         {isLoading ? (
           <PageSkeleton title={false} className="py-2" />
         ) : isError ? (
-          <p className="py-6 text-center text-sm text-error">{t("forumLoadFailed")}</p>
+          <LoadError
+            message={t("forumLoadFailed")}
+            onRetry={() => void threadsQuery.refetch()}
+            retrying={threadsQuery.isFetching}
+          />
         ) : threads.length === 0 ? (
           <div className="py-4 text-center">
             <p className="text-sm text-label">{emptyText}</p>

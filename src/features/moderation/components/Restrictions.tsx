@@ -111,7 +111,7 @@ export function RestrictionPanel({ userId }: { userId: string }) {
           rows={2}
           placeholder={t("restrictReasonPlaceholder")}
           aria-label={t("restrictReason")}
-          className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm text-primary placeholder:text-grey focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20"
+          className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm text-primary placeholder:text-placeholder focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20"
         />
         {set.isError ? <p className="text-xs text-error">{t("postActionFailed")}</p> : null}
         <Button type="submit" size="sm" disabled={set.isPending || !reason.trim()}>

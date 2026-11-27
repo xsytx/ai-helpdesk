@@ -109,7 +109,10 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
 - **Auth.** JWT (7 days) in `localStorage` (`ai_helpdesk_token`), user cache in
   `ai_helpdesk_user`. Login is shared by all tabs of one origin; `AuthContext`
   follows changes from other tabs (`storage` event) and ignores late `/api/me`
-  answers for a login that changed. To be logged in as two accounts at once
+  answers for a login that changed. A logged-out visitor sent to /login from
+  a page (`ProtectedRoute`) gets back to it (path, query, #answer) after login
+  or signup + code (`features/auth/returnTo.ts`, this tab only); a logout
+  saves nothing. To be logged in as two accounts at once
   use two origins (`localhost:3000` and `127.0.0.1:3000`) or incognito.
 - **Emails** (codes, password reset, follower notices) are sent in the
   background (`sendEmail` in `handlers/auth.go`): the code is saved first,
@@ -146,7 +149,10 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   (the per-minute limiter's 429 has no code); `/api/chat/status` and every
   answer carry `daily_left`. `ChatPage` shows "N AI questions left today" at
   5 or fewer and `DailyLimitNotice` (FAQ buttons and "Ask on the forum" stay)
-  at 0; the corner chat (`MascotAssistant`) shows the same line, and at 0 a
+  at 0 with the reset time (`features/chat/dailyReset.ts`: both chats ask
+  `/api/chat/status` again just after Almaty midnight and when the tab is
+  shown again, so no reload is needed); the corner chat (`MascotAssistant`)
+  shows the same line, and at 0 a
   short notice with FAQ / Forum links instead of its box (Barys sleeps,
   "Resting until midnight"); streamed errors keep their JSON body
   (`HttpStatusError.data`).
@@ -756,11 +762,15 @@ above. Docker Hub sometimes times out (`TLS handshake timeout`): just retry.
   `PasswordField`, `OtpInput`, `RollingNumber`), tokens like `text-primary`,
   `bg-background-2`, `text-label`, `rounded-2xl`. Loading: `shared/ui/Skeleton`
   (`PageSkeleton` = Barys + "Loading…" + placeholder cards, `SkeletonList`,
-  `SkeletonBlock`), not a bare "Loading…" text.
+  `SkeletonBlock`), not a bare "Loading…" text. A failed load is never shown
+  as an empty list: `shared/ui/LoadError` (message + Retry, when
+  `query.isError && !query.data`); only a 404 says "not found".
 - **Light/dark theme.** Colours come only from the tokens in
   `styles/globals.css`; `:root[data-theme="dark"]` redefines them (and the
   amber/red/green/sky/violet shades in use). Use `bg-surface` (not
-  `bg-white`) for cards/inputs/dialogs, `bg-brand` (not `bg-primary`) for
+  `bg-white`) for cards/inputs/dialogs, `placeholder:text-placeholder` for
+  input hints, `bg-danger` (not `bg-error`, pale in dark) for filled delete
+  buttons, `bg-brand` (not `bg-primary`) for
   filled buttons/bubbles with white text, `text-primary` for text; `dark:`
   classes follow the theme. The choice (Settings → Оформление:
   system/light/dark; the header's sun/moon `ThemeToggle` switches light/dark)

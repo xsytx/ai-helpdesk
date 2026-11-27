@@ -389,7 +389,7 @@ function SearchBox({ draft, setDraft, extra, onSubmit, onPickPlace, onPickRoom }
           role="combobox"
           id="maps-search"
           autoComplete="off"
-          className="min-w-0 flex-1 bg-transparent py-1.5 text-base text-primary outline-none placeholder:text-label/70"
+          className="min-w-0 flex-1 bg-transparent py-1.5 text-base text-primary outline-none placeholder:text-placeholder"
         />
         <Button type="submit" size="sm">{t("mapsFind")}</Button>
       </div>

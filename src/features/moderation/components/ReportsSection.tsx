@@ -93,7 +93,7 @@ function ReportCard({ report }: { report: PostReport }) {
             <p className="mr-auto text-sm text-primary">
               {report.targetType === "thread" ? t("deleteThreadConfirm") : t("deleteAnswerConfirm")}
             </p>
-            <Button size="sm" className="bg-error hover:bg-error/90" disabled={busy} onClick={() => remove.mutate(report, { onError })}>
+            <Button size="sm" className="bg-danger hover:bg-danger/90" disabled={busy} onClick={() => remove.mutate(report, { onError })}>
               {t("postDelete")}
             </Button>
             <Button size="sm" variant="secondary" onClick={() => setConfirming(false)}>

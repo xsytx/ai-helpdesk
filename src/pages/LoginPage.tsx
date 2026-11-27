@@ -6,6 +6,7 @@ import {
   savePending,
   toUser,
 } from "@/features/auth/api";
+import { returnToPath } from "@/features/auth/returnTo";
 import { getErrorStatus } from "@/shared/api/client";
 import { useLocale } from "@/i18n/LocaleContext";
 import { AuthLayout } from "@/shared/layout/AuthLayout";
@@ -35,7 +36,7 @@ export function LoginPage() {
   const [loading, setLoading] = useState(false);
 
   if (isAuthenticated) {
-    return <Navigate to="/" replace />;
+    return <Navigate to={returnToPath()} replace />;
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -63,7 +64,7 @@ export function LoginPage() {
         return;
       }
       login(toUser(user), token);
-      navigate("/", { viewTransition: true });
+      navigate(returnToPath(), { viewTransition: true });
     } catch (err) {
       const status = getErrorStatus(err);
       if (status === 401) setPasswordError(t("invalidCredentials"));

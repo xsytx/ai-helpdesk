@@ -21,7 +21,8 @@ function targetShapes(block?: SchemeBlock, spot?: SchemeSpot): ReactNode[] {
 }
 
 /** A small name tag above a point of the route (scheme units; u keeps one size on screen). */
-/** The start's tag goes under its point, the end's above: the plan's own pin names sit above pins. */
+/** The start's tag goes under its point, the end's above: the plan's own pin names sit above pins.
+ * Dark text on both: white on amber is only 2.2:1. */
 function RouteTag({ at: [x, y], text, u, filled }: { at: Pt; text: string; u: number; filled: boolean }) {
   const size = 11 * u;
   const w = (text.length * 0.6 + 1.4) * size;
@@ -30,7 +31,7 @@ function RouteTag({ at: [x, y], text, u, filled }: { at: Pt; text: string; u: nu
   return (
     <g>
       <rect x={x - w / 2} y={top} width={w} height={h} rx={h / 2} fill={filled ? "var(--color-accent)" : "#fff"} stroke="var(--color-accent)" strokeWidth={1.5 * u} />
-      <text x={x} y={top + h / 2 + size * 0.36} fontSize={size} fontWeight="700" textAnchor="middle" fill={filled ? "#fff" : "#1e2151"}>{text}</text>
+      <text x={x} y={top + h / 2 + size * 0.36} fontSize={size} fontWeight="700" textAnchor="middle" fill="#1e2151">{text}</text>
     </g>
   );
 }

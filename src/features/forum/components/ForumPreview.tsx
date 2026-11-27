@@ -1,3 +1,5 @@
+import { LoadError } from "@/shared/ui/LoadError";
+import { SkeletonList } from "@/shared/ui/Skeleton";
 import { useThreads } from "@/features/forum/api";
 import { useLocale } from "@/i18n/LocaleContext";
 import { Card } from "@/shared/ui/Card";
@@ -10,7 +12,8 @@ import { ThreadList } from "./ThreadList";
 export function ForumPreview() {
   const { t } = useLocale();
   const [sort, setSort] = useState<ThreadSort>("top");
-  const { data: threads = [], isLoading } = useThreads(sort);
+  const query = useThreads(sort);
+  const { data: threads = [], isLoading } = query;
   const preview = threads.slice(0, 3);
 
   return (
@@ -24,7 +27,9 @@ export function ForumPreview() {
         <ThreadSortToggle sort={sort} onSortChange={setSort} />
       </div>
       {isLoading ? (
-        <p className="text-sm text-label">{t("loading")}</p>
+        <SkeletonList rows={3} />
+      ) : query.isError && !query.data ? (
+        <LoadError onRetry={() => void query.refetch()} retrying={query.isFetching} />
       ) : (
         <ThreadList threads={preview} />
       )}

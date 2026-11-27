@@ -104,7 +104,7 @@ export function ReportDialog({
               maxLength={400}
               placeholder={t("reportDetailsPlaceholder")}
               aria-label={t("reportDetailsPlaceholder")}
-              className="w-full resize-none rounded-xl border border-border px-3 py-2 text-sm text-primary placeholder:text-grey focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20"
+              className="w-full resize-none rounded-xl border border-border px-3 py-2 text-sm text-primary placeholder:text-placeholder focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20"
             />
             {failed ? <p className="text-sm text-error">{t("postActionFailed")}</p> : null}
             <div className="flex gap-2">

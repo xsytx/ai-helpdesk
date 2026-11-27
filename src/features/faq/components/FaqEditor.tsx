@@ -170,7 +170,7 @@ function FaqRow({
           <p className="mr-auto text-sm text-primary">{t("faqDeleteConfirm")}</p>
           <Button
             size="sm"
-            className="bg-error hover:bg-error/90"
+            className="bg-danger hover:bg-danger/90"
             disabled={remove.isPending}
             onClick={() => {
               setFailed(false);

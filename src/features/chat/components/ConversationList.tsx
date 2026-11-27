@@ -1,3 +1,4 @@
+import { LoadError } from "@/shared/ui/LoadError";
 import {
   sharedChatUrl,
   useChatConversations,
@@ -32,10 +33,11 @@ function groupOf(c: ChatConversation, now: Date): GroupKey {
  */
 export function ConversationList({ activeId, onNavigate }: { activeId?: string; onNavigate?: () => void }) {
   const { t, plural } = useLocale();
-  const { data, isPending, isError } = useChatConversations();
+  const query = useChatConversations();
+  const { data, isPending, isError } = query;
 
   if (isPending) return <p className="px-2 py-1 text-sm text-label">{t("loading")}</p>;
-  if (isError) return <p className="px-2 py-1 text-sm text-error">{t("serverUnavailable")}</p>;
+  if (isError && !data) return <LoadError className="py-3" onRetry={() => void query.refetch()} retrying={query.isFetching} />;
 
   const now = new Date();
   const groups = new Map<GroupKey, ChatConversation[]>();

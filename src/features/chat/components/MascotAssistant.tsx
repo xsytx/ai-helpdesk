@@ -21,6 +21,7 @@ import {
   type ConversationList,
   type UiChatMessage,
 } from "../api";
+import { dailyResetTime, useDailyResetRefresh } from "../dailyReset";
 import { AssistantContent } from "./AssistantContent";
 import { StreamingBubble } from "./StreamingBubble";
 
@@ -86,7 +87,7 @@ export function MascotAssistant() {
 }
 
 function Widget({ pathname, onHide }: { pathname: string; onHide: () => void }) {
-  const { t, plural } = useLocale();
+  const { t, plural, locale } = useLocale();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -117,6 +118,13 @@ function Widget({ pathname, onHide }: { pathname: string; onHide: () => void }) 
   // AI questions left today (null = no daily limit for this account).
   const [daily, setDaily] = useState<{ limit: number; left: number } | null>(null);
   const usedUp = daily?.left === 0;
+  // After midnight the questions come back without reopening the page.
+  useDailyResetRefresh(usedUp, () => {
+    fetchChatStatus().then(
+      (s) => setDaily(s.dailyLimit !== undefined && s.dailyLeft !== undefined ? { limit: s.dailyLimit, left: s.dailyLeft } : null),
+      () => undefined,
+    );
+  });
   const abortRef = useRef<AbortController | null>(null);
   const streamedRef = useRef("");
   const listRef = useRef<HTMLDivElement>(null);
@@ -330,7 +338,7 @@ function Widget({ pathname, onHide }: { pathname: string; onHide: () => void }) 
               <Hourglass className="mt-0.5 h-4 w-4 shrink-0 text-amber-700 dark:text-amber-300" aria-hidden />
               <div className="min-w-0 flex-1">
                 <p className="font-semibold text-primary">{t("chatDailyLimitTitle").replace("{n}", String(daily?.limit ?? ""))}</p>
-                <p className="text-xs text-label">{t("chatDailyLimitBody")}</p>
+                <p className="text-xs text-label">{t("chatDailyLimitBody").replace("{time}", dailyResetTime(locale))}</p>
                 <div className="mt-2 flex gap-2">
                   {(["/faq", "/forum"] as const).map((to) => (
                     <Link
@@ -375,7 +383,7 @@ function Widget({ pathname, onHide }: { pathname: string; onHide: () => void }) 
               rows={1}
               maxLength={1000}
               placeholder={t("askPlaceholder")}
-              className="max-h-28 min-h-10 flex-1 resize-none rounded-xl border border-border bg-background-2/50 px-3 py-2 text-sm text-primary outline-none placeholder:text-label/70 focus:border-brand"
+              className="max-h-28 min-h-10 flex-1 resize-none rounded-xl border border-border bg-background-2/50 px-3 py-2 text-sm text-primary outline-none placeholder:text-placeholder focus:border-brand"
             />
             {busy ? (
               <button

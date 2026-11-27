@@ -532,7 +532,7 @@ function ReviewForm({ code, initial, onDone }: { code: string; initial?: CourseR
           rows={4}
           maxLength={2000}
           placeholder={t("reviewsTextPlaceholder")}
-          className="mt-1 w-full resize-y rounded-xl border border-border bg-surface px-3 py-2 text-sm text-primary outline-none placeholder:text-label/70 focus:border-brand"
+          className="mt-1 w-full resize-y rounded-xl border border-border bg-surface px-3 py-2 text-sm text-primary outline-none placeholder:text-placeholder focus:border-brand"
         />
       </label>
       <p className="flex flex-wrap justify-between gap-2 text-xs text-label">

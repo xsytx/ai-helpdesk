@@ -171,7 +171,7 @@ export function PostEditor({
         }}
         onClick={findMention}
         onBlur={() => window.setTimeout(() => setMention(null), 150)}
-        className="block w-full resize-y rounded-xl border border-border bg-surface px-3.5 py-2.5 text-sm text-primary placeholder:text-grey focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20"
+        className="block w-full resize-y rounded-xl border border-border bg-surface px-3.5 py-2.5 text-sm text-primary placeholder:text-placeholder focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20"
       />
       {mention && (people.length > 0 || suggestions.isSuccess) ? (
         <ul

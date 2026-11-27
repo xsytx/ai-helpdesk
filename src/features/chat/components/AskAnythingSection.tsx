@@ -30,7 +30,7 @@ export function AskAnythingSection() {
           onChange={(e) => setQuery(e.target.value)}
           placeholder={t("askPlaceholder")}
           rows={3}
-          className="min-h-[88px] w-full resize-y rounded-2xl border border-border bg-surface px-4 py-3 pr-14 text-sm text-primary placeholder:text-grey focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 md:min-h-[72px]"
+          className="min-h-[88px] w-full resize-y rounded-2xl border border-border bg-surface px-4 py-3 pr-14 text-sm text-primary placeholder:text-placeholder focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 md:min-h-[72px]"
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {
               e.preventDefault();

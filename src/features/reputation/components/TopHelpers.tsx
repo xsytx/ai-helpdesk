@@ -1,3 +1,4 @@
+import { LoadError } from "@/shared/ui/LoadError";
 import { useTopHelpers, type HelpersPeriod } from "@/features/reputation/api";
 import { UserAvatar } from "@/features/profile/components/UserAvatar";
 import { useLocale } from "@/i18n/LocaleContext";
@@ -20,7 +21,8 @@ const MEDAL = ["text-amber-500", "text-slate-400", "text-orange-400"];
 export function TopHelpers() {
   const { t, plural } = useLocale();
   const [period, setPeriod] = useState<HelpersPeriod>("week");
-  const { data: helpers = [], isPending } = useTopHelpers(period);
+  const query = useTopHelpers(period);
+  const { data: helpers = [], isPending } = query;
 
   return (
     <Card>
@@ -46,7 +48,9 @@ export function TopHelpers() {
           </button>
         ))}
       </div>
-      {isPending ? (
+      {query.isError && !query.data ? (
+        <LoadError onRetry={() => void query.refetch()} retrying={query.isFetching} />
+      ) : isPending ? (
         <p className="mt-4 text-sm text-label">{t("loading")}</p>
       ) : helpers.length === 0 ? (
         <p className="mt-4 text-sm text-label">{t("helpersEmpty")}</p>
